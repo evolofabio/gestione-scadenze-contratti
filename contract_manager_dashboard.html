@@ -566,7 +566,7 @@
     .empty-state svg { margin-bottom: 12px; opacity: 0.5; }
 
     .sort-bar {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
       margin-bottom: 12px; font-size: 12px; color: var(--color-text-secondary);
     }
     .sort-bar select {
@@ -575,6 +575,20 @@
       background: var(--color-background-primary); color: var(--color-text-primary);
       font-family: var(--font-sans);
     }
+    .filter-month-wrap {
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .filter-month-wrap input[type="month"] {
+      font-size: 12px; padding: 5px 8px; border-radius: var(--border-radius-md);
+      border: 1px solid var(--color-border-secondary);
+      background: var(--color-background-primary); color: var(--color-text-primary);
+      font-family: var(--font-sans);
+    }
+    .filter-clear {
+      background: none; border: none; cursor: pointer; font-size: 14px;
+      color: var(--color-text-tertiary); padding: 2px 4px; line-height: 1;
+    }
+    .filter-clear:hover { color: #dc2626; }
 
     /* ── Toast ── */
     .toast {
@@ -818,6 +832,7 @@
     editingContract: null,
     editingCompany: null,
     sortBy: 'urgency',
+    filterMonth: '',
     emailModal: null,
     emailEditMode: 'preview',
     emailDraft: null,
@@ -1462,14 +1477,23 @@
   }
 
   function filteredContracts() {
-    if (!state.searchQuery) return state.companies;
-    const q = state.searchQuery.toLowerCase();
-    return state.companies.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.contractType.toLowerCase().includes(q) ||
-      (c.employeeName && c.employeeName.toLowerCase().includes(q)) ||
-      (c.notes && c.notes.toLowerCase().includes(q))
-    );
+    let list = state.companies;
+    if (state.searchQuery) {
+      const q = state.searchQuery.toLowerCase();
+      list = list.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        c.contractType.toLowerCase().includes(q) ||
+        (c.employeeName && c.employeeName.toLowerCase().includes(q)) ||
+        (c.notes && c.notes.toLowerCase().includes(q))
+      );
+    }
+    if (state.filterMonth) {
+      list = list.filter(c => {
+        if (!c.endDate) return false;
+        return c.endDate.substring(0, 7) === state.filterMonth;
+      });
+    }
+    return list;
   }
 
   /* ── Toast ── */
@@ -1634,6 +1658,138 @@
         c.renewCount || 0, c.adminEmail || '', c.companyEmail || '', c.notes || ''
       ];
     });
+  }
+
+  /* ── Import Excel ── */
+  function triggerImportExcel() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls,.csv';
+    input.style.display = 'none';
+    input.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array', cellDates: true });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          if (!rows.length) { showToast('Il file non contiene dati.'); return; }
+          importRows(rows);
+        } catch(err) {
+          console.error('Import error:', err);
+          showToast('Errore nella lettura del file: ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      input.remove();
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+  window.triggerImportExcel = triggerImportExcel;
+
+  function importRows(rows) {
+    const colMap = {
+      'nome azienda': 'name', 'azienda': 'name', 'company': 'name', 'nome': 'name', 'ragione sociale': 'name',
+      'dipendente': 'employeeName', 'nome dipendente': 'employeeName', 'employee': 'employeeName', 'lavoratore': 'employeeName', 'nome e cognome': 'employeeName',
+      'tipo contratto': 'contractType', 'tipo': 'contractType', 'contract type': 'contractType', 'tipologia': 'contractType',
+      'data inizio': 'startDate', 'inizio': 'startDate', 'start date': 'startDate', 'data assunzione': 'startDate',
+      'data scadenza': 'endDate', 'scadenza': 'endDate', 'end date': 'endDate', 'data fine': 'endDate', 'fine': 'endDate',
+      'prorogabile': 'renewable', 'rinnovo': 'renewable', 'renewable': 'renewable',
+      'durata proroga': 'renewMonths', 'durata proroga (mesi)': 'renewMonths', 'mesi proroga': 'renewMonths', 'mesi rinnovo': 'renewMonths',
+      'tipo proroga': 'renewType', 'tipo rinnovo': 'renewType',
+      'preavviso': 'renewNotice', 'preavviso (gg)': 'renewNotice', 'giorni preavviso': 'renewNotice',
+      'proroghe effettuate': 'renewCount', 'numero proroghe': 'renewCount', 'rinnovi': 'renewCount',
+      'email admin': 'adminEmail', 'admin email': 'adminEmail', 'email amministratore': 'adminEmail',
+      'email azienda': 'companyEmail', 'company email': 'companyEmail',
+      'note': 'notes', 'notes': 'notes', 'commenti': 'notes',
+    };
+
+    const headers = Object.keys(rows[0]);
+    const mapping = {};
+    headers.forEach(h => {
+      const norm = h.toLowerCase().trim();
+      if (colMap[norm]) mapping[h] = colMap[norm];
+    });
+
+    if (!mapping || Object.keys(mapping).length === 0) {
+      showToast('Intestazioni non riconosciute. Usa: Nome Azienda, Dipendente, Tipo Contratto, Data Inizio, Data Scadenza…');
+      return;
+    }
+
+    let maxId = state.companies.reduce((m, c) => Math.max(m, c.id || 0), 0);
+    let imported = 0;
+
+    rows.forEach(row => {
+      const mapped = {};
+      Object.keys(mapping).forEach(h => {
+        mapped[mapping[h]] = row[h];
+      });
+
+      if (!mapped.name && !mapped.endDate) return;
+
+      mapped.startDate = parseImportDate(mapped.startDate);
+      mapped.endDate = parseImportDate(mapped.endDate);
+      if (!mapped.endDate) return;
+
+      maxId++;
+      const contract = {
+        id: maxId,
+        name: String(mapped.name || 'Importato').trim(),
+        employeeName: String(mapped.employeeName || '').trim(),
+        contractType: String(mapped.contractType || 'Non specificato').trim(),
+        startDate: mapped.startDate || '',
+        endDate: mapped.endDate,
+        renewable: parseImportBool(mapped.renewable),
+        renewMonths: parseInt(mapped.renewMonths) || 12,
+        renewType: String(mapped.renewType || 'Senza causale').trim(),
+        renewNotice: parseInt(mapped.renewNotice) || 30,
+        renewCount: parseInt(mapped.renewCount) || 0,
+        adminEmail: String(mapped.adminEmail || '').trim(),
+        companyEmail: String(mapped.companyEmail || '').trim(),
+        notes: String(mapped.notes || '').trim(),
+      };
+
+      state.companies.push(contract);
+      imported++;
+    });
+
+    if (imported > 0) {
+      saveData();
+      render();
+      showToast('Importati ' + imported + ' contratti con successo.');
+    } else {
+      showToast('Nessun contratto valido trovato nel file.');
+    }
+  }
+
+  function parseImportDate(val) {
+    if (!val) return '';
+    if (val instanceof Date) {
+      const y = val.getFullYear(); const m = String(val.getMonth()+1).padStart(2,'0'); const d = String(val.getDate()).padStart(2,'0');
+      return y + '-' + m + '-' + d;
+    }
+    const s = String(val).trim();
+    // yyyy-mm-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // dd/mm/yyyy
+    const dmy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+    if (dmy) return dmy[3] + '-' + dmy[2].padStart(2,'0') + '-' + dmy[1].padStart(2,'0');
+    // try Date parse
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().split('T')[0];
+    }
+    return '';
+  }
+
+  function parseImportBool(val) {
+    if (typeof val === 'boolean') return val;
+    const s = String(val || '').toLowerCase().trim();
+    return ['sì', 'si', 'yes', 'true', '1', 'vero', 'x'].includes(s);
   }
 
   /* ── Export CSV ── */
@@ -1846,6 +2002,11 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               CSV (.csv)
             </button>
+            <div class="export-menu-sep"></div>
+            <button class="export-menu-item" onclick="triggerImportExcel(); closeExportMenu()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+              Importa Excel (.xlsx)
+            </button>
           </div>` : ''}
         </div>
         <button class="btn-sm${state.showSettings ? ' primary' : ''}" onclick="toggleSettings()" title="Impostazioni email">${icons.settings} Impostazioni</button>
@@ -1895,18 +2056,19 @@
         });
       }
 
-      /* Search + sort */
+      /* Search + sort + filter */
       html += `<div class="section-title">Tutti i contratti</div>`;
       html += `<div class="search-bar"><span class="search-icon">${icons.search}</span><input type="text" placeholder="Cerca per nome, tipo o note…" value="${escAttr(state.searchQuery)}" oninput="setSearch(this.value)" aria-label="Cerca contratti"></div>`;
-      html += `<div class="sort-bar">Ordina per <select onchange="setSortBy(this.value)" aria-label="Ordina contratti">
+      html += `<div class="sort-bar"><span>Ordina per <select onchange="setSortBy(this.value)" aria-label="Ordina contratti">
         <option value="urgency"${state.sortBy==='urgency'?' selected':''}>Urgenza</option>
         <option value="date"${state.sortBy==='date'?' selected':''}>Data scadenza</option>
         <option value="name"${state.sortBy==='name'?' selected':''}>Nome azienda</option>
-      </select></div>`;
+      </select></span>
+      <span class="filter-month-wrap">Mese scadenza <input type="month" value="${escAttr(state.filterMonth)}" onchange="setFilterMonth(this.value)" aria-label="Filtra per mese di scadenza">${state.filterMonth ? '<button class="filter-clear" onclick="setFilterMonth(\'\')">✕</button>' : ''}</span></div>`;
 
       const visible = sortedContracts(filteredContracts());
       if (visible.length === 0) {
-        html += `<div class="empty-state">${icons.file}<br>${state.searchQuery ? 'Nessun risultato per la ricerca.' : "Nessun contratto. Aggiungi un'azienda per iniziare."}</div>`;
+        html += `<div class="empty-state">${icons.file}<br>${(state.searchQuery || state.filterMonth) ? 'Nessun risultato per i filtri applicati.' : "Nessun contratto. Aggiungi un'azienda per iniziare."}</div>`;
       } else {
         visible.forEach(c => { html += renderCard(c); });
       }
@@ -2341,6 +2503,7 @@
   window.setTab = (i) => { state.activeTab = i; state.searchQuery = ''; render(); };
   window.setSortBy = (v) => { state.sortBy = v; render(); };
   window.setSearch = (v) => { state.searchQuery = v; render(); };
+  window.setFilterMonth = (v) => { state.filterMonth = v; render(); };
   window.openModal = (mode) => {
     if (mode === 'add') {
       state.modal = 'add-company';
