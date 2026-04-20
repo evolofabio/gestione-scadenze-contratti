@@ -911,7 +911,7 @@
       if (authFirebaseApp) return authFirebaseApp;
       const existingApp = firebase.apps.find(a => a.name === 'authApp');
       if (existingApp) { authFirebaseApp = existingApp; return existingApp; }
-      authFirebaseApp = firebase.initializeApp({ apiKey: cfg.apiKey, authDomain: cfg.authDomain || '' }, 'authApp');
+      authFirebaseApp = firebase.initializeApp({ apiKey: cfg.apiKey, authDomain: cfg.authDomain }, 'authApp');
       return authFirebaseApp;
     } catch(e) { console.error('Auth app init error:', e); return null; }
   }
@@ -929,15 +929,16 @@
         <div class="login-error" id="login-error"></div>
         ${!hasConfig ? `
         <div style="margin-bottom:18px;padding:12px;background:var(--color-background-tertiary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary);line-height:1.5">
-          <strong>Configurazione iniziale:</strong> inserisci la API Key del tuo progetto Firebase (la stessa usata per la sincronizzazione cloud).
+          <strong>Configurazione iniziale:</strong> vai su <strong>console.firebase.google.com</strong> → il tuo progetto → Impostazioni progetto → trovi API Key e Auth Domain.
         </div>
         <div class="login-field">
           <label for="auth-apikey">Firebase API Key</label>
           <input id="auth-apikey" type="text" placeholder="AIzaSy..." value="${escAttr(cfg.apiKey)}">
         </div>
         <div class="login-field">
-          <label for="auth-domain">Auth Domain (opzionale)</label>
-          <input id="auth-domain" type="text" placeholder="progetto.firebaseapp.com" value="${escAttr(cfg.authDomain || '')}">
+          <label for="auth-domain">Auth Domain</label>
+          <input id="auth-domain" type="text" placeholder="nome-progetto.firebaseapp.com" value="${escAttr(cfg.authDomain || '')}">
+          <div class="settings-hint">Lo trovi in Firebase Console → Impostazioni progetto, es: <code>mio-progetto.firebaseapp.com</code></div>
         </div>
         <button class="login-btn" onclick="saveAuthAndReload()">Salva configurazione</button>
         ` : `
@@ -1098,8 +1099,13 @@
 
   window.saveAuthAndReload = function() {
     const apiKey = (document.getElementById('auth-apikey')?.value || '').trim();
-    const authDomain = (document.getElementById('auth-domain')?.value || '').trim();
+    let authDomain = (document.getElementById('auth-domain')?.value || '').trim();
     if (!apiKey) { showLoginError('Inserisci la Firebase API Key.'); return; }
+    if (!authDomain) { showLoginError('Inserisci l\u2019Auth Domain (es: nome-progetto.firebaseapp.com).'); return; }
+    if (authFirebaseApp) {
+      try { authFirebaseApp.delete(); } catch(e) {}
+      authFirebaseApp = null;
+    }
     saveAuthConfig({ apiKey, authDomain });
     renderLoginScreen();
   };
