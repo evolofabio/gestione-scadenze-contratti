@@ -906,14 +906,25 @@
 
   function getAuthApp() {
     const cfg = loadAuthConfig();
-    if (!cfg.apiKey) return null;
+    if (!cfg.apiKey || !cfg.authDomain) return null;
     try {
       if (authFirebaseApp) return authFirebaseApp;
       const existingApp = firebase.apps.find(a => a.name === 'authApp');
-      if (existingApp) { authFirebaseApp = existingApp; return existingApp; }
+      if (existingApp) {
+        existingApp.delete().catch(() => {});
+      }
       authFirebaseApp = firebase.initializeApp({ apiKey: cfg.apiKey, authDomain: cfg.authDomain }, 'authApp');
       return authFirebaseApp;
     } catch(e) { console.error('Auth app init error:', e); return null; }
+  }
+
+  function destroyAuthApp() {
+    if (authFirebaseApp) {
+      try { authFirebaseApp.delete(); } catch(e) {}
+      authFirebaseApp = null;
+    }
+    const existing = firebase.apps.find(a => a.name === 'authApp');
+    if (existing) { try { existing.delete(); } catch(e) {} }
   }
 
   function renderLoginScreen() {
@@ -1102,17 +1113,23 @@
     let authDomain = (document.getElementById('auth-domain')?.value || '').trim();
     if (!apiKey) { showLoginError('Inserisci la Firebase API Key.'); return; }
     if (!authDomain) { showLoginError('Inserisci l\u2019Auth Domain (es: nome-progetto.firebaseapp.com).'); return; }
-    if (authFirebaseApp) {
-      try { authFirebaseApp.delete(); } catch(e) {}
-      authFirebaseApp = null;
-    }
+    destroyAuthApp();
     saveAuthConfig({ apiKey, authDomain });
-    renderLoginScreen();
+    // Re-create app and listen for auth state
+    const app = getAuthApp();
+    if (app) {
+      app.auth().onAuthStateChanged(function(user) {
+        if (user) { authUser = user; enterApp(); }
+        else { renderLoginScreen(); }
+      });
+    } else {
+      showLoginError('Errore nella configurazione Firebase. Verifica i dati inseriti.');
+    }
   };
 
   window.resetAuthConfig = function() {
+    destroyAuthApp();
     saveAuthConfig({ apiKey: '', authDomain: '' });
-    authFirebaseApp = null;
     renderLoginScreen();
   };
 
