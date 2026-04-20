@@ -940,9 +940,6 @@
           <input id="auth-domain" type="text" placeholder="progetto.firebaseapp.com" value="${escAttr(cfg.authDomain || '')}">
         </div>
         <button class="login-btn" onclick="saveAuthAndReload()">Salva configurazione</button>
-        <div style="margin-top:14px;text-align:center">
-          <a style="font-size:12px;color:var(--color-text-tertiary);cursor:pointer;text-decoration:underline" onclick="skipAuth()">Accedi senza autenticazione</a>
-        </div>
         ` : `
         <div id="login-form">
           <div class="login-field">
@@ -988,9 +985,8 @@
             Hai già un account? <a onclick="showLogin()">Accedi</a>
           </div>
         </div>
-        <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+        <div style="margin-top:14px;text-align:center">
           <a style="font-size:11px;color:var(--color-text-tertiary);cursor:pointer" onclick="resetAuthConfig()">Cambia configurazione</a>
-          <a style="font-size:12px;color:var(--color-text-tertiary);cursor:pointer;text-decoration:underline" onclick="skipAuth()">Accedi senza login</a>
         </div>
         `}
         <div style="margin-top:16px;text-align:center">
@@ -1114,10 +1110,7 @@
     renderLoginScreen();
   };
 
-  window.skipAuth = function() {
-    authUser = null;
-    enterApp();
-  };
+  window.skipAuth = undefined;
 
   window.toggleLoginTheme = function() {
     const t = (localStorage.getItem('cm_theme') || 'light') === 'dark' ? 'light' : 'dark';
