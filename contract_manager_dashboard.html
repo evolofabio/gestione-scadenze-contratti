@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <style>
     :root {
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
@@ -619,6 +620,91 @@
       .header-actions { width: 100%; justify-content: flex-end; }
     }
 
+    /* ── Login screen ── */
+    .login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--color-background-secondary);
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--color-background-primary);
+      border: 1px solid var(--color-border-tertiary);
+      border-radius: var(--border-radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 40px 36px;
+      max-width: 400px; width: 100%;
+    }
+    .login-card h2 {
+      font-size: 22px; font-weight: 700; color: var(--color-text-primary);
+      margin-bottom: 6px; display: flex; align-items: center; gap: 10px;
+    }
+    .login-card .login-subtitle {
+      font-size: 13px; color: var(--color-text-tertiary); margin-bottom: 24px;
+    }
+    .login-field {
+      display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px;
+    }
+    .login-field label {
+      font-size: 12px; color: var(--color-text-secondary); font-weight: 600;
+    }
+    .login-field input {
+      font-size: 14px; border-radius: var(--border-radius-md);
+      border: 1px solid var(--color-border-secondary);
+      padding: 10px 14px; background: var(--color-background-primary);
+      color: var(--color-text-primary); font-family: var(--font-sans);
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .login-field input:focus {
+      outline: none; border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .login-btn {
+      width: 100%; padding: 11px; font-size: 14px; font-weight: 600;
+      border: none; border-radius: var(--border-radius-md);
+      background: var(--color-accent); color: #fff; cursor: pointer;
+      font-family: var(--font-sans); transition: background var(--transition);
+      margin-top: 4px;
+    }
+    .login-btn:hover { background: var(--color-accent-hover); }
+    .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .login-error {
+      background: #fef2f2; color: #dc2626; font-size: 12px; font-weight: 500;
+      padding: 8px 12px; border-radius: var(--border-radius-md);
+      margin-bottom: 14px; display: none;
+    }
+    [data-theme="dark"] .login-error { background: #3b1111; color: #fca5a5; }
+    .login-toggle {
+      margin-top: 16px; text-align: center; font-size: 13px; color: var(--color-text-tertiary);
+    }
+    .login-toggle a {
+      color: var(--color-accent); cursor: pointer; text-decoration: none; font-weight: 600;
+    }
+    .login-toggle a:hover { text-decoration: underline; }
+    .login-loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .user-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--color-text-secondary);
+      padding: 4px 10px; border-radius: var(--border-radius-md);
+      background: var(--color-background-tertiary);
+      max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .btn-logout {
+      font-size: 11px; padding: 4px 10px; border-radius: var(--border-radius-md);
+      border: 1px solid var(--color-border-secondary); background: transparent;
+      color: var(--color-text-secondary); cursor: pointer; font-family: var(--font-sans);
+      transition: all var(--transition);
+    }
+    .btn-logout:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+    [data-theme="dark"] .btn-logout:hover { background: #3b1111; color: #fca5a5; border-color: #fca5a5; }
+    .login-password-wrapper { position: relative; }
+    .login-password-wrapper input { width: 100%; box-sizing: border-box; padding-right: 40px; }
+    .login-password-toggle {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: var(--color-text-tertiary);
+      padding: 4px; display: flex; align-items: center;
+    }
+
     /* ── Print ── */
     @media print {
       body { background: #fff; }
@@ -629,7 +715,8 @@
   </style>
 </head>
 <body>
-  <div class="app" id="app"></div>
+  <div id="login-screen"></div>
+  <div class="app" id="app" style="display:none"></div>
 
   <script>
   'use strict';
@@ -640,6 +727,7 @@
   const EMAIL_LOG_KEY = 'contract_manager_email_log';
   const SENT_TRACKER_KEY = 'contract_manager_sent_tracker';
   const SYNC_KEY = 'contract_manager_sync';
+  const AUTH_KEY = 'contract_manager_auth';
 
   /* ── Utility: HTML escaping (XSS prevention) ── */
   function esc(str) {
@@ -668,6 +756,11 @@
     check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
     cloud: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>',
     refresh: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>',
+    user: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    lock: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>',
+    eye: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+    eyeOff: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+    logout: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
   };
 
   /* ── Default sample data ── */
@@ -795,6 +888,278 @@
 
   let syncConfig = loadSyncConfig();
   let syncState = { connected: false, lastSync: null, listener: null, db: null, skipNext: false };
+
+  /* ── Authentication (Firebase Auth) ── */
+  let authUser = null;
+  let authFirebaseApp = null;
+
+  function loadAuthConfig() {
+    try {
+      const raw = localStorage.getItem(AUTH_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return { apiKey: '', authDomain: '' };
+  }
+  function saveAuthConfig(cfg) {
+    try { localStorage.setItem(AUTH_KEY, JSON.stringify(cfg)); } catch(e) {}
+  }
+
+  function getAuthApp() {
+    const cfg = loadAuthConfig();
+    if (!cfg.apiKey) return null;
+    try {
+      if (authFirebaseApp) return authFirebaseApp;
+      const existingApp = firebase.apps.find(a => a.name === 'authApp');
+      if (existingApp) { authFirebaseApp = existingApp; return existingApp; }
+      authFirebaseApp = firebase.initializeApp({ apiKey: cfg.apiKey, authDomain: cfg.authDomain || '' }, 'authApp');
+      return authFirebaseApp;
+    } catch(e) { console.error('Auth app init error:', e); return null; }
+  }
+
+  function renderLoginScreen() {
+    const loginEl = document.getElementById('login-screen');
+    const cfg = loadAuthConfig();
+    const hasConfig = !!cfg.apiKey;
+    const isDark = (localStorage.getItem('cm_theme') || 'light') === 'dark';
+
+    loginEl.innerHTML = `<div class="login-screen">
+      <div class="login-card">
+        <h2>${icons.lock} Accesso</h2>
+        <div class="login-subtitle">Gestione Scadenze Contratti</div>
+        <div class="login-error" id="login-error"></div>
+        ${!hasConfig ? `
+        <div style="margin-bottom:18px;padding:12px;background:var(--color-background-tertiary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary);line-height:1.5">
+          <strong>Configurazione iniziale:</strong> inserisci la API Key del tuo progetto Firebase (la stessa usata per la sincronizzazione cloud).
+        </div>
+        <div class="login-field">
+          <label for="auth-apikey">Firebase API Key</label>
+          <input id="auth-apikey" type="text" placeholder="AIzaSy..." value="${escAttr(cfg.apiKey)}">
+        </div>
+        <div class="login-field">
+          <label for="auth-domain">Auth Domain (opzionale)</label>
+          <input id="auth-domain" type="text" placeholder="progetto.firebaseapp.com" value="${escAttr(cfg.authDomain || '')}">
+        </div>
+        <button class="login-btn" onclick="saveAuthAndReload()">Salva configurazione</button>
+        <div style="margin-top:14px;text-align:center">
+          <a style="font-size:12px;color:var(--color-text-tertiary);cursor:pointer;text-decoration:underline" onclick="skipAuth()">Accedi senza autenticazione</a>
+        </div>
+        ` : `
+        <div id="login-form">
+          <div class="login-field">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" placeholder="nome@email.com" autocomplete="email">
+          </div>
+          <div class="login-field">
+            <label for="login-password">Password</label>
+            <div class="login-password-wrapper">
+              <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+              <button type="button" class="login-password-toggle" onclick="togglePasswordVisibility()" title="Mostra/nascondi password">${icons.eye}</button>
+            </div>
+          </div>
+          <button class="login-btn" id="login-btn" onclick="doLogin()">
+            Accedi
+          </button>
+          <div class="login-toggle" id="login-toggle-link">
+            Non hai un account? <a onclick="showRegister()">Registrati</a>
+          </div>
+        </div>
+        <div id="register-form" style="display:none">
+          <div class="login-field">
+            <label for="reg-email">Email</label>
+            <input id="reg-email" type="email" placeholder="nome@email.com" autocomplete="email">
+          </div>
+          <div class="login-field">
+            <label for="reg-password">Password (min. 6 caratteri)</label>
+            <div class="login-password-wrapper">
+              <input id="reg-password" type="password" placeholder="••••••••" autocomplete="new-password" minlength="6">
+              <button type="button" class="login-password-toggle" onclick="toggleRegPasswordVisibility()" title="Mostra/nascondi password">${icons.eye}</button>
+            </div>
+          </div>
+          <div class="login-field">
+            <label for="reg-password2">Conferma password</label>
+            <div class="login-password-wrapper">
+              <input id="reg-password2" type="password" placeholder="••••••••" autocomplete="new-password">
+            </div>
+          </div>
+          <button class="login-btn" id="register-btn" onclick="doRegister()">
+            Crea account
+          </button>
+          <div class="login-toggle">
+            Hai già un account? <a onclick="showLogin()">Accedi</a>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center">
+          <a style="font-size:11px;color:var(--color-text-tertiary);cursor:pointer" onclick="resetAuthConfig()">Cambia configurazione</a>
+          <a style="font-size:12px;color:var(--color-text-tertiary);cursor:pointer;text-decoration:underline" onclick="skipAuth()">Accedi senza login</a>
+        </div>
+        `}
+        <div style="margin-top:16px;text-align:center">
+          <button class="theme-toggle" onclick="toggleLoginTheme()" title="${isDark ? 'Tema chiaro' : 'Tema scuro'}" aria-label="Cambia tema" style="background:var(--color-background-tertiary);border:1px solid var(--color-border-secondary);border-radius:50%;width:36px;height:36px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+            ${isDark ? icons.sun : icons.moon}
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+    // Enter key handlers
+    setTimeout(() => {
+      const emailInput = document.getElementById('login-email');
+      const passInput = document.getElementById('login-password');
+      const regEmail = document.getElementById('reg-email');
+      const regPass2 = document.getElementById('reg-password2');
+      if (emailInput) emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (passInput) passInput.focus(); } });
+      if (passInput) passInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
+      if (regPass2) regPass2.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doRegister(); } });
+    }, 50);
+  }
+
+  function showLoginError(msg) {
+    const el = document.getElementById('login-error');
+    if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+  }
+
+  function showRegister() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    showLoginError('');
+  }
+  function showLogin() {
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'block';
+    showLoginError('');
+  }
+
+  function togglePasswordVisibility() {
+    const input = document.getElementById('login-password');
+    const btn = input.parentElement.querySelector('.login-password-toggle');
+    if (input.type === 'password') { input.type = 'text'; btn.innerHTML = icons.eyeOff; }
+    else { input.type = 'password'; btn.innerHTML = icons.eye; }
+  }
+  function toggleRegPasswordVisibility() {
+    const input = document.getElementById('reg-password');
+    const btn = input.parentElement.querySelector('.login-password-toggle');
+    if (input.type === 'password') { input.type = 'text'; btn.innerHTML = icons.eyeOff; }
+    else { input.type = 'password'; btn.innerHTML = icons.eye; }
+  }
+
+  function setLoginBtnLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (loading) {
+      btn.disabled = true;
+      btn.dataset.origText = btn.textContent;
+      btn.innerHTML = '<span class="login-loading"></span> Caricamento…';
+    } else {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.origText || 'Accedi';
+    }
+  }
+
+  function firebaseAuthErrorMsg(code) {
+    const map = {
+      'auth/invalid-email': 'Indirizzo email non valido.',
+      'auth/user-disabled': 'Account disabilitato.',
+      'auth/user-not-found': 'Nessun account con questa email.',
+      'auth/wrong-password': 'Password errata.',
+      'auth/invalid-credential': 'Credenziali non valide. Verifica email e password.',
+      'auth/email-already-in-use': 'Questa email è già registrata.',
+      'auth/weak-password': 'La password deve avere almeno 6 caratteri.',
+      'auth/too-many-requests': 'Troppi tentativi. Riprova tra qualche minuto.',
+      'auth/network-request-failed': 'Errore di rete. Verifica la connessione.',
+      'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'API Key non valida. Controlla la configurazione Firebase.',
+    };
+    return map[code] || ('Errore: ' + code);
+  }
+
+  window.doLogin = function() {
+    const email = (document.getElementById('login-email')?.value || '').trim();
+    const password = document.getElementById('login-password')?.value || '';
+    if (!email || !password) { showLoginError('Inserisci email e password.'); return; }
+    const app = getAuthApp();
+    if (!app) { showLoginError('Configurazione Firebase mancante.'); return; }
+    showLoginError('');
+    setLoginBtnLoading('login-btn', true);
+    app.auth().signInWithEmailAndPassword(email, password)
+      .then(cred => { authUser = cred.user; enterApp(); })
+      .catch(err => { showLoginError(firebaseAuthErrorMsg(err.code)); setLoginBtnLoading('login-btn', false); });
+  };
+
+  window.doRegister = function() {
+    const email = (document.getElementById('reg-email')?.value || '').trim();
+    const password = document.getElementById('reg-password')?.value || '';
+    const password2 = document.getElementById('reg-password2')?.value || '';
+    if (!email || !password) { showLoginError('Inserisci email e password.'); return; }
+    if (password.length < 6) { showLoginError('La password deve avere almeno 6 caratteri.'); return; }
+    if (password !== password2) { showLoginError('Le password non corrispondono.'); return; }
+    const app = getAuthApp();
+    if (!app) { showLoginError('Configurazione Firebase mancante.'); return; }
+    showLoginError('');
+    setLoginBtnLoading('register-btn', true);
+    app.auth().createUserWithEmailAndPassword(email, password)
+      .then(cred => { authUser = cred.user; enterApp(); })
+      .catch(err => { showLoginError(firebaseAuthErrorMsg(err.code)); setLoginBtnLoading('register-btn', false); });
+  };
+
+  window.saveAuthAndReload = function() {
+    const apiKey = (document.getElementById('auth-apikey')?.value || '').trim();
+    const authDomain = (document.getElementById('auth-domain')?.value || '').trim();
+    if (!apiKey) { showLoginError('Inserisci la Firebase API Key.'); return; }
+    saveAuthConfig({ apiKey, authDomain });
+    renderLoginScreen();
+  };
+
+  window.resetAuthConfig = function() {
+    saveAuthConfig({ apiKey: '', authDomain: '' });
+    authFirebaseApp = null;
+    renderLoginScreen();
+  };
+
+  window.skipAuth = function() {
+    authUser = null;
+    enterApp();
+  };
+
+  window.toggleLoginTheme = function() {
+    const t = (localStorage.getItem('cm_theme') || 'light') === 'dark' ? 'light' : 'dark';
+    applyTheme(t);
+    renderLoginScreen();
+  };
+
+  window.doLogout = function() {
+    const app = getAuthApp();
+    if (app) {
+      app.auth().signOut().then(() => {
+        authUser = null;
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('login-screen').style.display = '';
+        renderLoginScreen();
+      }).catch(() => {
+        authUser = null;
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('login-screen').style.display = '';
+        renderLoginScreen();
+      });
+    } else {
+      authUser = null;
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('login-screen').style.display = '';
+      renderLoginScreen();
+    }
+  };
+
+  function enterApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = '';
+    checkAlerts();
+    render();
+    if (emailSettings.autoSend.enabled) startAutoSend();
+    if (syncConfig.enabled) initFirebaseSync();
+  }
+
+  window.showRegister = showRegister;
+  window.showLogin = showLogin;
+  window.togglePasswordVisibility = togglePasswordVisibility;
+  window.toggleRegPasswordVisibility = toggleRegPasswordVisibility;
 
   function encodeRoomName(name) {
     return String(name).replace(/[.#$\[\]\/]/g, '_').substring(0, 128);
@@ -1483,6 +1848,8 @@
         <button class="theme-toggle" onclick="toggleTheme()" title="${isDark ? 'Tema chiaro' : 'Tema scuro'}" aria-label="Cambia tema">
           ${isDark ? icons.sun : icons.moon}
         </button>
+        ${authUser ? `<span class="user-badge">${icons.user} ${esc(authUser.email)}</span>` : ''}
+        <button class="btn-logout" onclick="doLogout()" title="Esci">${icons.logout} Esci</button>
       </div>
     </header>`;
 
@@ -2273,10 +2640,25 @@
     });
   }
 
-  checkAlerts();
-  render();
-  if (emailSettings.autoSend.enabled) startAutoSend();
-  if (syncConfig.enabled) initFirebaseSync();
+  /* ── Boot: check auth state ── */
+  (function boot() {
+    const cfg = loadAuthConfig();
+    if (cfg.apiKey) {
+      const app = getAuthApp();
+      if (app) {
+        app.auth().onAuthStateChanged(function(user) {
+          if (user) {
+            authUser = user;
+            enterApp();
+          } else {
+            renderLoginScreen();
+          }
+        });
+        return;
+      }
+    }
+    renderLoginScreen();
+  })();
   </script>
 </body>
 </html>
