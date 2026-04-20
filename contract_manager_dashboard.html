@@ -1201,8 +1201,9 @@
       return;
     }
     try {
-      if (firebase.apps.length) {
-        firebase.app().delete().then(connectFirebase).catch(connectFirebase);
+      const existing = firebase.apps.find(a => a.name === 'syncApp');
+      if (existing) {
+        existing.delete().then(connectFirebase).catch(connectFirebase);
       } else {
         connectFirebase();
       }
@@ -1215,11 +1216,11 @@
 
   function connectFirebase() {
     try {
-      firebase.initializeApp({
+      const syncApp = firebase.initializeApp({
         apiKey: syncConfig.apiKey,
         databaseURL: syncConfig.databaseURL
-      });
-      syncState.db = firebase.database();
+      }, 'syncApp');
+      syncState.db = syncApp.database();
 
       syncState.db.ref('.info/connected').on('value', function(snap) {
         syncState.connected = snap.val() === true;
@@ -1288,7 +1289,7 @@
 
   function disconnectSync() {
     if (syncState.listener) { syncState.listener.off(); syncState.listener = null; }
-    try { if (firebase.apps.length) firebase.app().delete(); } catch(e) {}
+    try { const sa = firebase.apps.find(a => a.name === 'syncApp'); if (sa) sa.delete(); } catch(e) {}
     syncState.connected = false;
     syncState.db = null;
     updateSyncStatusUI();
