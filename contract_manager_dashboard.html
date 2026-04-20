@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
     :root {
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
@@ -637,6 +639,7 @@
   const SETTINGS_KEY = 'contract_manager_settings';
   const EMAIL_LOG_KEY = 'contract_manager_email_log';
   const SENT_TRACKER_KEY = 'contract_manager_sent_tracker';
+  const SYNC_KEY = 'contract_manager_sync';
 
   /* ── Utility: HTML escaping (XSS prevention) ── */
   function esc(str) {
@@ -663,6 +666,8 @@
     settings: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
     mail: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
     check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    cloud: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>',
+    refresh: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>',
   };
 
   /* ── Default sample data ── */
@@ -739,6 +744,7 @@
   /* ── Persistence ── */
   function saveData() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.companies)); } catch(e) {}
+    syncToCloud();
   }
   function loadData() {
     try {
@@ -770,6 +776,138 @@
   function loadSentTracker() {
     try { const raw = localStorage.getItem(SENT_TRACKER_KEY); if (raw) return JSON.parse(raw); } catch(e) {}
     return {};
+  }
+
+  /* ── Cloud Sync (Firebase Realtime Database) ── */
+  function defaultSyncConfig() {
+    return { enabled: false, apiKey: '', databaseURL: '', roomName: '' };
+  }
+  function loadSyncConfig() {
+    try {
+      const raw = localStorage.getItem(SYNC_KEY);
+      if (raw) return { ...defaultSyncConfig(), ...JSON.parse(raw) };
+    } catch(e) {}
+    return defaultSyncConfig();
+  }
+  function saveSyncConfig() {
+    try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncConfig)); } catch(e) {}
+  }
+
+  let syncConfig = loadSyncConfig();
+  let syncState = { connected: false, lastSync: null, listener: null, db: null, pushing: false };
+
+  function encodeRoomName(name) {
+    return String(name).replace(/[.#$\[\]\/]/g, '_').substring(0, 128);
+  }
+
+  function initFirebaseSync() {
+    if (!syncConfig.enabled || !syncConfig.apiKey || !syncConfig.databaseURL || !syncConfig.roomName) {
+      disconnectSync();
+      return;
+    }
+    try {
+      if (firebase.apps.length) {
+        firebase.app().delete().then(connectFirebase).catch(connectFirebase);
+      } else {
+        connectFirebase();
+      }
+    } catch(e) {
+      console.error('Firebase init error:', e);
+      syncState.connected = false;
+      updateSyncStatusUI();
+    }
+  }
+
+  function connectFirebase() {
+    try {
+      firebase.initializeApp({
+        apiKey: syncConfig.apiKey,
+        databaseURL: syncConfig.databaseURL
+      });
+      syncState.db = firebase.database();
+
+      syncState.db.ref('.info/connected').on('value', function(snap) {
+        syncState.connected = snap.val() === true;
+        updateSyncStatusUI();
+      });
+
+      listenRemoteData();
+    } catch(e) {
+      console.error('Firebase connect error:', e);
+      syncState.connected = false;
+      updateSyncStatusUI();
+    }
+  }
+
+  function listenRemoteData() {
+    if (!syncState.db || !syncConfig.roomName) return;
+    const roomRef = syncState.db.ref('rooms/' + encodeRoomName(syncConfig.roomName) + '/data');
+    if (syncState.listener) { syncState.listener.off(); }
+    syncState.listener = roomRef;
+    roomRef.on('value', function(snap) {
+      if (syncState.pushing) { syncState.pushing = false; return; }
+      const remoteData = snap.val();
+      if (remoteData && Array.isArray(remoteData)) {
+        const localJson = JSON.stringify(state.companies);
+        const remoteJson = JSON.stringify(remoteData);
+        if (localJson !== remoteJson) {
+          state.companies = remoteData;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteData)); } catch(e) {}
+          syncState.lastSync = new Date().toISOString();
+          render();
+        }
+      }
+      updateSyncStatusUI();
+    });
+  }
+
+  function syncToCloud() {
+    if (!syncState.db || !syncConfig.enabled || !syncConfig.roomName) return;
+    syncState.pushing = true;
+    const roomRef = syncState.db.ref('rooms/' + encodeRoomName(syncConfig.roomName) + '/data');
+    roomRef.set(state.companies).then(function() {
+      syncState.lastSync = new Date().toISOString();
+      updateSyncStatusUI();
+    }).catch(function(err) {
+      console.error('Sync push error:', err);
+      syncState.pushing = false;
+    });
+  }
+
+  function pullFromCloud() {
+    if (!syncState.db || !syncConfig.enabled || !syncConfig.roomName) return;
+    const roomRef = syncState.db.ref('rooms/' + encodeRoomName(syncConfig.roomName) + '/data');
+    roomRef.once('value').then(function(snap) {
+      const remoteData = snap.val();
+      if (remoteData && Array.isArray(remoteData)) {
+        state.companies = remoteData;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteData)); } catch(e) {}
+        syncState.lastSync = new Date().toISOString();
+        render();
+      }
+      updateSyncStatusUI();
+    }).catch(function(err) { console.error('Pull error:', err); });
+  }
+
+  function disconnectSync() {
+    if (syncState.listener) { syncState.listener.off(); syncState.listener = null; }
+    try { if (firebase.apps.length) firebase.app().delete(); } catch(e) {}
+    syncState.connected = false;
+    syncState.db = null;
+    updateSyncStatusUI();
+  }
+
+  function updateSyncStatusUI() {
+    const el = document.getElementById('sync-status-indicator');
+    if (!el) return;
+    if (!syncConfig.enabled) {
+      el.innerHTML = '<span class="settings-status off">Sincronizzazione disattivata</span>';
+    } else if (syncState.connected) {
+      const timeStr = syncState.lastSync ? ' — ultimo sync: ' + new Date(syncState.lastSync).toLocaleTimeString('it-IT') : '';
+      el.innerHTML = '<span class="settings-status ok">' + icons.check + ' Connesso' + esc(timeStr) + '</span>';
+    } else {
+      el.innerHTML = '<span class="settings-status warn">Connessione in corso…</span>';
+    }
   }
 
   /* ── Theme ── */
@@ -1768,6 +1906,46 @@
         ${emailLog.length === 0 ? '<div style="font-size:13px;color:var(--color-text-tertiary);padding:8px 0">Nessun invio registrato.</div>' : logHtml}
         ${emailLog.length > 0 ? '<div style="margin-top:10px"><button class="btn-sm" onclick="clearEmailLog()">Cancella log</button></div>' : ''}
       </div>
+
+      <div class="settings-section">
+        <h4>${icons.cloud} Sincronizzazione Cloud (Firebase)</h4>
+        <div id="sync-status-indicator">
+          ${!syncConfig.enabled
+            ? '<span class="settings-status off">Sincronizzazione disattivata</span>'
+            : syncState.connected
+              ? '<span class="settings-status ok">' + icons.check + ' Connesso' + (syncState.lastSync ? ' — ultimo sync: ' + new Date(syncState.lastSync).toLocaleTimeString('it-IT') : '') + '</span>'
+              : '<span class="settings-status warn">Connessione in corso…</span>'
+          }
+        </div>
+        <div class="toggle-row" style="margin-top:12px">
+          <label class="toggle-switch">
+            <input type="checkbox" ${syncConfig.enabled?'checked':''} onchange="toggleCloudSync(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">Attiva sincronizzazione cloud tra dispositivi</span>
+        </div>
+        <div class="settings-row triple" style="margin-top:8px">
+          <div class="settings-field">
+            <label for="sync-apikey">API Key</label>
+            <input id="sync-apikey" type="text" value="${escAttr(syncConfig.apiKey)}" placeholder="AIzaSy..." onchange="saveSyncField('apiKey', this.value)">
+          </div>
+          <div class="settings-field">
+            <label for="sync-dburl">Database URL</label>
+            <input id="sync-dburl" type="text" value="${escAttr(syncConfig.databaseURL)}" placeholder="https://progetto.firebaseio.com" onchange="saveSyncField('databaseURL', this.value)">
+          </div>
+          <div class="settings-field">
+            <label for="sync-room">Nome stanza</label>
+            <input id="sync-room" type="text" value="${escAttr(syncConfig.roomName)}" placeholder="la-mia-azienda" onchange="saveSyncField('roomName', this.value)">
+          </div>
+        </div>
+        <div class="settings-hint">Crea un progetto gratuito su <strong>console.firebase.google.com</strong> → Realtime Database → copia API Key e Database URL. Tutti i dispositivi con la stessa stanza vedranno gli stessi dati.</div>
+        <div class="settings-hint" style="margin-top:4px">Regole database consigliate: <code>{"rules": {".read": true, ".write": true}}</code> (oppure configura autenticazione per maggiore sicurezza).</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-sm" onclick="applySyncConfig()">Applica configurazione</button>
+          <button class="btn-sm" onclick="pullFromCloud()" ${!syncState.connected?'disabled':''}>Scarica dati dal cloud</button>
+          <button class="btn-sm" onclick="forcePushToCloud()" ${!syncState.connected?'disabled':''}>Carica dati sul cloud</button>
+        </div>
+      </div>
     </div>`;
   }
 
@@ -1801,6 +1979,33 @@
     applyTheme(state.theme);
     render();
   };
+
+  /* ── Sync event handlers ── */
+  window.toggleCloudSync = (enabled) => {
+    syncConfig.enabled = enabled;
+    saveSyncConfig();
+    if (enabled) { initFirebaseSync(); } else { disconnectSync(); }
+    render();
+  };
+  window.saveSyncField = (field, value) => {
+    syncConfig[field] = value;
+    saveSyncConfig();
+  };
+  window.applySyncConfig = () => {
+    saveSyncConfig();
+    initFirebaseSync();
+    render();
+  };
+  window.forcePushToCloud = () => {
+    if (!syncState.connected) return;
+    syncState.pushing = true;
+    const roomRef = syncState.db.ref('rooms/' + encodeRoomName(syncConfig.roomName) + '/data');
+    roomRef.set(state.companies).then(() => {
+      syncState.lastSync = new Date().toISOString();
+      updateSyncStatusUI();
+    }).catch(err => { console.error('Push error:', err); syncState.pushing = false; });
+  };
+  window.pullFromCloud = pullFromCloud;
 
   window.editContract = (id) => {
     state.editingContract = state.companies.find(c => c.id === id);
@@ -2054,6 +2259,7 @@
   checkAlerts();
   render();
   if (emailSettings.autoSend.enabled) startAutoSend();
+  if (syncConfig.enabled) initFirebaseSync();
   </script>
 </body>
 </html>
