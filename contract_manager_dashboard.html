@@ -794,10 +794,21 @@
   }
 
   let syncConfig = loadSyncConfig();
-  let syncState = { connected: false, lastSync: null, listener: null, db: null, pushing: false };
+  let syncState = { connected: false, lastSync: null, listener: null, db: null, skipNext: false };
 
   function encodeRoomName(name) {
     return String(name).replace(/[.#$\[\]\/]/g, '_').substring(0, 128);
+  }
+
+  function firebaseValToArray(val) {
+    if (!val) return null;
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'object') {
+      const keys = Object.keys(val);
+      if (keys.length === 0) return null;
+      return keys.map(k => val[k]).filter(Boolean);
+    }
+    return null;
   }
 
   function initFirebaseSync() {
@@ -845,9 +856,9 @@
     if (syncState.listener) { syncState.listener.off(); }
     syncState.listener = roomRef;
     roomRef.on('value', function(snap) {
-      if (syncState.pushing) { syncState.pushing = false; return; }
-      const remoteData = snap.val();
-      if (remoteData && Array.isArray(remoteData)) {
+      if (syncState.skipNext) { syncState.skipNext = false; updateSyncStatusUI(); return; }
+      const remoteData = firebaseValToArray(snap.val());
+      if (remoteData) {
         const localJson = JSON.stringify(state.companies);
         const remoteJson = JSON.stringify(remoteData);
         if (localJson !== remoteJson) {
@@ -863,14 +874,14 @@
 
   function syncToCloud() {
     if (!syncState.db || !syncConfig.enabled || !syncConfig.roomName) return;
-    syncState.pushing = true;
+    syncState.skipNext = true;
     const roomRef = syncState.db.ref('rooms/' + encodeRoomName(syncConfig.roomName) + '/data');
-    roomRef.set(state.companies).then(function() {
+    roomRef.set(JSON.parse(JSON.stringify(state.companies))).then(function() {
       syncState.lastSync = new Date().toISOString();
       updateSyncStatusUI();
     }).catch(function(err) {
       console.error('Sync push error:', err);
-      syncState.pushing = false;
+      syncState.skipNext = false;
     });
   }
 
@@ -878,12 +889,14 @@
     if (!syncState.db || !syncConfig.enabled || !syncConfig.roomName) return;
     const roomRef = syncState.db.ref('rooms/' + encodeRoomName(syncConfig.roomName) + '/data');
     roomRef.once('value').then(function(snap) {
-      const remoteData = snap.val();
-      if (remoteData && Array.isArray(remoteData)) {
+      const remoteData = firebaseValToArray(snap.val());
+      if (remoteData) {
         state.companies = remoteData;
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteData)); } catch(e) {}
         syncState.lastSync = new Date().toISOString();
         render();
+      } else {
+        console.warn('Nessun dato trovato nel cloud per questa stanza.');
       }
       updateSyncStatusUI();
     }).catch(function(err) { console.error('Pull error:', err); });
@@ -908,6 +921,10 @@
     } else {
       el.innerHTML = '<span class="settings-status warn">Connessione in corso…</span>';
     }
+    const btnPull = document.getElementById('btn-sync-pull');
+    const btnPush = document.getElementById('btn-sync-push');
+    if (btnPull) btnPull.disabled = !syncState.connected;
+    if (btnPush) btnPush.disabled = !syncState.connected;
   }
 
   /* ── Theme ── */
@@ -1942,8 +1959,8 @@
         <div class="settings-hint" style="margin-top:4px">Regole database consigliate: <code>{"rules": {".read": true, ".write": true}}</code> (oppure configura autenticazione per maggiore sicurezza).</div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-sm" onclick="applySyncConfig()">Applica configurazione</button>
-          <button class="btn-sm" onclick="pullFromCloud()" ${!syncState.connected?'disabled':''}>Scarica dati dal cloud</button>
-          <button class="btn-sm" onclick="forcePushToCloud()" ${!syncState.connected?'disabled':''}>Carica dati sul cloud</button>
+          <button class="btn-sm" id="btn-sync-pull" onclick="pullFromCloud()" ${!syncState.connected?'disabled':''}>Scarica dati dal cloud</button>
+          <button class="btn-sm" id="btn-sync-push" onclick="forcePushToCloud()" ${!syncState.connected?'disabled':''}>Carica dati sul cloud</button>
         </div>
       </div>
     </div>`;
@@ -1997,13 +2014,13 @@
     render();
   };
   window.forcePushToCloud = () => {
-    if (!syncState.connected) return;
-    syncState.pushing = true;
+    if (!syncState.connected || !syncState.db) return;
+    syncState.skipNext = true;
     const roomRef = syncState.db.ref('rooms/' + encodeRoomName(syncConfig.roomName) + '/data');
-    roomRef.set(state.companies).then(() => {
+    roomRef.set(JSON.parse(JSON.stringify(state.companies))).then(() => {
       syncState.lastSync = new Date().toISOString();
       updateSyncStatusUI();
-    }).catch(err => { console.error('Push error:', err); syncState.pushing = false; });
+    }).catch(err => { console.error('Push error:', err); syncState.skipNext = false; });
   };
   window.pullFromCloud = pullFromCloud;
 
