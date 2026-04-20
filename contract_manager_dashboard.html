@@ -718,6 +718,7 @@
     companies: loadData(),
     modal: null,
     editingContract: null,
+    editingCompany: null,
     sortBy: 'urgency',
     emailModal: null,
     emailEditMode: 'preview',
@@ -742,7 +743,7 @@
   function loadData() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed) && parsed.length) return parsed; }
+      if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) return parsed; }
     } catch(e) {}
     return defaultCompanies();
   }
@@ -1397,7 +1398,7 @@
             <div class="company-detail-name">${esc(companyName)}</div>
             <div class="company-detail-info">${icons.mail} ${esc(first.adminEmail)} · ${esc(first.companyEmail)}</div>
           </div>
-          <button class="btn-sm primary" onclick="addContractToCompany()">+ Nuovo contratto</button>
+          <button class="btn-sm primary" onclick="addContractToCompany()">+ Nuovo dipendente</button>
         </div>`;
         html += `<div class="section-title">Contratti (${companyContracts.length})</div>`;
         sortedContracts(companyContracts).forEach(c => {
@@ -1411,7 +1412,10 @@
     }
 
     /* Modals */
-    if (state.modal === 'add' || state.modal === 'edit' || state.modal === 'add-contract') {
+    if (state.modal === 'add-company') {
+      html += renderCompanyModal();
+    }
+    if (state.modal === 'edit' || state.modal === 'add-contract') {
       html += renderModal();
     }
     if (state.emailModal) {
@@ -1569,30 +1573,57 @@
     </div>`;
   }
 
+  function renderCompanyModal() {
+    const c = state.editingCompany || {};
+    const isEdit = state.modal === 'edit-company';
+    const modalTitle = isEdit ? 'Modifica azienda' : 'Nuova azienda';
+    return `<div class="modal-bg" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-label="${modalTitle}" style="width:min(460px,94vw)">
+        <h3>${modalTitle}</h3>
+        <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px">Inserisci i dati dell'azienda. Dopo la creazione potrai aggiungere dipendenti e contratti.</p>
+        <div class="form-row single">
+          <div class="form-field"><label for="fc-name">Nome azienda</label><input id="fc-name" type="text" value="${escAttr(c.name||'')}" placeholder="Es. Acme S.r.l." required autofocus></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field"><label for="fc-admin">Email amministratore</label><input id="fc-admin" type="email" value="${escAttr(c.adminEmail||'')}" placeholder="admin@esempio.it"></div>
+          <div class="form-field"><label for="fc-company">Email azienda</label><input id="fc-company" type="email" value="${escAttr(c.companyEmail||'')}" placeholder="contratti@azienda.it"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-sm" onclick="closeModal()">Annulla</button>
+          <button class="btn-sm primary" onclick="saveCompany()">Crea azienda e aggiungi dipendente</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   function renderModal() {
     const c = state.editingContract || {};
     const isEdit = state.modal === 'edit';
     const isAddContract = state.modal === 'add-contract';
-    const modalTitle = isEdit ? 'Modifica contratto' : isAddContract ? 'Nuovo contratto — ' + esc(c.name||'') : 'Nuovo contratto';
+    const modalTitle = isEdit ? 'Modifica contratto' : 'Nuovo dipendente / contratto — ' + esc(c.name||'');
     return `<div class="modal-bg" onclick="closeModal()">
       <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-label="${modalTitle}">
         <h3>${modalTitle}</h3>
+        ${isAddContract ? `<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">Azienda: <strong>${esc(c.name||'')}</strong> — compila i dati del dipendente e del contratto</div>
+        <input id="f-name" type="hidden" value="${escAttr(c.name||'')}">
+        <input id="f-admin" type="hidden" value="${escAttr(c.adminEmail||'')}">
+        <input id="f-company" type="hidden" value="${escAttr(c.companyEmail||'')}">` : `
         <div class="form-row">
-          <div class="form-field"><label for="f-name">Nome azienda</label><input id="f-name" type="text" value="${escAttr(c.name||'')}" placeholder="Es. Acme S.r.l." required ${isAddContract ? 'readonly style="opacity:0.6;cursor:not-allowed"' : ''}></div>
+          <div class="form-field"><label for="f-name">Nome azienda</label><input id="f-name" type="text" value="${escAttr(c.name||'')}" placeholder="Es. Acme S.r.l." required></div>
           <div class="form-field"><label for="f-type">Tipo contratto</label><input id="f-type" type="text" value="${escAttr(c.contractType||'')}" placeholder="Es. Fornitura servizi"></div>
-        </div>
+        </div>`}
         <div class="form-row">
-          <div class="form-field"><label for="f-employee">Nome dipendente</label><input id="f-employee" type="text" value="${escAttr(c.employeeName||'')}" placeholder="Es. Mario Rossi"></div>
-          <div class="form-field"></div>
+          <div class="form-field"><label for="f-employee">Nome dipendente</label><input id="f-employee" type="text" value="${escAttr(c.employeeName||'')}" placeholder="Es. Mario Rossi" ${isAddContract ? 'autofocus' : ''}></div>
+          <div class="form-field"><label for="f-type">${isAddContract ? 'Tipo contratto' : ''}</label>${isAddContract ? '<input id="f-type" type="text" value="' + escAttr(c.contractType||'') + '" placeholder="Es. Fornitura servizi">' : ''}</div>
         </div>
         <div class="form-row">
           <div class="form-field"><label for="f-start">Data inizio</label><input id="f-start" type="date" value="${c.startDate||''}"></div>
           <div class="form-field"><label for="f-end">Data scadenza</label><input id="f-end" type="date" value="${c.endDate||''}" required></div>
         </div>
-        <div class="form-row">
+        ${!isAddContract ? `<div class="form-row">
           <div class="form-field"><label for="f-admin">Email amministratore</label><input id="f-admin" type="email" value="${escAttr(c.adminEmail||'')}" placeholder="admin@esempio.it"></div>
           <div class="form-field"><label for="f-company">Email azienda</label><input id="f-company" type="email" value="${escAttr(c.companyEmail||'')}" placeholder="contratti@azienda.it"></div>
-        </div>
+        </div>` : ''}
         <div class="form-row">
           <div class="form-field"><label for="f-renew">Prorogabile?</label>
             <select id="f-renew">
@@ -1630,7 +1661,7 @@
         </div>
         <div class="modal-actions">
           <button class="btn-sm" onclick="closeModal()">Annulla</button>
-          <button class="btn-sm primary" onclick="saveContract()">${isEdit ? 'Salva modifiche' : 'Aggiungi'}</button>
+          <button class="btn-sm primary" onclick="saveContract()">${isEdit ? 'Salva modifiche' : 'Aggiungi dipendente'}</button>
         </div>
       </div>
     </div>`;
@@ -1744,8 +1775,18 @@
   window.setTab = (i) => { state.activeTab = i; state.searchQuery = ''; render(); };
   window.setSortBy = (v) => { state.sortBy = v; render(); };
   window.setSearch = (v) => { state.searchQuery = v; render(); };
-  window.openModal = (mode) => { state.modal = mode; state.editingContract = null; render(); };
-  window.closeModal = () => { state.modal = null; state.editingContract = null; render(); };
+  window.openModal = (mode) => {
+    if (mode === 'add') {
+      state.modal = 'add-company';
+      state.editingCompany = { name: '', adminEmail: '', companyEmail: '' };
+      state.editingContract = null;
+    } else {
+      state.modal = mode;
+      state.editingContract = null;
+    }
+    render();
+  };
+  window.closeModal = () => { state.modal = null; state.editingContract = null; state.editingCompany = null; render(); };
   window.closeEmailModal = () => { state.emailModal = null; state.emailDraft = null; state.emailEditMode = 'preview'; render(); };
   window.cancelDelete = () => { state.confirmDelete = null; render(); };
   window.exportCSV = exportCSV;
@@ -1911,6 +1952,35 @@
     }
   };
 
+  window.saveCompany = () => {
+    const name = document.getElementById('fc-name').value.trim();
+    const adminEmail = document.getElementById('fc-admin').value.trim();
+    const companyEmail = document.getElementById('fc-company').value.trim();
+
+    if (!name) { showToast('Inserire il nome dell\'azienda.'); return; }
+
+    /* Verifica duplicati */
+    const uniqueNames = [...new Set(state.companies.map(c => c.name))];
+    if (uniqueNames.some(n => n.toLowerCase() === name.toLowerCase())) {
+      showToast('Azienda "' + name + '" già esistente. Usa il tab dell\'azienda per aggiungere dipendenti.');
+      return;
+    }
+
+    /* Apri direttamente il form dipendente/contratto con dati azienda pre-compilati */
+    state.modal = 'add-contract';
+    state.editingCompany = null;
+    state.editingContract = {
+      name: name,
+      adminEmail: adminEmail,
+      companyEmail: companyEmail,
+      employeeName: '', contractType: '', startDate: '', endDate: '',
+      renewable: true, renewMonths: 12, renewType: 'Senza causale',
+      renewNotice: 30, renewCount: 0, notes: ''
+    };
+    render();
+    showToast('Azienda "' + name + '" pronta — inserisci il primo dipendente');
+  };
+
   window.saveContract = () => {
     const name = document.getElementById('f-name').value.trim();
     const employeeName = document.getElementById('f-employee').value.trim();
@@ -1953,7 +2023,7 @@
       state.companies.push({ id: newId, name, employeeName, contractType, startDate, endDate, adminEmail, companyEmail, renewable, renewMonths, renewType, renewNotice, renewCount, notes });
       const uniqueNames = [...new Set(state.companies.map(c => c.name))];
       state.activeTab = uniqueNames.indexOf(name) + 1;
-      showToast(state.modal === 'add-contract' ? 'Contratto aggiunto' : 'Nuovo contratto aggiunto');
+      showToast(state.modal === 'add-contract' ? 'Dipendente aggiunto' : 'Nuovo contratto aggiunto');
     }
 
     state.modal = null;
@@ -1967,7 +2037,7 @@
     if (e.key === 'Escape') {
       if (state.confirmDelete) { state.confirmDelete = null; render(); }
       else if (state.emailModal) { state.emailModal = null; render(); }
-      else if (state.modal) { state.modal = null; state.editingContract = null; render(); }
+      else if (state.modal) { state.modal = null; state.editingContract = null; state.editingCompany = null; render(); }
     }
   });
 
