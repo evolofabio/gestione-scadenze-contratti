@@ -1369,6 +1369,14 @@
     return (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + (e.getDate() > s.getDate() ? 1 : 0);
   }
 
+  function calcolaMesiRimanenti(endDate) {
+    if (!endDate) return 0;
+    const oggi = new Date(); oggi.setHours(0,0,0,0);
+    const fine = new Date(endDate); fine.setHours(0,0,0,0);
+    if (fine <= oggi) return 0;
+    return (fine.getFullYear() - oggi.getFullYear()) * 12 + (fine.getMonth() - oggi.getMonth()) + (fine.getDate() > oggi.getDate() ? 1 : 0);
+  }
+
   function verificaCausale(durata_totale_mesi, numero_proroghe, presenza_causale) {
     durata_totale_mesi = parseInt(durata_totale_mesi) || 0;
     numero_proroghe = parseInt(numero_proroghe) || 0;
@@ -1531,6 +1539,9 @@
     const renewCount = parseInt((document.getElementById('f-renewcount') || {}).value) || 0;
     if (!startDate || !endDate) { fb.innerHTML = ''; return; }
     const durata = calcolaDurataMesi(startDate, endDate);
+    /* Auto-aggiorna durata proroga dal contratto */
+    const fMonths = document.getElementById('f-months');
+    if (fMonths && durata > 0) fMonths.value = durata;
     const causale = renewType === 'Con causale';
     const result = verificaCausale(durata, renewCount, causale);
     fb.innerHTML = renderCausaleFeedback(result);
@@ -2142,6 +2153,10 @@
         <div class="card-field"><label>Inizio</label><span>${formatDate(c.startDate)}</span></div>
         <div class="card-field"><label>Scadenza</label><span>${formatDate(c.endDate)}</span></div>
         <div class="card-field"><label>Giorni rimanenti</label><span class="${days<=0?'days-red':days<=ALERT_DAYS?'days-red':days<=30?'days-amber':'days-green'}">${days <= 0 ? 'Scaduto' : days + ' giorni'}</span></div>
+        <div class="card-field"><label>Mesi rimanenti</label><span class="${days<=0?'days-red':days<=ALERT_DAYS?'days-red':days<=30?'days-amber':'days-green'}">${days <= 0 ? 'Scaduto' : calcolaMesiRimanenti(c.endDate) + ' mesi'}</span></div>`;
+
+    const durataMesi = calcolaDurataMesi(c.startDate, c.endDate);
+    html += `<div class="card-field"><label>Durata contratto</label><span>${durataMesi} mesi</span></div>
         <div class="card-field"><label>Preavviso proroga</label><span>${c.renewNotice ? c.renewNotice + ' giorni' : '—'}</span></div>`;
 
     if (c.renewable) {
@@ -2149,8 +2164,6 @@
         <div class="card-field"><label>Tipo proroga</label><span>${esc(c.renewType)}</span></div>
         <div class="card-field"><label>Proroghe effettuate</label><span>${c.renewCount || 0}</span></div>`;
     }
-    const durataMesi = calcolaDurataMesi(c.startDate, c.endDate);
-    html += `<div class="card-field"><label>Durata totale</label><span>${durataMesi} mesi</span></div>`;
     html += '</div>';
 
     const causaleResult = verificaCausaleContratto(c);
@@ -2320,7 +2333,7 @@
               <option value="no"${c.renewable === false ? ' selected' : ''}>No</option>
             </select>
           </div>
-          <div class="form-field"><label for="f-months">Durata proroga (mesi)</label><input id="f-months" type="number" value="${c.renewMonths||12}" min="1"></div>
+          <div class="form-field"><label for="f-months">Durata proroga (mesi)</label><input id="f-months" type="number" value="${c.renewMonths || calcolaDurataMesi(c.startDate, c.endDate) || ''}" min="1" placeholder="auto"></div>
         </div>
         <div class="form-row">
           <div class="form-field"><label for="f-rtype">Tipo proroga</label>
@@ -2575,7 +2588,7 @@
       adminEmail: existing ? existing.adminEmail : '',
       companyEmail: existing ? existing.companyEmail : '',
       employeeName: '', contractType: '', startDate: '', endDate: '',
-      renewable: true, renewMonths: 12, renewType: 'Senza causale',
+      renewable: true, renewMonths: 0, renewType: 'Senza causale',
       renewNotice: 30, renewCount: 0, notes: ''
     };
     render();
@@ -2731,7 +2744,7 @@
       adminEmail: adminEmail,
       companyEmail: companyEmail,
       employeeName: '', contractType: '', startDate: '', endDate: '',
-      renewable: true, renewMonths: 12, renewType: 'Senza causale',
+      renewable: true, renewMonths: 0, renewType: 'Senza causale',
       renewNotice: 30, renewCount: 0, notes: ''
     };
     render();
@@ -2747,7 +2760,7 @@
     const adminEmail = document.getElementById('f-admin').value.trim();
     const companyEmail = document.getElementById('f-company').value.trim();
     const renewable = document.getElementById('f-renew').value === 'yes';
-    const renewMonths = parseInt(document.getElementById('f-months').value) || 12;
+    const renewMonths = parseInt(document.getElementById('f-months').value) || calcolaDurataMesi(startDate, endDate) || 12;
     const renewType = document.getElementById('f-rtype').value;
     const renewNotice = parseInt(document.getElementById('f-notice').value) || 30;
     const renewCount = parseInt(document.getElementById('f-renewcount').value) || 0;
