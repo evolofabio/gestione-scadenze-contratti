@@ -1,0 +1,15 @@
+{
+  "name": "gestione-scadenze-contratti",
+  "version": "1.0.0",
+  "description": "Dashboard web per la gestione e il monitoraggio delle scadenze contrattuali aziendali. Applicazione single-page senza dipendenze server — basta aprire il file HTML in un browser.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "playwright": "^1.43.0"
+  }
+}
