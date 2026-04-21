@@ -557,30 +557,8 @@
     .export-menu-sep {
       height: 1px; background: var(--color-border-tertiary); margin: 0;
     }
-
-    let state = {
-      activeTab: 0,
-      companies: loadData(),
-      modal: null,
-      editingContract: null,
-      editingCompany: null,
-      sortBy: 'urgency',
-      filterMonth: '',
-      emailModal: null,
-      emailEditMode: 'preview',
-      emailDraft: null,
-      searchQuery: '',
-      confirmDelete: null,
-      showSettings: false,
-      showExportMenu: false,
-      theme: localStorage.getItem('cm_theme') || 'light',
-      // Cantieri modal state
-      cantiereModal: false,
-      editingCantiere: null
-    };
-      background: var(--color-background-primary); color: var(--color-text-primary);
-      font-family: var(--font-sans);
-    }
+    
+    .filter-clear {
     .filter-clear {
       background: none; border: none; cursor: pointer; font-size: 14px;
       color: var(--color-text-tertiary); padding: 2px 4px; line-height: 1;
