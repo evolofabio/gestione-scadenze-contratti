@@ -558,28 +558,26 @@
       height: 1px; background: var(--color-border-tertiary); margin: 0;
     }
 
-    .empty-state {
-      text-align: center; padding: 3rem 1rem;
-      color: var(--color-text-tertiary); font-size: 14px;
-    }
-    .empty-state svg { margin-bottom: 12px; opacity: 0.5; }
-
-    .sort-bar {
-      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-      margin-bottom: 12px; font-size: 12px; color: var(--color-text-secondary);
-    }
-    .sort-bar select {
-      font-size: 12px; padding: 6px 10px; border-radius: var(--border-radius-md);
-      border: 1px solid var(--color-border-secondary);
-      background: var(--color-background-primary); color: var(--color-text-primary);
-      font-family: var(--font-sans);
-    }
-    .filter-month-wrap {
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .filter-month-wrap input[type="month"] {
-      font-size: 12px; padding: 5px 8px; border-radius: var(--border-radius-md);
-      border: 1px solid var(--color-border-secondary);
+    let state = {
+      activeTab: 0,
+      companies: loadData(),
+      modal: null,
+      editingContract: null,
+      editingCompany: null,
+      sortBy: 'urgency',
+      filterMonth: '',
+      emailModal: null,
+      emailEditMode: 'preview',
+      emailDraft: null,
+      searchQuery: '',
+      confirmDelete: null,
+      showSettings: false,
+      showExportMenu: false,
+      theme: localStorage.getItem('cm_theme') || 'light',
+      // Cantieri modal state
+      cantiereModal: false,
+      editingCantiere: null
+    };
       background: var(--color-background-primary); color: var(--color-text-primary);
       font-family: var(--font-sans);
     }
@@ -609,17 +607,20 @@
 
     /* ── Responsive ── */
     @media (max-width: 900px) {
-      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    /* Modals */
+    if (state.modal === 'add-company') {
+      html += renderCompanyModal();
     }
-    @media (max-width: 640px) {
-      .app { padding: 0.75rem 1rem 2rem; }
-      .app-header { padding: 0.5rem 0 1rem; }
-      .app-title { font-size: 17px; }
-      .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-      .metric-card { padding: 12px 14px; }
-      .metric-value { font-size: 22px; }
-      .card-grid { grid-template-columns: 1fr 1fr; }
-      .form-row { grid-template-columns: 1fr; }
+    if (state.modal === 'edit' || state.modal === 'add-contract') { html += renderModal(); }
+    if (state.emailModal) {
+      html += renderEmailModal(state.emailModal);
+    }
+    if (state.confirmDelete) {
+      html += renderConfirmDelete(state.confirmDelete);
+    }
+    if (state.cantiereModal) {
+      html += renderCantiereModal();
+    }
       .card-header { flex-direction: column; gap: 8px; }
       .card-badges { justify-content: flex-start; }
       .tab-btn { padding: 8px 12px; font-size: 12px; }
@@ -2207,20 +2208,15 @@
           if (days >= 0 && days <= ALERT_DAYS) {
             html += renderEmailPreview(c, days);
           }
-          // Visualizza scadenze cantieri con grafica migliorata e divisorio
+          // Visualizza scadenze cantieri come card (stesso stile dei contratti)
           if (Array.isArray(c.cantieri) && c.cantieri.length > 0) {
             html += `<hr style='border:0;border-top:2px dashed #d8d6d0;margin:18px 0 12px 0;'>`;
             html += `<div class="cantieri-box">
-              <div class="cantieri-title">Scadenze Cantieri</div>
-              <ul class="cantieri-list">`;
-            c.cantieri.forEach(ct => {
-              html += `<li class="cantiere-item">
-                <span class="cantiere-nome">${esc(ct.nome)}</span>
-                <span class="cantiere-scadenza">Scadenza: <strong>${formatDate(ct.scadenza)}</strong></span>
-                ${ct.note ? `<span class="cantiere-note">${esc(ct.note)}</span>` : ''}
-              </li>`;
+              <div class="cantieri-title">Scadenze Cantieri</div>`;
+            c.cantieri.forEach((ct, ci) => {
+              html += renderCantiere(ct, c, ci);
             });
-            html += `</ul></div>`;
+            html += `</div>`;
           }
 // ...existing code...
         });
@@ -2315,7 +2311,99 @@
     return html;
   }
 
-  function renderEmailPreview(c, days) {
+    function renderCantiere(ct, contract, idx) {
+      const days = daysLeft(ct.scadenza);
+      const uc = urgencyClass(days);
+      const ub = urgencyBadge(days);
+      return `<div class="contract-card ${uc} cantiere-card">
+        <div class="card-header">
+          <div>
+            <div class="card-company">${esc(ct.nome)}</div>
+            ${contract.employeeName ? `<div class="card-employee">Dipendente: <strong>${esc(contract.employeeName)}</strong></div>` : ''}
+            <div class="card-type">Cantiere — ${esc(contract.name)}</div>
+          </div>
+          <div class="card-badges">
+            <span class="badge ${ub.cls}">${ub.text}</span>
+          </div>
+        </div>
+        <div class="card-grid">
+          <div class="card-field"><label>Scadenza</label><span>${formatDate(ct.scadenza)}</span></div>
+          <div class="card-field"><label>Giorni rimanenti</label><span class="${days<=0?'days-red':days<=ALERT_DAYS?'days-red':days<=30?'days-amber':'days-green'}">${days <= 0 ? 'Scaduto' : days + ' giorni'}</span></div>
+          <div class="card-field"><label>Note</label><span>${ct.note ? esc(ct.note) : '—'}</span></div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-sm" onclick="openEditCantiere(${contract.id}, ${idx})">Modifica</button>
+          <button class="btn-sm danger-btn" onclick="deleteCantiere(${contract.id}, ${idx})">Elimina</button>
+        </div>
+      </div>`;
+    }
+
+    function renderCantiereModal() {
+      if (!state.cantiereModal || !state.editingCantiere) return '';
+      const e = state.editingCantiere;
+      return `<div class="modal-bg" onclick="closeCantiereModal()">
+        <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-label="${e.idx>=0? 'Modifica scadenza cantiere' : 'Nuova scadenza cantiere'}" style="width:min(520px,94vw)">
+          <h3>${e.idx>=0? 'Modifica scadenza cantiere' : 'Nuova scadenza cantiere'}</h3>
+          <div class="form-row">
+            <div class="form-field"><label for="cm-nome">Nome cantiere</label><input id="cm-nome" type="text" value="${escAttr(e.nome||'')}"></div>
+            <div class="form-field"><label for="cm-scadenza">Scadenza</label><input id="cm-scadenza" type="date" value="${e.scadenza||''}"></div>
+          </div>
+          <div class="form-row single"><div class="form-field"><label for="cm-note">Note</label><input id="cm-note" type="text" value="${escAttr(e.note||'')}"></div></div>
+          <div class="modal-actions">
+            <button class="btn-sm" onclick="closeCantiereModal()">Annulla</button>
+            <button class="btn-sm primary" onclick="saveCantiere()">Salva</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    window.openEditCantiere = function(contractId, idx) {
+      const contract = state.companies.find(c => c.id === contractId);
+      if (!contract) return;
+      const ct = (Array.isArray(contract.cantieri) && contract.cantieri[idx]) ? contract.cantieri[idx] : { nome: '', scadenza: '', note: '' };
+      state.cantiereModal = true;
+      state.editingCantiere = { contractId: contractId, idx: idx, nome: ct.nome || '', scadenza: ct.scadenza || '', note: ct.note || '' };
+      render();
+    };
+
+    window.closeCantiereModal = function() {
+      state.cantiereModal = false;
+      state.editingCantiere = null;
+      render();
+    };
+
+    window.saveCantiere = function() {
+      const e = state.editingCantiere || {};
+      const nome = (document.getElementById('cm-nome') || {}).value?.trim() || '';
+      const scadenza = (document.getElementById('cm-scadenza') || {}).value || '';
+      const note = (document.getElementById('cm-note') || {}).value?.trim() || '';
+      if (!nome || !scadenza) { showToast('Inserisci nome e scadenza cantiere'); return; }
+      const contract = state.companies.find(c => c.id === e.contractId);
+      if (!contract) return;
+      if (!Array.isArray(contract.cantieri)) contract.cantieri = [];
+      if (typeof e.idx === 'number' && e.idx >= 0 && contract.cantieri[e.idx]) {
+        contract.cantieri[e.idx] = { nome, scadenza, note };
+        showToast('Scadenza cantiere aggiornata');
+      } else {
+        contract.cantieri.push({ nome, scadenza, note });
+        showToast('Scadenza cantiere aggiunta');
+      }
+      saveData();
+      state.cantiereModal = false;
+      state.editingCantiere = null;
+      render();
+    };
+
+    window.deleteCantiere = function(contractId, idx) {
+      const contract = state.companies.find(c => c.id === contractId);
+      if (!contract || !Array.isArray(contract.cantieri)) return;
+      contract.cantieri.splice(idx, 1);
+      saveData();
+      render();
+      showToast('Scadenza cantiere rimossa');
+    };
+
+    function renderEmailPreview(c, days) {
     return `<div class="email-preview">
       <div class="email-header">
         A: ${esc(c.adminEmail)}; ${esc(c.companyEmail)}<br>
