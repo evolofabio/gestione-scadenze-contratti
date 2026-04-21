@@ -786,7 +786,11 @@
         renewMonths: 12, renewType: 'Senza causale', renewNotice: 30,
         renewCount: 2,
         adminEmail: 'admin@example.com', companyEmail: 'contratti@acme.it',
-        notes: 'Rinnovo automatico salvo disdetta. Verificare aggiornamento prezzi prima del rinnovo.'
+        notes: 'Rinnovo automatico salvo disdetta. Verificare aggiornamento prezzi prima del rinnovo.',
+        cantieri: [
+          { nome: 'Cantiere Milano', scadenza: computeDate(10), note: 'Verifica sicurezza.' },
+          { nome: 'Cantiere Roma', scadenza: computeDate(30), note: '' }
+        ]
       },
       {
         id: 4, name: 'Acme S.r.l.', employeeName: 'Laura Verdi', contractType: 'Supporto tecnico',
@@ -794,7 +798,8 @@
         renewMonths: 6, renewType: 'Automatica', renewNotice: 15,
         renewCount: 0,
         adminEmail: 'admin@example.com', companyEmail: 'contratti@acme.it',
-        notes: 'Contratto di supporto tecnico on-site.'
+        notes: 'Contratto di supporto tecnico on-site.',
+        cantieri: []
       },
       {
         id: 2, name: 'Beta Solutions S.p.A.', employeeName: 'Giuseppe Neri', contractType: 'Contratto di appalto',
@@ -802,7 +807,10 @@
         renewMonths: 6, renewType: 'Con causale', renewNotice: 60,
         renewCount: 1,
         adminEmail: 'admin@example.com', companyEmail: 'legal@beta.it',
-        notes: 'Proroga subordinata a valutazione performance. Richiedere report KPI entro 30 giorni dalla scadenza.'
+        notes: 'Proroga subordinata a valutazione performance. Richiedere report KPI entro 30 giorni dalla scadenza.',
+        cantieri: [
+          { nome: 'Cantiere Napoli', scadenza: computeDate(60), note: 'Controllo documenti.' }
+        ]
       },
       {
         id: 3, name: 'Gamma Trade S.r.l.', employeeName: 'Anna Russo', contractType: 'Accordo commerciale',
@@ -810,10 +818,52 @@
         renewMonths: 0, renewType: '', renewNotice: 0,
         renewCount: 0,
         adminEmail: 'admin@example.com', companyEmail: 'info@gamma.it',
-        notes: 'Contratto a termine fisso, non prorogabile.'
+        notes: 'Contratto a termine fisso, non prorogabile.',
+        cantieri: []
       }
     ];
   }
+  // Estrazione per azienda (contratti e scadenze cantieri)
+  function exportAziendaData(companyName) {
+    // Filtra contratti e cantieri per azienda
+    const contracts = state.companies.filter(c => c.name === companyName);
+    let rows = [];
+    contracts.forEach(c => {
+      // Riga contratto
+      rows.push([
+        c.name, c.employeeName || '', c.contractType,
+        formatDate(c.startDate), formatDate(c.endDate), daysLeft(c.endDate),
+        c.renewable ? 'Sì' : 'No', c.renewMonths || '', c.renewType || '', c.renewNotice || '',
+        c.renewCount || 0, c.adminEmail || '', c.companyEmail || '', c.notes || ''
+      ]);
+      // Riga per ogni cantiere
+      if (Array.isArray(c.cantieri)) {
+        c.cantieri.forEach(ct => {
+          rows.push([
+            c.name, '', 'CANTIERE: ' + (ct.nome || ''), '', formatDate(ct.scadenza), daysLeft(ct.scadenza), '', '', '', '', '', '', '', ct.note || ''
+          ]);
+        });
+      }
+    });
+    return rows;
+  }
+
+  // Esporta Excel solo per azienda selezionata (contratti + scadenze cantieri)
+  function exportExcelAzienda(companyName) {
+    const headers = getExportHeaders();
+    const rows = exportAziendaData(companyName);
+    const wsData = [headers, ...rows];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [
+      { wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 24 }, { wch: 24 }, { wch: 40 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, companyName);
+    XLSX.writeFile(wb, `contratti_cantieri_${companyName.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Excel azienda esportato con successo');
+  }
+
+  // UI: bottone esporta per azienda nella vista azienda
 
   /* ── Settings defaults ── */
   function defaultSettings() {
@@ -2099,6 +2149,7 @@
             <div class="company-detail-info">${icons.mail} ${esc(first.adminEmail)} · ${esc(first.companyEmail)}</div>
           </div>
           <button class="btn-sm primary" onclick="addContractToCompany()">+ Nuovo dipendente</button>
+          <button class="btn-sm" onclick="exportExcelAzienda('${companyName.replace(/'/g, '\\'')}")">Esporta Excel azienda</button>
         </div>`;
         html += `<div class="section-title">Contratti (${companyContracts.length})</div>`;
         sortedContracts(companyContracts).forEach(c => {
@@ -2107,8 +2158,43 @@
           if (days >= 0 && days <= ALERT_DAYS) {
             html += renderEmailPreview(c, days);
           }
+          // Visualizza scadenze cantieri
+          if (Array.isArray(c.cantieri) && c.cantieri.length > 0) {
+            html += `<div style='margin:10px 0 0 0;padding:10px 12px;background:#f8f7f4;border-radius:8px;border:1px solid #e8e6e1'>
+              <strong>Cantieri associati:</strong><ul style='margin:6px 0 0 0;padding:0 0 0 18px'>`;
+            c.cantieri.forEach(ct => {
+              html += `<li><span style='font-weight:600'>${esc(ct.nome)}</span> — Scadenza: <span style='color:#dc2626'>${formatDate(ct.scadenza)}</span>${ct.note ? ' — ' + esc(ct.note) : ''}</li>`;
+            });
+            html += `</ul></div>`;
+          }
         });
+        // Form aggiunta cantiere
+        html += `<div style='margin:18px 0 0 0;padding:12px 14px;background:#f0efe9;border-radius:8px;border:1px solid #e8e6e1'>
+          <strong>Aggiungi scadenza cantiere:</strong><br>
+          <input id='cantiere-nome' type='text' placeholder='Nome cantiere' style='margin:4px 8px 4px 0'>
+          <input id='cantiere-scadenza' type='date' style='margin:4px 8px 4px 0'>
+          <input id='cantiere-note' type='text' placeholder='Note' style='margin:4px 8px 4px 0'>
+          <button class='btn-sm' onclick='aggiungiCantiereAzienda("${companyName.replace(/'/g, '\\'')}")'>Aggiungi</button>
+        </div>`;
       }
+      // Funzione per aggiungere scadenza cantiere a tutti i contratti di una azienda
+      window.aggiungiCantiereAzienda = function(companyName) {
+        const nome = document.getElementById('cantiere-nome').value.trim();
+        const scadenza = document.getElementById('cantiere-scadenza').value;
+        const note = document.getElementById('cantiere-note').value.trim();
+        if (!nome || !scadenza) { showToast('Inserisci nome e scadenza cantiere'); return; }
+        let count = 0;
+        state.companies.forEach(c => {
+          if (c.name === companyName) {
+            if (!Array.isArray(c.cantieri)) c.cantieri = [];
+            c.cantieri.push({ nome, scadenza, note });
+            count++;
+          }
+        });
+        saveData();
+        render();
+        showToast('Cantiere aggiunto a ' + count + ' contratti');
+      };
     }
 
     /* Modals */
