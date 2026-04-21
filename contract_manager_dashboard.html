@@ -2158,15 +2158,70 @@
           if (days >= 0 && days <= ALERT_DAYS) {
             html += renderEmailPreview(c, days);
           }
-          // Visualizza scadenze cantieri
+          // Visualizza scadenze cantieri con grafica migliorata e divisorio
           if (Array.isArray(c.cantieri) && c.cantieri.length > 0) {
-            html += `<div style='margin:10px 0 0 0;padding:10px 12px;background:#f8f7f4;border-radius:8px;border:1px solid #e8e6e1'>
-              <strong>Cantieri associati:</strong><ul style='margin:6px 0 0 0;padding:0 0 0 18px'>`;
+            html += `<hr style='border:0;border-top:2px dashed #d8d6d0;margin:18px 0 12px 0;'>`;
+            html += `<div class="cantieri-box">
+              <div class="cantieri-title">Scadenze Cantieri</div>
+              <ul class="cantieri-list">`;
             c.cantieri.forEach(ct => {
-              html += `<li><span style='font-weight:600'>${esc(ct.nome)}</span> — Scadenza: <span style='color:#dc2626'>${formatDate(ct.scadenza)}</span>${ct.note ? ' — ' + esc(ct.note) : ''}</li>`;
+              html += `<li class="cantiere-item">
+                <span class="cantiere-nome">${esc(ct.nome)}</span>
+                <span class="cantiere-scadenza">Scadenza: <strong>${formatDate(ct.scadenza)}</strong></span>
+                ${ct.note ? `<span class="cantiere-note">${esc(ct.note)}</span>` : ''}
+              </li>`;
             });
             html += `</ul></div>`;
           }
+            /* ── Cantieri box ── */
+            .cantieri-box {
+              background: #f8f7f4;
+              border: 1.5px solid #e8e6e1;
+              border-radius: 10px;
+              padding: 14px 18px 10px 18px;
+              margin-bottom: 12px;
+              margin-top: 0;
+            }
+            .cantieri-title {
+              font-size: 13px;
+              font-weight: 700;
+              color: #2563eb;
+              margin-bottom: 8px;
+              letter-spacing: 0.03em;
+              text-transform: uppercase;
+            }
+            .cantieri-list {
+              list-style: none;
+              margin: 0;
+              padding: 0;
+            }
+            .cantiere-item {
+              display: flex;
+              flex-wrap: wrap;
+              align-items: center;
+              gap: 12px;
+              padding: 7px 0 7px 0;
+              border-bottom: 1px solid #ececec;
+              font-size: 13px;
+            }
+            .cantiere-item:last-child {
+              border-bottom: none;
+            }
+            .cantiere-nome {
+              font-weight: 600;
+              color: #1a1a1a;
+              margin-right: 8px;
+            }
+            .cantiere-scadenza {
+              color: #dc2626;
+              font-weight: 500;
+              margin-right: 8px;
+            }
+            .cantiere-note {
+              color: #5f5e5a;
+              font-style: italic;
+              opacity: 0.85;
+            }
         });
         // Form aggiunta cantiere
         html += `<div style='margin:18px 0 0 0;padding:12px 14px;background:#f0efe9;border-radius:8px;border:1px solid #e8e6e1'>
