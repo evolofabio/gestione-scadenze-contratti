@@ -1813,6 +1813,7 @@
         adminEmail: String(mapped.adminEmail || '').trim(),
         companyEmail: String(mapped.companyEmail || '').trim(),
         notes: String(mapped.notes || '').trim(),
+        cantieri: []
       };
 
       state.companies.push(contract);
@@ -2872,11 +2873,12 @@
       const idx = state.companies.findIndex(c => c.id === state.editingContract.id);
       if (idx >= 0) {
         state.companies[idx] = { ...state.editingContract, name, employeeName, contractType, startDate, endDate, adminEmail, companyEmail, renewable, renewMonths, renewType, renewNotice, renewCount, notes };
+        if (!Array.isArray(state.companies[idx].cantieri)) state.companies[idx].cantieri = [];
       }
       showToast('Contratto aggiornato');
     } else {
       const newId = Math.max(0, ...state.companies.map(c => c.id)) + 1;
-      state.companies.push({ id: newId, name, employeeName, contractType, startDate, endDate, adminEmail, companyEmail, renewable, renewMonths, renewType, renewNotice, renewCount, notes });
+      state.companies.push({ id: newId, name, employeeName, contractType, startDate, endDate, adminEmail, companyEmail, renewable, renewMonths, renewType, renewNotice, renewCount, notes, cantieri: [] });
       const uniqueNames = [...new Set(state.companies.map(c => c.name))];
       state.activeTab = uniqueNames.indexOf(name) + 1;
       showToast(state.modal === 'add-contract' ? 'Dipendente aggiunto' : 'Nuovo contratto aggiunto');
