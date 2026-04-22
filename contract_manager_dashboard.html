@@ -1154,7 +1154,7 @@ function renderCantieriPage(){
             <div class="cantiere-info">
               <div class="cantiere-name">${esc(ct.nome)}</div>
               <div class="cantiere-company">${esc(ct.company.name)}</div>
-              ${ct.note?`<div style=\"font-size:11px;color:var(--text3);margin-top:2px;font-style:italic\">${esc(ct.note)}</div>`:''}
+              ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic">${esc(ct.note)}</div>`:''}
             </div>
             <div class="cantiere-right">
               <div class="cantiere-days ${d<0?'urgent':d<=7?'urgent':d<=30?'warning':'ok'}">${d<0?'Sc.':d}</div>
@@ -1595,8 +1595,11 @@ function renderCantieriPage(){
             <div class="cantiere-right">
               <div class="cantiere-days ${uc}">${d<0?'Sc.':d}</div>
               <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
-              <div style=\"font-size:11px;color:var(--text2);margin-top:2px\">${formatDate(ct.scadenza)}</div>
-              <div style=\"margin-top:8px;display:flex;gap:8px;justify-content:flex-end\">\n                <button class=\"act-btn\" onclick=\"openEditCantiere(${ct._contractId},${ct._idx})\">Modifica</button>\n                <button class=\"act-btn danger\" onclick=\"confirmDeleteCantiere(${ct._contractId},${ct._idx})\">Elimina</button>\n              </div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
+              <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+                <button class="act-btn" onclick="openEditCantiere(${ct._contractId},${ct._idx})">Modifica</button>
+                <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct._contractId},${ct._idx})">Elimina</button>
+              </div>
             </div>
           </div>`;
       }).join('')}
