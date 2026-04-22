@@ -954,6 +954,7 @@ let state={
   calMonth:new Date().getMonth(),
   expandedCard:null,
   quickRenewId:null,
+  quickRenewMonths:{},
   showExportMenu:false,
   showNotifCenter:false,
   theme:load(SK.theme,'light'),
@@ -1269,9 +1270,14 @@ function renderCard(c,inCompany=false){
 
   let quickRenewBlock='';
   if(showQR&&c.renewable){
+    const curMonths=(state.quickRenewMonths&&state.quickRenewMonths[c.id])||(c.renewMonths||dm||12);
     quickRenewBlock=`<div class="quick-renew-panel">
-      <div class="qrp-info">Proroga rapida <strong>${esc(c.name)}${c.employeeName?' — '+c.employeeName:''}</strong> di <strong>${c.renewMonths||dm||12} mesi</strong>?</div>
-      <div class="qrp-actions">
+      <div class="qrp-info">Proroga rapida <strong>${esc(c.name)}${c.employeeName?' — '+c.employeeName:''}</strong></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+        <label style="font-size:13px;color:var(--text2);min-width:120px">Mesi da prorogare</label>
+        <input id="qr-months-${c.id}" type="number" min="1" value="${curMonths}" style="width:96px;padding:6px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text)" oninput="setQuickRenewMonths(${c.id},this)">
+      </div>
+      <div class="qrp-actions" style="margin-top:12px">
         <button class="qrp-btn" onclick="cancelQuickRenew()">Annulla</button>
         <button class="qrp-btn confirm" onclick="doQuickRenew(${c.id})">Conferma proroga</button>
       </div>
@@ -1332,13 +1338,29 @@ function renderCard(c,inCompany=false){
 }
 
 // quick renew
-window.startQuickRenew=function(id){state.quickRenewId=state.quickRenewId===id?null:id;renderPage()}
+window.startQuickRenew=function(id){
+  const idx=state.companies.findIndex(c=>c.id===id);
+  if(idx<0)return;
+  const c=state.companies[idx];
+  state.quickRenewId = state.quickRenewId===id?null:id;
+  state.quickRenewMonths = state.quickRenewMonths||{};
+  if(state.quickRenewId===id){
+    const dm=durationMonths(c.startDate,c.endDate);
+    state.quickRenewMonths[id]=state.quickRenewMonths[id]??(c.renewMonths||dm||12);
+  }
+  renderPage();
+}
 window.cancelQuickRenew=function(){state.quickRenewId=null;renderPage()}
+window.setQuickRenewMonths=function(id,el){
+  state.quickRenewMonths = state.quickRenewMonths||{};
+  const v=parseInt((el||{}).value,10);
+  state.quickRenewMonths[id]=isNaN(v)||v<1?1:v;
+}
 window.doQuickRenew=function(id){
   const idx=state.companies.findIndex(c=>c.id===id);
   if(idx<0)return;
   const c=state.companies[idx];
-  const addMonths=c.renewMonths||durationMonths(c.startDate,c.endDate)||12;
+  const addMonths=(state.quickRenewMonths&&state.quickRenewMonths[id])||c.renewMonths||durationMonths(c.startDate,c.endDate)||12;
   const old=new Date(c.endDate);old.setMonth(old.getMonth()+addMonths);
   state.companies[idx]={...c,endDate:old.toISOString().split('T')[0],renewCount:(c.renewCount||0)+1};
   state.quickRenewId=null;
