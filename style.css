@@ -12,3 +12,31 @@
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}.section-title{font-size:16px;font-weight:600;color:var(--text)}.section-sub{font-size:13px;color:var(--text2);margin-top:1px}.label-tag{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:block}
 /* Metric grid, cards, modals, etc. are included similarly... (full style inserted) */
 /* End overwritten styles */
+
+/* === Inline styles extracted programmatically === */
+.cm-inline-1 {display:none;}
+.cm-inline-2 {margin-bottom:18px;padding:12px;background:var(--color-background-tertiary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary);line-height:1.5;}
+.cm-inline-3 {color:var(--color-accent);}
+.cm-inline-4 {margin-top:14px;text-align:center;}
+.cm-inline-5 {font-size:11px;color:var(--color-text-tertiary);cursor:pointer;}
+.cm-inline-6 {margin-top:16px;text-align:center;}
+.cm-inline-7 {background:var(--color-background-tertiary);border:1px solid var(--color-border-secondary);border-radius:50%;width:36px;height:36px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+.cm-inline-8 {border:0;border-top:2px dashed #d8d6d0;margin:18px 0 12px 0;}
+.cm-inline-9 {margin:18px 0 0 0;padding:12px 14px;background:#f0efe9;border-radius:8px;border:1px solid #e8e6e1;}
+.cm-inline-10 {margin:4px 8px 4px 0;}
+.cm-inline-11 {width:min(600px,94vw);}
+.cm-inline-12 {width:min(400px,92vw);}
+.cm-inline-13 {width:min(460px,94vw);}
+.cm-inline-14 {font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;}
+.cm-inline-15 {font-size:12px;color:var(--color-text-secondary);margin-bottom:16px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);}
+.cm-inline-16 {font-size:11px;color:var(--color-text-tertiary);}
+.cm-inline-17 {margin-bottom:1.5rem;}
+.cm-inline-18 {margin-top:12px;}
+.cm-inline-19 {margin-top:4px;}
+.cm-inline-20 {margin-top:10px;}
+.cm-inline-21 {margin-bottom:14px;}
+.cm-inline-22 {font-size:12px;color:var(--color-text-secondary);font-weight:600;display:block;margin-bottom:6px;}
+.cm-inline-23 {margin-top:8px;}
+.cm-inline-24 {font-size:13px;color:var(--color-text-tertiary);padding:8px 0;}
+.cm-inline-25 {margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+.cm-inline-26 {'.concat(n,';}

@@ -17,6 +17,26 @@ class_attr_re = re.compile(r'class\s*=\s*(?P<quote>["\'])(?P<class>.*?)\1', re.S
 for html_file in html_files:
     text = html_file.read_text(encoding='utf-8')
     changed = False
+#!/usr/bin/env python3
+import re
+from pathlib import Path
+
+root = Path('.')
+html_files = list(root.rglob('*.html'))
+style_map = {}
+style_order = []
+modified_files = []
+skipped_entries = []
+
+# Patterns
+tag_pattern = re.compile(r'<(?P<tag>[a-zA-Z0-9_-]+)(?P<attrs>[^>]*?)(?P<selfclose>/?)>', re.S)
+style_attr_re = re.compile(r'style\s*=\s*(?P<quote>["\'])(?P<style>.*?)\1', re.S)
+class_attr_re = re.compile(r'class\s*=\s*(?P<quote>["\'])(?P<class>.*?)\1', re.S)
+
+
+def process_file(html_file):
+    text = html_file.read_text(encoding='utf-8')
+    changed = False
 
     def repl(m):
         nonlocal changed
@@ -34,7 +54,6 @@ for html_file in html_files:
         if style_str == '':
             # remove empty style attribute
             new_attrs = re.sub(style_attr_re, '', attrs)
-            # ensure spacing
             return f'<{tag}{new_attrs}{selfclose}>'
         # register class
         if style_str not in style_map:
@@ -59,13 +78,16 @@ for html_file in html_files:
             else:
                 new_attrs = new_attrs + ' ' + f'class={q}{cls}{q}'
         changed = True
-        # normalize spacing
         return f'<{tag}{new_attrs}{selfclose}>'
 
     new_text = tag_pattern.sub(repl, text)
     if changed and new_text != text:
         html_file.write_text(new_text, encoding='utf-8')
         modified_files.append(str(html_file))
+
+
+for html_file in html_files:
+    process_file(html_file)
 
 # Append CSS rules
 if style_map:
@@ -82,11 +104,7 @@ if style_map:
     if not style_file.exists():
         style_file.write_text('/* style.css generated */\n', encoding='utf-8')
     content = style_file.read_text(encoding='utf-8')
-    if header.strip() in content:
-        # append new rules after existing content
-        content = content + ''.join(css_lines)
-    else:
-        content = content + ''.join(css_lines)
+    content = content + ''.join(css_lines)
     style_file.write_text(content, encoding='utf-8')
 
 # Summary

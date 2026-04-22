@@ -160,7 +160,7 @@
 </head>
 <body>
   <div id="login-screen"></div>
-  <div class="app" id="app" style="display:none"></div>
+  <div class="app cm-inline-1" id="app" ></div>
 
   <script>
   'use strict';
@@ -429,12 +429,12 @@
         <div class="login-subtitle">Gestione Scadenze Contratti</div>
         <div class="login-error" id="login-error"></div>
         ${!hasConfig ? `
-        <div style="margin-bottom:18px;padding:12px;background:var(--color-background-tertiary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary);line-height:1.5">
+        <div class="cm-inline-2">
           <strong>Configurazione iniziale:</strong><br>
           1. Vai su <strong>console.firebase.google.com</strong> → il tuo progetto<br>
           2. <strong>Authentication</strong> → Sign-in method → abilita <strong>Email/Password</strong><br>
           3. <strong>Impostazioni progetto</strong> (ingranaggio) → copia API Key e Auth Domain<br>
-          4. Se l'errore persiste: vai su <a href="https://console.cloud.google.com/apis/library/identitytoolkit.googleapis.com" target="_blank" rel="noopener" style="color:var(--color-accent)">Google Cloud Console</a> → abilita <strong>Identity Toolkit API</strong>
+          4. Se l'errore persiste: vai su <a href="https://console.cloud.google.com/apis/library/identitytoolkit.googleapis.com" target="_blank" rel="noopener"  class="cm-inline-3">Google Cloud Console</a> → abilita <strong>Identity Toolkit API</strong>
         </div>
         <div class="login-field">
           <label for="auth-apikey">Firebase API Key</label>
@@ -466,7 +466,7 @@
             Non hai un account? <a onclick="showRegister()">Registrati</a>
           </div>
         </div>
-        <div id="register-form" style="display:none">
+        <div id="register-form"  class="cm-inline-1">
           <div class="login-field">
             <label for="reg-email">Email</label>
             <input id="reg-email" type="email" placeholder="nome@email.com" autocomplete="email">
@@ -491,12 +491,12 @@
             Hai già un account? <a onclick="showLogin()">Accedi</a>
           </div>
         </div>
-        <div style="margin-top:14px;text-align:center">
-          <a style="font-size:11px;color:var(--color-text-tertiary);cursor:pointer" onclick="resetAuthConfig()">Cambia configurazione</a>
+        <div class="cm-inline-4">
+          <a  onclick="resetAuthConfig()" class="cm-inline-5">Cambia configurazione</a>
         </div>
         `}
-        <div style="margin-top:16px;text-align:center">
-          <button class="theme-toggle" onclick="toggleLoginTheme()" title="${isDark ? 'Tema chiaro' : 'Tema scuro'}" aria-label="Cambia tema" style="background:var(--color-background-tertiary);border:1px solid var(--color-border-secondary);border-radius:50%;width:36px;height:36px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+        <div class="cm-inline-6">
+          <button class="theme-toggle cm-inline-7" onclick="toggleLoginTheme()" title="${isDark ? 'Tema chiaro' : 'Tema scuro'}" aria-label="Cambia tema" >
             ${isDark ? icons.sun : icons.moon}
           </button>
         </div>
@@ -1591,7 +1591,7 @@
           }
           // Visualizza scadenze cantieri come card (stesso stile dei contratti)
           if (Array.isArray(c.cantieri) && c.cantieri.length > 0) {
-            html += `<hr style='border:0;border-top:2px dashed #d8d6d0;margin:18px 0 12px 0;'>`;
+            html += `<hr class='cm-inline-8'>`;
             html += `<div class="cantieri-box">
               <div class="cantieri-title">Scadenze Cantieri</div>`;
             c.cantieri.forEach((ct, ci) => {
@@ -1602,11 +1602,11 @@
 // ...existing code...
         });
         // Form aggiunta cantiere
-        html += `<div style='margin:18px 0 0 0;padding:12px 14px;background:#f0efe9;border-radius:8px;border:1px solid #e8e6e1'>
+        html += `<div class='cm-inline-9'>
           <strong>Aggiungi scadenza cantiere:</strong><br>
-          <input id='cantiere-nome' type='text' placeholder='Nome cantiere' style='margin:4px 8px 4px 0'>
-          <input id='cantiere-scadenza' type='date' style='margin:4px 8px 4px 0'>
-          <input id='cantiere-note' type='text' placeholder='Note' style='margin:4px 8px 4px 0'>
+          <input id='cantiere-nome' type='text' placeholder='Nome cantiere'  class='cm-inline-10'>
+          <input id='cantiere-scadenza' type='date'  class='cm-inline-10'>
+          <input id='cantiere-note' type='text' placeholder='Note'  class='cm-inline-10'>
           <button class='btn-sm' onclick='aggiungiCantiereAzienda("${companyName.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}")'>Aggiungi</button>
         </div>`;
       }
@@ -1845,7 +1845,7 @@
     }
 
     return `<div class="modal-bg" onclick="closeEmailModal()">
-      <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-label="Email di notifica" style="width:min(600px,94vw)">
+      <div class="modal cm-inline-11" onclick="event.stopPropagation()" role="dialog" aria-label="Email di notifica" >
         <h3>Email di notifica${c.employeeName ? ' — ' + esc(c.employeeName) : ''}</h3>
         <div class="email-tabs">
           <button class="email-tab-btn${mode==='preview'?' active':''}" onclick="setEmailTab('preview')">Anteprima</button>
@@ -1865,7 +1865,7 @@
 
   function renderConfirmDelete(c) {
     return `<div class="modal-bg" onclick="cancelDelete()">
-      <div class="modal" onclick="event.stopPropagation()" role="alertdialog" aria-label="Conferma eliminazione" style="width:min(400px,92vw)">
+      <div class="modal cm-inline-12" onclick="event.stopPropagation()" role="alertdialog" aria-label="Conferma eliminazione" >
         <h3>Conferma eliminazione</h3>
         <div class="confirm-body">Eliminare il contratto${c.employeeName ? ' di <strong>' + esc(c.employeeName) + '</strong>' : ''} con <strong>${esc(c.name)}</strong>?<br>Questa azione non è reversibile.</div>
         <div class="modal-actions">
@@ -1881,9 +1881,9 @@
     const isEdit = state.modal === 'edit-company';
     const modalTitle = isEdit ? 'Modifica azienda' : 'Nuova azienda';
     return `<div class="modal-bg" onclick="closeModal()">
-      <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-label="${modalTitle}" style="width:min(460px,94vw)">
+      <div class="modal cm-inline-13" onclick="event.stopPropagation()" role="dialog" aria-label="${modalTitle}" >
         <h3>${modalTitle}</h3>
-        <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px">Inserisci i dati dell'azienda. Dopo la creazione potrai aggiungere dipendenti e contratti.</p>
+        <p class="cm-inline-14">Inserisci i dati dell'azienda. Dopo la creazione potrai aggiungere dipendenti e contratti.</p>
         <div class="form-row single">
           <div class="form-field"><label for="fc-name">Nome azienda</label><input id="fc-name" type="text" value="${escAttr(c.name||'')}" placeholder="Es. Acme S.r.l." required autofocus></div>
         </div>
@@ -1907,7 +1907,7 @@
     return `<div class="modal-bg" onclick="closeModal()">
       <div class="modal" onclick="event.stopPropagation()" role="dialog" aria-label="${modalTitle}">
         <h3>${modalTitle}</h3>
-        ${isAddContract ? `<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:16px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">Azienda: <strong>${esc(c.name||'')}</strong> — compila i dati del dipendente e del contratto</div>
+        ${isAddContract ? `<div class="cm-inline-15">Azienda: <strong>${esc(c.name||'')}</strong> — compila i dati del dipendente e del contratto</div>
         <input id="f-name" type="hidden" value="${escAttr(c.name||'')}">
         <input id="f-admin" type="hidden" value="${escAttr(c.adminEmail||'')}">
         <input id="f-company" type="hidden" value="${escAttr(c.companyEmail||'')}">` : `
@@ -1995,23 +1995,23 @@
         const time = new Date(l.date).toLocaleString('it-IT', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
         logHtml += `<div class="email-log-entry">
           <span class="log-status-dot ${dotClass}"></span>
-          <div class="log-info"><strong>${esc(l.contractName)}</strong> → ${esc(l.recipients)}<br><span style="font-size:11px;color:var(--color-text-tertiary)">${esc(l.detail)}</span></div>
+          <div class="log-info"><strong>${esc(l.contractName)}</strong> → ${esc(l.recipients)}<br><span class="cm-inline-16">${esc(l.detail)}</span></div>
           <span class="log-time">${time}</span>
         </div>`;
       });
       logHtml += `</div>`;
     }
 
-    return `<div style="margin-bottom:1.5rem">
+    return `<div class="cm-inline-17">
       <div class="settings-section">
         <h4>${icons.mail} Metodo di invio email</h4>
         ${statusHtml}
-        <div style="margin-top:12px">
+        <div class="cm-inline-18">
           <label class="send-method-label"><input type="radio" name="sendMethod" value="mailto" ${s.sendMethod==='mailto'?'checked':''} onchange="setSendMethod('mailto')"> <strong>Mailto</strong> — apre il client email (Outlook, Gmail, Apple Mail…)</label>
           <label class="send-method-label"><input type="radio" name="sendMethod" value="emailjs" ${s.sendMethod==='emailjs'?'checked':''} onchange="setSendMethod('emailjs')"> <strong>EmailJS</strong> — invio diretto automatico (gratis, 200 email/mese)</label>
         </div>
         ${s.sendMethod === 'emailjs' ? `
-        <div class="settings-row triple" style="margin-top:12px">
+        <div class="settings-row triple cm-inline-18" >
           <div class="settings-field">
             <label for="ejs-service">Service ID</label>
             <input id="ejs-service" type="text" value="${escAttr(s.emailjs.serviceId)}" placeholder="service_xxxxxxx" onchange="saveEJSField('serviceId', this.value)">
@@ -2025,10 +2025,10 @@
             <input id="ejs-key" type="text" value="${escAttr(s.emailjs.publicKey)}" placeholder="xxxxxxxxxxxx" onchange="saveEJSField('publicKey', this.value)">
           </div>
         </div>
-        <div class="settings-hint" style="margin-top:4px">
+        <div class="settings-hint cm-inline-19" >
           Registrati gratis su <strong>emailjs.com</strong> → crea un servizio email (Gmail, Outlook…) → crea un template con variabili: <code>{{to_email}}</code>, <code>{{subject}}</code>, <code>{{message}}</code>, <code>{{contract_name}}</code>
         </div>
-        <div style="margin-top:10px">
+        <div class="cm-inline-20">
           <button class="btn-sm" onclick="testEmailJS()">Testa connessione</button>
         </div>
         ` : ''}
@@ -2044,8 +2044,8 @@
           <span class="toggle-label">Attiva invio automatico notifiche scadenza</span>
         </div>
         ${autoEnabled ? `
-        <div style="margin-bottom:14px">
-          <label style="font-size:12px;color:var(--color-text-secondary);font-weight:600;display:block;margin-bottom:6px">Invia notifica quando mancano (giorni):</label>
+        <div class="cm-inline-21">
+          <label class="cm-inline-22">Invia notifica quando mancano (giorni):</label>
           <div class="auto-send-chips">
             ${allDays.map(d => `<button class="auto-chip${activeDays.includes(d) ? ' active' : ''}" onclick="toggleAutoDay(${d})">${d} gg</button>`).join('')}
           </div>
@@ -2058,18 +2058,18 @@
           </div>
           <div class="settings-field">
             <label>Stato</label>
-            <span class="settings-status ok" style="margin-top:8px">${icons.check} Attivo — prossimo controllo tra ${s.autoSend.checkIntervalMinutes||60} min</span>
+            <span class="settings-status ok cm-inline-23" >${icons.check} Attivo — prossimo controllo tra ${s.autoSend.checkIntervalMinutes||60} min</span>
           </div>
         </div>
         <div class="settings-hint">Le email automatiche vengono inviate max 1 volta al giorno per soglia/contratto. Ogni invio è registrato nel log sotto.</div>
-        <div style="margin-top:10px"><button class="btn-sm" onclick="forceAutoCheck()">Esegui controllo adesso</button></div>
+        <div class="cm-inline-20"><button class="btn-sm" onclick="forceAutoCheck()">Esegui controllo adesso</button></div>
         ` : '<div class="settings-hint">Quando attivato, il sistema invierà automaticamente email di notifica ai giorni selezionati prima della scadenza di ogni contratto.</div>'}
       </div>
 
       <div class="settings-section">
         <h4>Log invii email</h4>
-        ${emailLog.length === 0 ? '<div style="font-size:13px;color:var(--color-text-tertiary);padding:8px 0">Nessun invio registrato.</div>' : logHtml}
-        ${emailLog.length > 0 ? '<div style="margin-top:10px"><button class="btn-sm" onclick="clearEmailLog()">Cancella log</button></div>' : ''}
+        ${emailLog.length === 0 ? '<div class="cm-inline-24">Nessun invio registrato.</div>' : logHtml}
+        ${emailLog.length > 0 ? '<div class="cm-inline-20"><button class="btn-sm" onclick="clearEmailLog()">Cancella log</button></div>' : ''}
       </div>
 
       <div class="settings-section">
@@ -2082,14 +2082,14 @@
               : '<span class="settings-status warn">Connessione in corso…</span>'
           }
         </div>
-        <div class="toggle-row" style="margin-top:12px">
+        <div class="toggle-row cm-inline-18" >
           <label class="toggle-switch">
             <input type="checkbox" ${syncConfig.enabled?'checked':''} onchange="toggleCloudSync(this.checked)">
             <span class="toggle-slider"></span>
           </label>
           <span class="toggle-label">Attiva sincronizzazione cloud tra dispositivi</span>
         </div>
-        <div class="settings-row triple" style="margin-top:8px">
+        <div class="settings-row triple cm-inline-23" >
           <div class="settings-field">
             <label for="sync-apikey">API Key</label>
             <input id="sync-apikey" type="text" value="${escAttr(syncConfig.apiKey)}" placeholder="AIzaSy..." onchange="saveSyncField('apiKey', this.value)">
@@ -2104,8 +2104,8 @@
           </div>
         </div>
         <div class="settings-hint">Crea un progetto gratuito su <strong>console.firebase.google.com</strong> → Realtime Database → copia API Key e Database URL. Tutti i dispositivi con la stessa stanza vedranno gli stessi dati.</div>
-        <div class="settings-hint" style="margin-top:4px">Regole database consigliate: <code>{"rules": {".read": true, ".write": true}}</code> (oppure configura autenticazione per maggiore sicurezza).</div>
-        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <div class="settings-hint cm-inline-19" >Regole database consigliate: <code>{"rules": {".read": true, ".write": true}}</code> (oppure configura autenticazione per maggiore sicurezza).</div>
+        <div class="cm-inline-25">
           <button class="btn-sm" onclick="applySyncConfig()">Applica configurazione</button>
           <button class="btn-sm" id="btn-sync-pull" onclick="pullFromCloud()" ${!syncState.connected?'disabled':''}>Scarica dati dal cloud</button>
           <button class="btn-sm" id="btn-sync-push" onclick="forcePushToCloud()" ${!syncState.connected?'disabled':''}>Carica dati sul cloud</button>
