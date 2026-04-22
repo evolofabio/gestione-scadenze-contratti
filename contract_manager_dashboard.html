@@ -1251,13 +1251,17 @@ function renderCard(c,inCompany=false){
   if(Array.isArray(c.cantieri)&&c.cantieri.length){
     cantieriBlock=`<div class="cantieri-inline">
       <div class="cantieri-label">Scadenze cantieri</div>
-      ${c.cantieri.map(ct=>{
+      ${c.cantieri.map((ct,ci)=>{
         const cd=daysLeft(ct.scadenza);
         const cls=cd<0||cd<=7?'urgent':'ok';
         return`<div class="cantiere-row">
           <span class="cantiere-nome">${esc(ct.nome)}</span>
           <span class="cantiere-scad ${cd>7&&cd>=0?'ok':''}">${formatDate(ct.scadenza)} (${cd<0?'scaduto':cd+'gg'})</span>
           ${ct.note?`<span class="cantiere-note">${esc(ct.note)}</span>`:''}
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+            <button class="act-btn" onclick="openEditCantiere(${c.id},${ci})">Modifica</button>
+            <button class="act-btn danger" onclick="confirmDeleteCantiere(${c.id},${ci})">Elimina</button>
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -1353,7 +1357,7 @@ function renderCompanyPage(){
   const contracts=state.companies.filter(c=>c.name===name);
   if(!contracts.length)return`<div class="empty-state">Azienda non trovata.</div>`;
   const first=contracts[0];
-  const allCantieri=contracts.flatMap(c=>(c.cantieri||[]).map(ct=>({...ct,contract:c})));
+  const allCantieri=contracts.flatMap(c=>(c.cantieri||[]).map((ct,idx)=>({...ct,contract:c,_idx:idx})));
   let h=`<div class="company-hero">
     <div class="company-avatar">${name.substring(0,2).toUpperCase()}</div>
     <div class="company-info">
@@ -1388,6 +1392,10 @@ function renderCompanyPage(){
           <div class="cantiere-days ${d<0?'urgent':d<=7?'urgent':d<=30?'warning':'ok'}">${d<0?'Sc.':d}</div>
           <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
+          <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+            <button class="act-btn" onclick="openEditCantiere(${ct.contract.id},${ct._idx})">Modifica</button>
+            <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct.contract.id},${ct._idx})">Elimina</button>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -1489,7 +1497,7 @@ window.calToday=()=>{state.calYear=new Date().getFullYear();state.calMonth=new D
 // CANTIERI PAGE
 // ═══════════════════════════════════════
 function renderCantieriPage(){
-  const all=state.companies.flatMap(c=>(c.cantieri||[]).map(ct=>({...ct,company:c})));
+  const all=state.companies.flatMap(c=>(c.cantieri||[]).map((ct,idx)=>({...ct,company:c,_idx:idx,_contractId:c.id})));
   all.sort((a,b)=>daysLeft(a.scadenza)-daysLeft(b.scadenza));
   if(!all.length)return`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br>Apri il tab di un'azienda per aggiungere cantieri.</div>`;
 
@@ -1509,18 +1517,22 @@ function renderCantieriPage(){
         const d=daysLeft(ct.scadenza);
         const uc=d<0||d<=7?'urgent':d<=30?'warning':'ok';
         return`<div class="cantiere-card">
-          <div class="cantiere-urgency-bar ${uc}"></div>
-          <div class="cantiere-info">
-            <div class="cantiere-name">${esc(ct.nome)}</div>
-            <div class="cantiere-company">${esc(ct.company.name)}${ct.company.employeeName?' — '+ct.company.employeeName:''}</div>
-            ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic">${esc(ct.note)}</div>`:''}
-          </div>
-          <div class="cantiere-right">
-            <div class="cantiere-days ${uc}">${d<0?'Sc.':d}</div>
-            <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
-            <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
-          </div>
-        </div>`;
+            <div class="cantiere-urgency-bar ${uc}"></div>
+            <div class="cantiere-info">
+              <div class="cantiere-name">${esc(ct.nome)}</div>
+              <div class="cantiere-company">${esc(ct.company.name)}${ct.company.employeeName?' — '+ct.company.employeeName:''}</div>
+              ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic">${esc(ct.note)}</div>`:''}
+            </div>
+            <div class="cantiere-right">
+              <div class="cantiere-days ${uc}">${d<0?'Sc.':d}</div>
+              <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
+              <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+                <button class="act-btn" onclick="openEditCantiere(${ct._contractId},${ct._idx})">Modifica</button>
+                <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct._contractId},${ct._idx})">Elimina</button>
+              </div>
+            </div>
+          </div>`;
       }).join('')}
     </div>`;
   });
@@ -1722,7 +1734,7 @@ window.openAddCantiere=function(id){
     </div>
   </div></div>`);
 }
-window.saveModalCantiere=function(id){
+window.saveModalCantiere=function(id,idx){
   const nome=(document.getElementById('mc-nome')||{}).value?.trim();
   const scad=(document.getElementById('mc-scad')||{}).value;
   const note=(document.getElementById('mc-note')||{}).value?.trim()||'';
@@ -1730,8 +1742,53 @@ window.saveModalCantiere=function(id){
   const c=state.companies.find(x=>x.id===id);
   if(!c)return;
   if(!Array.isArray(c.cantieri))c.cantieri=[];
-  c.cantieri.push({nome,scadenza:scad,note});
-  saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
+  if(idx===null||idx===undefined){
+    c.cantieri.push({nome,scadenza:scad,note});
+    saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
+  }else{
+    if(!c.cantieri[idx]){showToast('Cantiere non trovato');return}
+    c.cantieri[idx]=Object.assign({},c.cantieri[idx],{nome,scadenza:scad,note});
+    saveData();hideModal();renderPage();showToast('Cantiere aggiornato');
+  }
+}
+
+// Edit / Delete cantieri
+window.openEditCantiere=function(contractId,idx){
+  const c=state.companies.find(x=>x.id===contractId);
+  if(!c||!Array.isArray(c.cantieri)||!c.cantieri[idx])return;
+  const ct=c.cantieri[idx];
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+    <h3>Modifica cantiere — ${esc(c.name)}</h3>
+    <div class="form-row single"><div class="form-field"><label>Nome cantiere</label><input class="f-input" id="mc-nome" type="text" value="${escAttr(ct.nome)}" style="width:100%"></div></div>
+    <div class="form-row"><div class="form-field"><label>Data scadenza</label><input class="f-input" id="mc-scad" type="date" value="${ct.scadenza}" style="width:100%"></div>
+    <div class="form-field"><label>Note</label><input class="f-input" id="mc-note" type="text" value="${escAttr(ct.note||'')}" style="width:100%"></div></div>
+    <div class="modal-actions">
+      <button class="m-btn" onclick="hideModal()">Annulla</button>
+      <button class="m-btn danger" onclick="confirmDeleteCantiere(${contractId},${idx})">Elimina</button>
+      <button class="m-btn primary" onclick="saveModalCantiere(${contractId},${idx})">Salva</button>
+    </div>
+  </div></div>`);
+}
+
+window.confirmDeleteCantiere=function(contractId,idx){
+  const c=state.companies.find(x=>x.id===contractId);
+  const ct=c?.cantieri?.[idx];
+  if(!ct)return;
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+    <h3>Conferma eliminazione cantiere</h3>
+    <p style="font-size:14px;color:var(--text2);">Eliminare il cantiere <strong style="color:var(--text)">${esc(ct.nome)}</strong> dal contratto <strong style="color:var(--text)">${esc(c.name)}</strong>? Questa azione non è reversibile.</p>
+    <div class="modal-actions">
+      <button class="m-btn" onclick="hideModal()">Annulla</button>
+      <button class="m-btn danger" onclick="doDeleteCantiere(${contractId},${idx})">Elimina</button>
+    </div>
+  </div></div>`);
+}
+
+window.doDeleteCantiere=function(contractId,idx){
+  const c=state.companies.find(x=>x.id===contractId);
+  if(!c||!Array.isArray(c.cantieri)||!c.cantieri[idx]){hideModal();return}
+  const removed=c.cantieri.splice(idx,1)[0];
+  saveData();hideModal();renderPage();showToast(`Cantiere "${removed?.nome||''}" eliminato`);
 }
 
 function renderContractModal(c,base){
