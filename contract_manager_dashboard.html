@@ -993,7 +993,7 @@ function toggleTheme(){state.theme=state.theme==='dark'?'light':'dark';applyThem
 // ═══════════════════════════════════════
 // DATE HELPERS
 // ═══════════════════════════════════════
-function daysLeft(d){if(!d)return9999;const t=new Date();t.setHours(0,0,0,0);const e=new Date(d);e.setHours(0,0,0,0);return Math.round((e-t)/86400000)}
+function daysLeft(d){if(!d) return 9999;const t=new Date();t.setHours(0,0,0,0);const e=new Date(d);e.setHours(0,0,0,0);return Math.round((e-t)/86400000)}
 function formatDate(d){if(!d)return'—';return new Date(d).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function durationMonths(s,e){if(!s||!e)return 0;const a=new Date(s),b=new Date(e);return(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth())+(b.getDate()>a.getDate()?1:0)}
 function remainingMonths(e){if(!e)return 0;const t=new Date();t.setHours(0,0,0,0);const b=new Date(e);b.setHours(0,0,0,0);if(b<=t)return 0;return(b.getFullYear()-t.getFullYear())*12+(b.getMonth()-t.getMonth())+(b.getDate()>t.getDate()?1:0)}
