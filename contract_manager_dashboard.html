@@ -2217,17 +2217,26 @@
         const scadenza = document.getElementById('cantiere-scadenza').value;
         const note = document.getElementById('cantiere-note').value.trim();
         if (!nome || !scadenza) { showToast('Inserisci nome e scadenza cantiere'); return; }
-        let count = 0;
+        let added = 0;
+        let skipped = 0;
         state.companies.forEach(c => {
           if (c.name === companyName) {
             if (!Array.isArray(c.cantieri)) c.cantieri = [];
-            c.cantieri.push({ nome, scadenza, note });
-            count++;
+            // evita duplicati (stesso nome + stessa scadenza + stessa nota)
+            const exists = c.cantieri.some(x => x.nome === nome && x.scadenza === scadenza && (x.note || '') === (note || ''));
+            if (!exists) {
+              c.cantieri.push({ nome, scadenza, note });
+              added++;
+            } else {
+              skipped++;
+            }
           }
         });
         saveData();
         render();
-        showToast('Cantiere aggiunto a ' + count + ' contratti');
+        if (added > 0 && skipped > 0) showToast('Cantiere aggiunto a ' + added + ' contratti, ' + skipped + ' duplicati saltati');
+        else if (added > 0) showToast('Cantiere aggiunto a ' + added + ' contratti');
+        else showToast('Nessun cantiere aggiunto (duplicato)');
       };
     }
 
@@ -2364,11 +2373,24 @@
       if (!contract) return;
       if (!Array.isArray(contract.cantieri)) contract.cantieri = [];
       if (typeof e.idx === 'number' && e.idx >= 0 && contract.cantieri[e.idx]) {
-        contract.cantieri[e.idx] = { nome, scadenza, note };
-        showToast('Scadenza cantiere aggiornata');
+        // Se modificando, evita di creare duplicati: se esiste già un'altra voce identica, rimuovi l'elemento corrente
+        const duplicate = contract.cantieri.findIndex((x, i) => i !== e.idx && x.nome === nome && x.scadenza === scadenza && (x.note || '') === (note || ''));
+        if (duplicate >= 0) {
+          // rimuove la voce corrente (unisce) per evitare duplicati
+          contract.cantieri.splice(e.idx, 1);
+          showToast('Modifica unita a cantiere esistente (duplicato rimosso)');
+        } else {
+          contract.cantieri[e.idx] = { nome, scadenza, note };
+          showToast('Scadenza cantiere aggiornata');
+        }
       } else {
-        contract.cantieri.push({ nome, scadenza, note });
-        showToast('Scadenza cantiere aggiunta');
+        const exists = contract.cantieri.some(x => x.nome === nome && x.scadenza === scadenza && (x.note || '') === (note || ''));
+        if (!exists) {
+          contract.cantieri.push({ nome, scadenza, note });
+          showToast('Scadenza cantiere aggiunta');
+        } else {
+          showToast('Cantiere già presente, nessuna azione eseguita');
+        }
       }
       saveData();
       state.cantiereModal = false;
