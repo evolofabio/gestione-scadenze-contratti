@@ -1861,7 +1861,10 @@ window.saveCompany=function(){
   if(exists){showToast('Azienda già registrata');return}
   const newId=Math.max(0,...state.companies.map(c=>c.id||0))+1;
   state.companies.push({id:newId,name,employeeName:'',contractType:'',startDate:'',endDate:'',renewable:false,renewMonths:12,renewType:'',renewNotice:30,renewCount:0,adminEmail:admin,companyEmail:company,notes,cantieri:[]});
-  hideModal();saveData();renderPage();renderSidebarCompanies();showToast('Azienda registrata');
+  hideModal();saveData();renderSidebarCompanies();
+  // Open company page so user can immediately add dipendenti
+  setPage('company',name);
+  showToast('Azienda registrata');
 }
 
 window.openEditCompanyModal=function(name){
@@ -1892,7 +1895,13 @@ window.saveEditedCompany=function(oldName){
   if(!newName){showToast('Inserisci il nome dell\'azienda');return}
   if(newName!==oldName && state.companies.some(c=>c.name===newName)){showToast('Esiste già un\'altra azienda con lo stesso nome');return}
   state.companies=state.companies.map(c=>c.name===oldName?{...c,name:newName,adminEmail:admin,companyEmail:company,notes}:c);
-  hideModal();saveData();renderPage();renderSidebarCompanies();showToast('Azienda aggiornata');
+  // If we were viewing the old company page, keep showing the updated company
+  if(state.activeCompany===oldName){
+    setPage('company',newName);
+  }else{
+    hideModal();saveData();renderPage();renderSidebarCompanies();
+  }
+  showToast('Azienda aggiornata');
 }
 
 window.confirmDeleteCompany=function(name){
