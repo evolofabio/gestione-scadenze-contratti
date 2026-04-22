@@ -1397,6 +1397,7 @@ function renderCompanyPage(){
     </div>
     <div style="display:flex;gap:8px">
       <button class="tb-btn" onclick="exportExcelCompany('${escAttr(name)}')">Esporta Excel</button>
+      <button class="tb-btn" onclick="openEditCompanyModal('${escAttr(name)}')">Modifica azienda</button>
       <button class="tb-btn primary" onclick="openAddContractModal('${escAttr(name)}')">+ Dipendente</button>
     </div>
   </div>`;
@@ -1491,13 +1492,17 @@ function renderCalendar(){
     ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="cal-header-cell">${d}</div>`).join('')}`;
 
   // Empty cells before month start
-  for(let i=0;i<startDow;i++)h+=`<div class="cal-day other-month"><div class="cal-day-num" style="color:var(--text3)">${new Date(y,m,1-startDow+i).getDate()}</div></div>`;
+  for(let i=0;i<startDow;i++){
+    const bd=new Date(y,m,1-startDow+i);
+    const bdStr=bd.toISOString().split('T')[0];
+    h+=`<div class="cal-day other-month" onclick="openDayEvents('${bdStr}')"><div class="cal-day-num" style="color:var(--text3)">${bd.getDate()}</div></div>`;
+  }
 
   for(let d=1;d<=daysInMonth;d++){
     const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
     const dayEvents=events[dateStr]||[];
-    h+=`<div class="cal-day${isToday?' today':''}">
+    h+=`<div class="cal-day${isToday?' today':''}" onclick="openDayEvents('${dateStr}')">
       <div class="cal-day-num">${d}</div>
       ${dayEvents.slice(0,3).map(e=>`<div class="cal-event ${e.type}" title="${escAttr(e.label)}">${esc(e.label)}</div>`).join('')}
       ${dayEvents.length>3?`<div style="font-size:10px;color:var(--text3)">+${dayEvents.length-3} altri</div>`:''}
@@ -1506,7 +1511,11 @@ function renderCalendar(){
 
   // Fill end
   const total=startDow+daysInMonth;const remaining=(7-total%7)%7;
-  for(let i=1;i<=remaining;i++)h+=`<div class="cal-day other-month"><div class="cal-day-num" style="color:var(--text3)">${i}</div></div>`;
+  for(let i=1;i<=remaining;i++){
+    const ad=new Date(y,m+1,i);
+    const adStr=ad.toISOString().split('T')[0];
+    h+=`<div class="cal-day other-month" onclick="openDayEvents('${adStr}')"><div class="cal-day-num" style="color:var(--text3)">${i}</div></div>`;
+  }
 
   h+=`</div>
   <div class="cal-legend">
@@ -1568,6 +1577,30 @@ function renderCantieriPage(){
     </div>`;
   });
   return h;
+}
+
+// Open modal showing all events (contracts + cantieri) for a specific day
+window.openDayEvents=function(dateStr){
+  const items=[];
+  state.companies.forEach(c=>{
+    if(c.endDate===dateStr)items.push({type:'contratto',label:`${c.name}${c.employeeName?' — '+c.employeeName:''}`,detail:`Scadenza contratto: ${formatDate(c.endDate)}`,contractId:c.id});
+    (c.cantieri||[]).forEach(ct=>{if(ct.scadenza===dateStr)items.push({type:'cantiere',label:`${ct.nome}`,detail:`Cantiere per ${c.name}${c.employeeName?' — '+c.employeeName:''}`,contractId:c.id,cantiereIdx:c.cantieri.indexOf(ct)})});
+  });
+  if(!items.length){showToast('Nessuna scadenza per il giorno selezionato');return}
+  const list=items.map(it=>{
+    const actions=[];
+    if(it.type==='contratto')actions.push(`<button class="m-btn" onclick="hideModal();openEditModal(${it.contractId})">Modifica contratto</button>`);
+    if(it.type==='cantiere')actions.push(`<button class="m-btn" onclick="hideModal();openEditCantiere(${it.contractId},${it.cantiereIdx})">Modifica cantiere</button>`);
+    return `<div style="padding:10px 0;border-bottom:1px dashed var(--border);display:flex;gap:12px;align-items:center">
+      <div style="flex:1"><div style="font-weight:600">${esc(it.label)}</div><div style="font-size:12px;color:var(--text3);margin-top:4px">${esc(it.detail)}</div></div>
+      <div style="display:flex;gap:8px">${actions.join('')}</div>
+    </div>`;
+  }).join('');
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:680px">
+    <h3>Scadenze del ${formatDate(dateStr)}</h3>
+    <div style="max-height:360px;overflow:auto;padding-top:6px">${list}</div>
+    <div class="modal-actions"><button class="m-btn" onclick="hideModal()">Chiudi</button></div>
+  </div></div>`);
 }
 
 // Global add cantiere (from Cantieri page)
@@ -1779,7 +1812,11 @@ window.openAddContractModal=function(name){
 }
 window.openEditModal=function(id){
   const c=state.companies.find(x=>x.id===id);
-  if(c){showModal(renderContractModal(c,null));setTimeout(attachModalListeners,10)}
+  if(c){
+    // open contract modal prefilled; allow editing company fields as well
+    showModal(renderContractModal(c,null));
+    setTimeout(attachModalListeners,10);
+  }
 }
 window.openAddCantiere=function(id){
   const c=state.companies.find(x=>x.id===id);
@@ -1825,6 +1862,53 @@ window.saveCompany=function(){
   const newId=Math.max(0,...state.companies.map(c=>c.id||0))+1;
   state.companies.push({id:newId,name,employeeName:'',contractType:'',startDate:'',endDate:'',renewable:false,renewMonths:12,renewType:'',renewNotice:30,renewCount:0,adminEmail:admin,companyEmail:company,notes,cantieri:[]});
   hideModal();saveData();renderPage();renderSidebarCompanies();showToast('Azienda registrata');
+}
+
+window.openEditCompanyModal=function(name){
+  const contracts=state.companies.filter(c=>c.name===name);
+  if(!contracts.length){showToast('Azienda non trovata');return}
+  const first=contracts[0];
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
+    <h3>Modifica azienda — ${esc(name)}</h3>
+    <div class="form-row"><div class="form-field"><label>Nome azienda *</label><input id="ec-name" class="f-input" type="text" value="${escAttr(first.name)}" style="width:100%"></div></div>
+    <div class="form-row">
+      <div class="form-field"><label>Email amministratore</label><input id="ec-admin" class="f-input" type="email" value="${escAttr(first.adminEmail||'')}" style="width:100%"></div>
+      <div class="form-field"><label>Email azienda</label><input id="ec-company" class="f-input" type="email" value="${escAttr(first.companyEmail||'')}" style="width:100%"></div>
+    </div>
+    <div class="form-row single"><div class="form-field"><label>Note</label><input id="ec-notes" class="f-input" type="text" value="${escAttr(first.notes||'')}" style="width:100%"></div></div>
+    <div class="modal-actions">
+      <button class="m-btn" onclick="hideModal()">Annulla</button>
+      <button class="m-btn danger" onclick="confirmDeleteCompany('${escAttr(name)}')">Elimina azienda</button>
+      <button class="m-btn primary" onclick="saveEditedCompany('${escAttr(name)}')">Salva</button>
+    </div>
+  </div></div>`);
+}
+
+window.saveEditedCompany=function(oldName){
+  const newName=(document.getElementById('ec-name')||{}).value?.trim();
+  const admin=(document.getElementById('ec-admin')||{}).value?.trim();
+  const company=(document.getElementById('ec-company')||{}).value?.trim();
+  const notes=(document.getElementById('ec-notes')||{}).value?.trim()||'';
+  if(!newName){showToast('Inserisci il nome dell\'azienda');return}
+  if(newName!==oldName && state.companies.some(c=>c.name===newName)){showToast('Esiste già un\'altra azienda con lo stesso nome');return}
+  state.companies=state.companies.map(c=>c.name===oldName?{...c,name:newName,adminEmail:admin,companyEmail:company,notes}:c);
+  hideModal();saveData();renderPage();renderSidebarCompanies();showToast('Azienda aggiornata');
+}
+
+window.confirmDeleteCompany=function(name){
+  const cnt=state.companies.filter(c=>c.name===name).length;
+  if(!cnt){showToast('Azienda non trovata');return}
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
+    <h3>Conferma eliminazione azienda</h3>
+    <p style="font-size:14px;color:var(--text2);">Eliminare l'azienda <strong style="color:var(--text)">${esc(name)}</strong> e tutti i suoi ${cnt} contratti e cantieri associati? Questa azione è irreversibile.</p>
+    <div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn danger" onclick="doDeleteCompany('${escAttr(name)}')">Elimina</button></div>
+  </div></div>`);
+}
+
+window.doDeleteCompany=function(name){
+  const removed=state.companies.filter(c=>c.name===name);
+  state.companies=state.companies.filter(c=>c.name!==name);
+  hideModal();saveData();renderPage();renderSidebarCompanies();showToast(`Azienda "${name}" e ${removed.length} contratti eliminati`);
 }
 
 window.openAddEmployeeModal=function(){
