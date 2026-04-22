@@ -976,6 +976,30 @@ let autoSendInterval=null;
 
 applyTheme(state.theme);
 
+// Normalize cantieri so they are stored per azienda (first contract entry) and deduplicated
+function normalizeCompanyCantieri(){
+  try{
+    const map={};
+    state.companies.forEach(c=>{
+      const name=c.name||'';
+      if(!map[name])map[name]={seen:new Set(),cantieri:[]};
+      if(Array.isArray(c.cantieri)){
+        c.cantieri.forEach(ct=>{
+          const key=((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'');
+          if(!map[name].seen.has(key)){map[name].seen.add(key);map[name].cantieri.push({nome:ct.nome,scadenza:ct.scadenza,note:ct.note||''})}
+        });
+      }
+    });
+    const seenFirst={};
+    state.companies.forEach(c=>{
+      const name=c.name||'';
+      if(!seenFirst[name]){seenFirst[name]=true;c.cantieri=(map[name]&&map[name].cantieri.length)?map[name].cantieri.slice():[]}
+      else{c.cantieri=[]}
+    });
+  }catch(e){console.error('normalizeCompanyCantieri',e)}
+}
+normalizeCompanyCantieri();
+
 // ═══════════════════════════════════════
 // THEME
 // ═══════════════════════════════════════
@@ -1449,11 +1473,14 @@ window.addCantiere=function(companyName){
   const scad=(document.getElementById('ct-scad')||{}).value;
   const note=(document.getElementById('ct-note')||{}).value?.trim();
   if(!nome||!scad){showToast('Inserire nome e data scadenza cantiere');return}
-  let count=0;
-  state.companies.forEach(c=>{
-    if(c.name===companyName){if(!Array.isArray(c.cantieri))c.cantieri=[];c.cantieri.push({nome,scadenza:scad,note:note||''});count++}
-  });
-  saveData();renderPage();showToast('Cantiere aggiunto a '+count+' contratti');
+  // Add cantiere only to the canonical company record (first contract for that company)
+  const canonical=state.companies.find(c=>c.name===companyName);
+  if(!canonical){showToast('Azienda non trovata');return}
+  if(!Array.isArray(canonical.cantieri))canonical.cantieri=[];
+  const key=((nome||'').trim().toLowerCase())+'|'+scad;
+  if(canonical.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key)){showToast('Cantiere già presente per questa azienda');return}
+  canonical.cantieri.push({nome,scadenza:scad,note:note||''});
+  saveData();renderPage();showToast('Cantiere aggiunto');
 }
 
 // ═══════════════════════════════════════
@@ -1605,8 +1632,9 @@ window.openDayEvents=function(dateStr){
 
 // Global add cantiere (from Cantieri page)
 window.openAddCantiereGlobal=function(){
-  // build a select of companies
-  const opts=state.companies.map(c=>`<option value="${c.id}">${esc(c.name)}${c.employeeName?` — ${esc(c.employeeName)}`:''}</option>`).join('');
+  // build a select of unique companies (use first contract id as canonical)
+  const seen={};
+  const opts=state.companies.reduce((a,c)=>{if(!seen[c.name]){seen[c.name]=true;a.push(`<option value="${c.id}">${esc(c.name)}</option>`)}return a},[]).join('');
   showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
     <h3>Nuovo cantiere</h3>
     <div class="form-row"><div class="form-field"><label>Azienda</label><select id="mc-company" class="f-input" style="width:100%">${opts}</select></div></div>
@@ -1629,6 +1657,10 @@ window.saveModalCantiereGlobal=function(){
   const c=state.companies.find(x=>x.id===companyId);
   if(!c)return showToast('Azienda non trovata');
   if(!Array.isArray(c.cantieri))c.cantieri=[];
+  // avoid duplicates by nome+scadenza
+  const key=((nome||'').trim().toLowerCase())+'|'+scad;
+  const exists=c.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key);
+  if(exists){showToast('Cantiere già presente per questa azienda');return}
   c.cantieri.push({nome,scadenza:scad,note});
   saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
 }
@@ -1947,10 +1979,14 @@ window.saveModalCantiere=function(id,idx){
   const scad=(document.getElementById('mc-scad')||{}).value;
   const note=(document.getElementById('mc-note')||{}).value?.trim()||'';
   if(!nome||!scad){showToast('Inserisci nome e data');return}
-  const c=state.companies.find(x=>x.id===id);
-  if(!c)return;
+  const original=state.companies.find(x=>x.id===id);
+  if(!original)return;
+  // operate on canonical company record (first contract with same name)
+  const c=state.companies.find(x=>x.name===original.name) || original;
   if(!Array.isArray(c.cantieri))c.cantieri=[];
   if(idx===null||idx===undefined){
+    const key=((nome||'').trim().toLowerCase())+'|'+scad;
+    if(c.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key)){showToast('Cantiere già presente per questa azienda');return}
     c.cantieri.push({nome,scadenza:scad,note});
     saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
   }else{
@@ -2368,7 +2404,11 @@ window.applySyncConfig=()=>{save(SK.sync,syncConfig);initSync();renderPage()}
 // ═══════════════════════════════════════
 // SAVE DATA
 // ═══════════════════════════════════════
-function saveData(){save(SK.data,state.companies);syncToCloud()}
+function saveData(){
+  // Ensure cantieri are canonicalized per azienda before saving
+  normalizeCompanyCantieri();
+  save(SK.data,state.companies);syncToCloud()
+}
 
 // ═══════════════════════════════════════
 // TOAST
@@ -2479,7 +2519,9 @@ function enterApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-shell').style.display='flex';
   document.getElementById('mobile-menu-btn').style.display=window.innerWidth<640?'flex':'none';
-  updateNav();renderSidebarCompanies();renderPage();
+  updateNav();
+  normalizeCompanyCantieri();
+  renderSidebarCompanies();renderPage();
   if(emailSettings.autoSend.enabled)startAutoSend();
   if(syncConfig.enabled)initSync();
 
