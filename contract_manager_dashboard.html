@@ -883,10 +883,16 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
             </button>
           </div>
         </div>
-        <button class="tb-btn primary" onclick="openAddModal()">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Aggiungi
-        </button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="tb-btn primary" onclick="openAddCompanyModal()">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+            Aggiungi azienda
+          </button>
+          <button class="tb-btn" onclick="openAddEmployeeModal()">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Aggiungi dipendente
+          </button>
+        </div>
         <div style="position:relative">
           <button class="icon-btn" onclick="toggleNotifCenter()" id="notif-btn">
             <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
@@ -1788,6 +1794,60 @@ window.openAddCantiere=function(id){
       <button class="m-btn primary" onclick="saveModalCantiere(${id})">Aggiungi</button>
     </div>
   </div></div>`);
+}
+
+// Company / Employee separated registration
+window.openAddCompanyModal=function(){
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
+    <h3>Registra nuova azienda</h3>
+    <div class="form-row"><div class="form-field"><label>Nome azienda *</label><input id="ac-name" class="f-input" type="text" placeholder="Es. ACME S.r.l." style="width:100%"></div></div>
+    <div class="form-row">
+      <div class="form-field"><label>Email amministratore</label><input id="ac-admin" class="f-input" type="email" placeholder="admin@azienda.it" style="width:100%"></div>
+      <div class="form-field"><label>Email azienda</label><input id="ac-company" class="f-input" type="email" placeholder="contratti@azienda.it" style="width:100%"></div>
+    </div>
+    <div class="form-row single"><div class="form-field"><label>Note</label><input id="ac-notes" class="f-input" type="text" placeholder="Opzionale" style="width:100%"></div></div>
+    <div class="modal-actions">
+      <button class="m-btn" onclick="hideModal()">Annulla</button>
+      <button class="m-btn primary" onclick="saveCompany()">Registra azienda</button>
+    </div>
+  </div></div>`);
+}
+
+window.saveCompany=function(){
+  const name=(document.getElementById('ac-name')||{}).value?.trim();
+  const admin=(document.getElementById('ac-admin')||{}).value?.trim();
+  const company=(document.getElementById('ac-company')||{}).value?.trim();
+  const notes=(document.getElementById('ac-notes')||{}).value?.trim()||'';
+  if(!name){showToast('Inserisci il nome dell\'azienda');return}
+  // prevent duplicate company name
+  const exists=state.companies.some(c=>c.name===name);
+  if(exists){showToast('Azienda già registrata');return}
+  const newId=Math.max(0,...state.companies.map(c=>c.id||0))+1;
+  state.companies.push({id:newId,name,employeeName:'',contractType:'',startDate:'',endDate:'',renewable:false,renewMonths:12,renewType:'',renewNotice:30,renewCount:0,adminEmail:admin,companyEmail:company,notes,cantieri:[]});
+  hideModal();saveData();renderPage();renderSidebarCompanies();showToast('Azienda registrata');
+}
+
+window.openAddEmployeeModal=function(){
+  const names=[...new Set(state.companies.map(c=>c.name))];
+  if(!names.length){
+    showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+      <h3>Nessuna azienda</h3>
+      <p style="color:var(--text2)">Non ci sono aziende registrate. Prima registra l'azienda, poi aggiungi i dipendenti.</p>
+      <div class="modal-actions"><button class="m-btn" onclick="hideModal()">Chiudi</button><button class="m-btn primary" onclick="hideModal();openAddCompanyModal()">Registra azienda</button></div>
+    </div></div>`);
+    return;
+  }
+  const opts=names.map(n=>`<option value="${escAttr(n)}">${esc(n)}</option>`).join('');
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
+    <h3>Nuovo dipendente</h3>
+    <div class="form-row"><div class="form-field"><label>Azienda *</label><select id="ae-company" class="f-input" style="width:100%">${opts}</select></div></div>
+    <div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="doOpenAddContractForSelectedCompany()">Aggiungi dipendente</button></div>
+  </div></div>`);
+}
+
+window.doOpenAddContractForSelectedCompany=function(){
+  const sel=document.getElementById('ae-company');
+  if(!sel)return;const name=sel.value;hideModal();openAddContractModal(name);
 }
 window.saveModalCantiere=function(id,idx){
   const nome=(document.getElementById('mc-nome')||{}).value?.trim();
