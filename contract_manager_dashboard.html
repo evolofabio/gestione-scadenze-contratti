@@ -1120,52 +1120,58 @@ function updateNav(){
 // ═══════════════════════════════════════
 // NOTIFICATIONS
 // ═══════════════════════════════════════
-function getAlerts(){
-  const alerts=[];
-  state.companies.forEach(c=>{
-    const d=daysLeft(c.endDate);
-    if(d<0)alerts.push({type:'expired',c,d});
-    else if(d<=ALERT_DAYS)alerts.push({type:'urgent',c,d});
-    if(Array.isArray(c.cantieri))c.cantieri.forEach(ct=>{
-      const cd=daysLeft(ct.scadenza);
-      if(cd>=0&&cd<=7)alerts.push({type:'cantiere',c,ct,d:cd});
+function renderCantieriPage(){
+  // Only show cantieri from the canonical company record (first contract per azienda)
+  const seenCompany = {};
+  const all = state.companies.flatMap(c => {
+    if (seenCompany[c.name]) return [];
+    seenCompany[c.name] = true;
+    return (c.cantieri||[]).map((ct,idx) => ({...ct, company: c, _idx: idx, _contractId: c.id}));
+  });
+  all.sort((a,b)=>daysLeft(a.scadenza)-daysLeft(b.scadenza));
+  if(!all.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>`;
+
+  const groups=[
+    {label:'Scaduti',items:all.filter(ct=>daysLeft(ct.scadenza)<0),cls:'danger'},
+    {label:'Urgenti — entro 7 giorni',items:all.filter(ct=>{const d=daysLeft(ct.scadenza);return d>=0&&d<=7}),cls:'danger'},
+    {label:'In scadenza — entro 30 giorni',items:all.filter(ct=>{const d=daysLeft(ct.scadenza);return d>7&&d<=30}),cls:'warn'},
+    {label:'Regolari',items:all.filter(ct=>daysLeft(ct.scadenza)>30),cls:'ok'},
+  ];
+
+  let h=`<div class="section-head" style="align-items:center">
+    <div class="section-title">Cantieri (${all.length})</div>
+    <div><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>
+  </div>`;
+  groups.forEach(g=>{
+    if(!g.items.length)return;
+    h+=`<div class="urgency-group">
+      <div class="group-header"><span class="group-title">${g.label}</span><span class="group-count ${g.cls}">${g.items.length}</span></div>
+      ${g.items.map(ct=>{
+        const d=daysLeft(ct.scadenza);
+        const uc=d<0||d<=7?'urgent':d<=30?'warning':'ok';
+        return`<div class="cantiere-card">
+            <div class="cantiere-urgency-bar ${uc}"></div>
+            <div class="cantiere-info">
+              <div class="cantiere-name">${esc(ct.nome)}</div>
+              <div class="cantiere-company">${esc(ct.company.name)}</div>
+              ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic">${esc(ct.note)}</div>`:''}
+            </div>
+            <div class="cantiere-right">
+              <div class="cantiere-days ${d<0?'urgent':d<=7?'urgent':d<=30?'warning':'ok'}">${d<0?'Sc.':d}</div>
+              <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
+              <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+                <button class="act-btn" onclick="openEditCantiere(${ct.company.id},${ct._idx})">Modifica</button>
+                <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct.company.id},${ct._idx})">Elimina</button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+      h+=`</div>`;
     });
   });
-  return alerts;
+  return h;
 }
-function updateNotifBadge(){
-  const a=getAlerts();
-  const badge=document.getElementById('notif-badge');
-  const cb=document.getElementById('cantieri-badge');
-  if(badge){badge.textContent=a.length;badge.style.display=a.length?'flex':'none'}
-  const cantiereAlerts=state.companies.reduce((n,c)=>{
-    if(!Array.isArray(c.cantieri))return n;
-    return n+c.cantieri.filter(ct=>daysLeft(ct.scadenza)>=0&&daysLeft(ct.scadenza)<=7).length;
-  },0);
-  if(cb){cb.textContent=cantiereAlerts;cb.style.display=cantiereAlerts?'flex':'none'}
-  document.title=(a.length?`(${a.length}) `:'')+'Gestione Contratti';
-}
-function toggleNotifCenter(){
-  state.showNotifCenter=!state.showNotifCenter;
-  renderNotifCenter();
-}
-function renderNotifCenter(){
-  const el=document.getElementById('notif-center');
-  if(!el)return;
-  if(!state.showNotifCenter){el.style.display='none';return}
-  el.style.display='block';
-  const alerts=getAlerts();
-  if(!alerts.length){el.innerHTML=`<div class="notif-header">Notifiche</div><div class="notif-empty">Nessun alert attivo</div>`;return}
-  el.innerHTML=`<div class="notif-header">Notifiche <span class="badge badge-red">${alerts.length}</span></div>`+
-    alerts.map(a=>{
-      if(a.type==='expired')return`<div class="notif-item" onclick="goToContract(${a.c.id})"><div class="notif-item-title">${esc(a.c.name)} <span class="badge badge-gray">Scaduto</span></div><div class="notif-item-sub">${esc(a.c.employeeName)} — scaduto il ${formatDate(a.c.endDate)}</div></div>`;
-      if(a.type==='urgent')return`<div class="notif-item" onclick="goToContract(${a.c.id})"><div class="notif-item-title">${esc(a.c.name)} <span class="badge badge-red">${a.d}gg</span></div><div class="notif-item-sub">${esc(a.c.employeeName)} — scade il ${formatDate(a.c.endDate)}</div></div>`;
-      return`<div class="notif-item"><div class="notif-item-title">🏗️ ${esc(a.ct.nome)} <span class="badge badge-amber">${a.d}gg</span></div><div class="notif-item-sub">${esc(a.c.name)} — scade il ${formatDate(a.ct.scadenza)}</div></div>`;
-    }).join('');
-}
-function goToContract(id){
-  state.showNotifCenter=false;
-  document.getElementById('notif-center').style.display='none';
   setPage('dashboard');
   setTimeout(()=>{const el=document.getElementById('card-'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'center'})},100);
 }
