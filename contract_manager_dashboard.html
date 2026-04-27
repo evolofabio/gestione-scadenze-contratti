@@ -48,6 +48,11 @@
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
   --t: 0.18s ease;
 }
+/* DEBUG: force show app-shell for troubleshooting */
+/* temporary debug rule - remove after troubleshooting */
+@media screen {
+  #app-shell{display:flex !important;outline:3px dashed rgba(200,30,30,0.25);}
+}
 [data-theme="dark"] {
   --bg: #131312;
   --surface: #1e1e1c;
@@ -1601,6 +1606,118 @@ window.doDeleteCantiere=function(contractId,idx){
   saveData();hideModal();renderPage();showToast(`Cantiere "${removed?.nome||''}" eliminato`);
 }
 
+// Render helper: single contract card
+function renderContractCard(c){
+  try{
+    const d=daysLeft(c.endDate);
+    const badge=urgBadge(d)||{cls:'badge-gray',txt:'—'};
+    const prog=Math.round(progressPct(c.startDate,c.endDate)||0);
+    const pcls=progCls(d)||'gray';
+    const urg=urgClass(d)||'';
+    return `<div class="contract-card ${urg}" data-id="${escAttr(c.id)}">
+      <div class="card-main">
+        <div class="card-top">
+          <div class="card-ident">
+            <div class="card-company-name">${esc(c.name)}${c.employeeName?` — ${esc(c.employeeName)}`:''}</div>
+            <div class="card-employee">${esc(c.employeeName||'')}</div>
+            <div class="card-type">${esc(c.contractType||'')}</div>
+          </div>
+          <div class="card-badges">
+            <div class="badge ${badge.cls}">${esc(badge.txt)}</div>
+          </div>
+        </div>
+        <div class="prog-bar"><div class="prog-fill ${pcls}" style="width:${prog}%"></div></div>
+        <div class="card-fields">
+          <div><div class="field-label">Scadenza</div><div class="field-val ${d<0?'c-red':d<=ALERT_DAYS?'c-amber':'c-green'}">${formatDate(c.endDate)}</div></div>
+          <div><div class="field-label">Giorni</div><div class="field-val">${d<0?'Scaduto':d+' gg'}</div></div>
+          <div><div class="field-label">Inizio</div><div class="field-val">${formatDate(c.startDate)}</div></div>
+          <div><div class="field-label">Tipo</div><div class="field-val">${esc(c.contractType||'')}</div></div>
+          <div><div class="field-label">Proroghe</div><div class="field-val">${c.renewCount||0}</div></div>
+        </div>
+        ${c.notes?`<div class="card-notes"><span class="notes-label">Note</span>${esc(c.notes)}</div>`:''}
+        ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(ct=>`<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(ct.scadenza)<=0?'':'ok'}">${formatDate(ct.scadenza)}</div></div>`).join('')+`</div>`:''}
+      </div>
+      <div class="card-actions">
+        <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
+        <button class="act-btn" onclick="openAddCantiere(${escAttr(c.id)})">+ Cantiere</button>
+        <button class="act-btn primary" onclick="openEmailModal(${escAttr(c.id)})">Email</button>
+        <button class="act-btn danger" onclick="confirmDelete(${escAttr(c.id)})">Elimina</button>
+      </div>
+    </div>`;
+  }catch(e){console.error('renderContractCard',e);return ''}
+}
+
+// Render company page (list of contracts for a company) with optional month filter
+function renderCompanyContracts(name){
+  const contracts=state.companies.filter(c=>c.name===name);
+  if(!contracts.length){
+    return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto per ${esc(name)}.<br><br><button class="tb-btn primary" onclick="openAddContractModal('${escAttr(name)}')">+ Aggiungi dipendente</button></div>`;
+  }
+  const first=contracts[0];
+  // build month options from contracts (defensive: ensure endDate coerced to string)
+  const months=[...new Set(contracts.map(c=>c.endDate?String(c.endDate).slice(0,7):'').filter(Boolean))];
+  months.sort();
+  const opts=`<option value="">Tutti</option>`+months.map(m=>{
+    const d = new Date(m+'-01');
+    const lbl = isNaN(d.getTime()) ? m : d.toLocaleString('it-IT',{month:'long',year:'numeric'});
+    return `<option value="${escAttr(m)}"${state.filterMonth===m? ' selected' : ''}>${esc(lbl)}</option>`;
+  }).join('');
+
+  const filtered = state.filterMonth ? contracts.filter(c=>c.endDate && String(c.endDate).startsWith(state.filterMonth)) : contracts;
+  filtered.sort((a,b)=>daysLeft(a.endDate)-daysLeft(b.endDate));
+
+  let h=`<div class="company-hero">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="company-avatar">${esc(first.name.substring(0,2).toUpperCase())}</div>
+      <div class="company-info"><div class="company-name">${esc(first.name)}</div><div class="company-meta">${first.companyEmail?esc(first.companyEmail):''}${first.adminEmail?` • ${esc(first.adminEmail)}`:''}</div></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center"><button class="tb-btn primary" onclick="openAddContractModal('${escAttr(first.name)}')">+ Aggiungi dipendente</button><button class="tb-btn" onclick="openEditCompanyModal('${escAttr(first.name)}')">Modifica azienda</button></div>
+  </div>`;
+
+  h+=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="flex:1"></div><div><label style="font-size:12px;color:var(--text3);margin-right:8px">Filtra mese</label><select id="company-filter-month" class="f-input" onchange="state.filterMonth=this.value;renderPage();">${opts}</select></div></div>`;
+
+  h+=`<div id="company-contracts-list">${filtered.map(c=>renderContractCard(c)).join('')}</div>`;
+  return h;
+}
+
+// Main page renderer
+function renderPage(){
+  const el=document.getElementById('page-content');
+  if(!el) return;
+  try{
+    let html='';
+    switch(state.page){
+      case 'dashboard':
+        html+=`<div class="section-head"><div class="section-title">Contratti (${state.companies.length})</div><div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div></div>`;
+        // apply search filter
+        const q=(state.searchQuery||'').toLowerCase();
+        const list=state.companies.filter(c=>!q||(`${c.name} ${c.employeeName} ${c.contractType}`).toLowerCase().includes(q));
+        list.sort((a,b)=>daysLeft(a.endDate)-daysLeft(b.endDate));
+        html+=`<div id="contracts-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+        break;
+      case 'company':
+        html=renderCompanyContracts(state.activeCompany||'');
+        break;
+      case 'cantieri':
+        html=renderCantieriPage();
+        break;
+      case 'analytics':
+        html=renderAnalyticsPage();
+        break;
+      case 'settings':
+        html=renderSettingsPage();
+        break;
+      case 'calendar':
+        html=`<div class="section-head"><div class="section-title">Calendario</div></div><div>Calendario</div>`;
+        break;
+      default:
+        html='';
+    }
+    el.innerHTML=html;
+    if(state.page==='analytics') setTimeout(initCharts,50);
+  }catch(e){console.error('renderPage error',e);el.innerHTML='<div class="empty-state">Errore durante il rendering</div>'}
+}
+
 function renderContractModal(c,base){
   const isEdit=!!c;
   const v=c||base||{};
@@ -1981,7 +2098,21 @@ function mergeCompanies(cloud, local){
   // Ordina per id
   return Object.values(map).sort((a,b)=>a.id-b.id);
 }
-// ...existing code...
+// If no explicit login flow is active, show the app and render initial UI
+function initApp(){
+  try{
+    console.log('initApp start');
+    const loginEl=document.getElementById('login-screen');
+    const appEl=document.getElementById('app-shell');
+    if(loginEl)loginEl.innerHTML='';
+    if(appEl)appEl.style.display='flex';
+    renderSidebarCompanies();
+    renderPage();
+    updateNav();
+  }catch(e){console.error('initApp',e)}
+}
+// Run init after a short delay so DOM is ready
+setTimeout(initApp,20);
 </script>
 </body>
 </html>
