@@ -1776,12 +1776,32 @@ window.toggleNotifCenter=function(){
 }
 
 window.openQuickRenew=function(id){
+
   const c=state.companies.find(x=>x.id===id);if(!c)return;const months=c.renewMonths||12;
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Proroga rapida — ${esc(c.employeeName||c.name)}</h3><div class="form-row"><div class="form-field"><label>Mesi da aggiungere</label><input id="qr-months" class="f-input" type="number" min="1" value="${months}"></div></div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="doQuickRenew(${id})">Applica proroga</button></div></div></div>`);
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Proroga rapida — ${esc(c.employeeName||c.name)}</h3>
+    <div class="form-row"><div class="form-field"><label>Mesi da aggiungere</label><input id="qr-months" class="f-input" type="number" min="1" value="${months}" oninput="updateQuickRenewCausale(${id})"></div></div>
+    <div id="qr-causale" style="margin-bottom:10px"></div>
+    <div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" id="qr-apply" onclick="doQuickRenew(${id})">Applica proroga</button></div></div></div>`);
+  // initialize causale info after modal is inserted
+  setTimeout(()=>updateQuickRenewCausale(id),20);
 }
+
 window.doQuickRenew=function(id){
-  const m=parseInt((document.getElementById('qr-months')||{}).value)||0;const idx=state.companies.findIndex(c=>c.id===id);if(idx<0)return;const c=state.companies[idx];if(!c.endDate){showToast('Contratto senza data di scadenza');return}
-  const d=new Date(c.endDate);d.setMonth(d.getMonth()+m);state.companies[idx].endDate=d.toISOString().split('T')[0];state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData();hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata');
+  try{
+    const m=parseInt((document.getElementById('qr-months')||{}).value)||0;const idx=state.companies.findIndex(c=>c.id===id);if(idx<0)return;const c=state.companies[idx];
+    if(m<=0){showToast('Inserire mesi validi');return}
+    if(!c.endDate||!c.startDate){showToast('Contratto senza data di scadenza o inizio');return}
+    const d=new Date(c.endDate);d.setMonth(d.getMonth()+m);const newEndStr=d.toISOString().split('T')[0];
+    const newDur=durationMonths(c.startDate,newEndStr);const newRenew=(c.renewCount||0)+1;
+    const r=verificaCausale(newDur,newRenew,c.renewType==='Con causale');
+    if(r.stato==='ERRORE'){showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Impossibile applicare proroga</h3><div style="margin-bottom:12px">${esc(r.msg)}</div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Chiudi</button></div></div></div>`);return}
+    if(r.stato==='ATTENZIONE'){
+      showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Attenzione nella proroga</h3><div style="margin-bottom:12px">${esc(r.msg)}</div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="doQuickRenewConfirm(${id},${m})">Procedi comunque</button></div></div></div>`);
+      return;
+    }
+    // OK — apply
+    state.companies[idx].endDate=newEndStr;state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData();hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata');
+  }catch(e){console.error('doQuickRenew',e);showToast('Errore durante la proroga')}
 }
 
 // Main page renderer
@@ -1896,14 +1916,13 @@ function attachModalListeners(){
     const el=document.getElementById(id);
     if(el)el.addEventListener('input',updateCausaleLive);
   });
-}
-
-function updateCausaleLive(){
-  const fb=document.getElementById('causale-live');
-  if(!fb)return;
-  const s=(document.getElementById('f-start')||{}).value;
-  const e=(document.getElementById('f-end')||{}).value;
-  const rt=(document.getElementById('f-rtype')||{}).value||'';
+  window.doQuickRenewConfirm=function(id,m){
+    try{
+      const idx=state.companies.findIndex(c=>c.id===id);if(idx<0)return;const c=state.companies[idx];if(!c.endDate){showToast('Contratto senza data di scadenza');hideModal();return}
+      const d=new Date(c.endDate);d.setMonth(d.getMonth()+m);const newEndStr=d.toISOString().split('T')[0];
+      state.companies[idx].endDate=newEndStr;state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData();hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata (procedi comunque)');
+    }catch(e){console.error('doQuickRenewConfirm',e);showToast('Errore')}
+  }
   const rc=parseInt((document.getElementById('f-rcount')||{}).value)||0;
   if(!s||!e){fb.innerHTML='';return}
   const dm=durationMonths(s,e);
