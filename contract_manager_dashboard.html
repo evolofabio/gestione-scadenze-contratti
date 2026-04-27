@@ -833,7 +833,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
         <span>Analytics</span>
       </button>
       <button class="nav-item" id="nav-settings" onclick="setPage('settings')">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         <span>Impostazioni</span>
       </button>
       <span class="sidebar-section-label" style="margin-top:8px">Aziende</span>
@@ -1049,7 +1049,7 @@ function verificaCausale(durMesi,proroghe,causale){
   if(proroghe===4)return{stato:'ATTENZIONE',msg:'Raggiunto il numero massimo di proroghe (4/4).',azione:'Non è possibile ulteriori proroghe. Valutare conversione T.I.'};
   if(durMesi>=22)return{stato:'ATTENZIONE',msg:'Durata ('+durMesi+' mesi) vicina al limite di 24 mesi.',azione:'Pianificare chiusura o conversione prima dei 24 mesi.'};
   if(proroghe===3)return{stato:'ATTENZIONE',msg:'Effettuate 3 proroghe su 4 massime.',azione:'Resta una sola proroga disponibile.'};
-  return{stato:'OK',msg:'Conforme: '+durMesi+' mesi, '+proroghe+'/4 proroghe'+(causale?', con causale':'' )+'.',azione:'Nessuna azione richiesta.'};
+  return{stato:'OK',msg:'Conforme: '+durMesi+' mesi, '+proroghe+'/4 proroghe'+(causale?' con causale':'' )+'.',azione:'Nessuna azione richiesta.'};
 }
 function causaleForContract(c){if(!c||!c.startDate||!c.endDate)return null;return verificaCausale(durationMonths(c.startDate,c.endDate),c.renewCount||0,c.renewType==='Con causale')}
 
@@ -1157,448 +1157,12 @@ function renderCantieriPage(){
               ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic">${esc(ct.note)}</div>`:''}
             </div>
             <div class="cantiere-right">
-              <div class="cantiere-days ${d<0?'urgent':d<=7?'urgent':d<=30?'warning':'ok'}">${d<0?'Sc.':d}</div>
-              <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
-              <div style=\"font-size:11px;color:var(--text2);margin-top:2px\">${formatDate(ct.scadenza)}</div>
-              <div style=\"margin-top:8px;display:flex;gap:8px;justify-content:flex-end\">
-                <button class="act-btn" onclick="openEditCantiere(${ct.company.id},${ct._idx})">Modifica</button>
-                <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct.company.id},${ct._idx})">Elimina</button>
-              </div>
-            </div>
-          </div>`;
-      }).join('')}
-    </div>`;
-  });
-  return h;
-}
-
-// ═══════════════════════════════════════
-// PAGE RENDER ROUTER
-// ═══════════════════════════════════════
-function renderPage(){
-  const el=document.getElementById('page-content');
-  switch(state.page){
-    case'dashboard':el.innerHTML=renderDashboard();break;
-    case'calendar':el.innerHTML=renderCalendar();break;
-    case'cantieri':el.innerHTML=renderCantieriPage();break;
-    case'analytics':el.innerHTML=renderAnalyticsPage();setTimeout(initCharts,50);break;
-    case'settings':el.innerHTML=renderSettingsPage();break;
-    case'company':el.innerHTML=renderCompanyPage();break;
-    default:el.innerHTML=renderDashboard();
-  }
-  updateNotifBadge();
-}
-
-// ═══════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════
-function renderDashboard(){
-  const all=state.companies;
-  const expired=all.filter(c=>daysLeft(c.endDate)<0);
-  const urgent=all.filter(c=>{const d=daysLeft(c.endDate);return d>=0&&d<=ALERT_DAYS});
-  const soon=all.filter(c=>{const d=daysLeft(c.endDate);return d>ALERT_DAYS&&d<=30});
-  const ok=all.filter(c=>daysLeft(c.endDate)>30);
-
-  let h=`<h2 class="sr-only">Dashboard gestione contratti</h2>`;
-
-  // Metrics
-  h+=`<div class="metrics-grid">
-    <div class="metric-card"><div class="metric-label">Totali</div><div class="metric-val c-blue">${all.length}</div><div class="metric-delta">${[...new Set(all.map(c=>c.name))].length} aziende</div></div>
-    <div class="metric-card m-red"><div class="metric-label">Scaduti</div><div class="metric-val c-red">${expired.length}</div><div class="metric-delta">Da gestire subito</div></div>
-    <div class="metric-card m-amber"><div class="metric-label">In scadenza ≤${ALERT_DAYS}gg</div><div class="metric-val c-amber">${urgent.length}</div><div class="metric-delta">Azione urgente</div></div>
-    <div class="metric-card m-green"><div class="metric-label">Regolari</div><div class="metric-val c-green">${ok.length}</div><div class="metric-delta">Nessuna azione</div></div>
-  </div>`;
-
-  const list=filteredSorted();
-
-  if(!list.length){
-    return h+`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Nessun contratto${state.searchQuery?' per la ricerca':''}</div>`;
-  }
-
-  // Group by urgency
-  const groups=[
-    {key:'expired',label:'Scaduti',cls:'danger',items:list.filter(c=>daysLeft(c.endDate)<0)},
-    {key:'urgent',label:'Azione urgente — entro '+ALERT_DAYS+' giorni',cls:'danger',items:list.filter(c=>{const d=daysLeft(c.endDate);return d>=0&&d<=ALERT_DAYS})},
-    {key:'warning',label:'In scadenza — entro 30 giorni',cls:'warn',items:list.filter(c=>{const d=daysLeft(c.endDate);return d>ALERT_DAYS&&d<=30})},
-    {key:'ok',label:'Regolari',cls:'ok',items:list.filter(c=>daysLeft(c.endDate)>30)},
-  ];
-
-  groups.forEach(g=>{
-    if(!g.items.length)return;
-    h+=`<div class="urgency-group">
-      <div class="group-header">
-        <span class="group-title">${g.label}</span>
-        <span class="group-count ${g.cls}">${g.items.length}</span>
-      </div>
-      ${g.items.map(c=>renderCard(c)).join('')}
-    </div>`;
-  });
-
-  return h;
-}
-
-function filteredSorted(){
-  let list=[...state.companies];
-  if(state.searchQuery){
-    const q=state.searchQuery.toLowerCase();
-    list=list.filter(c=>c.name.toLowerCase().includes(q)||c.contractType.toLowerCase().includes(q)||(c.employeeName&&c.employeeName.toLowerCase().includes(q))||(c.notes&&c.notes.toLowerCase().includes(q)));
-  }
-  if(state.filterMonth)list=list.filter(c=>c.endDate&&c.endDate.substring(0,7)===state.filterMonth);
-  list.sort((a,b)=>{
-    if(state.sortBy==='name')return a.name.localeCompare(b.name);
-    if(state.sortBy==='date')return new Date(a.endDate)-new Date(b.endDate);
-    return daysLeft(a.endDate)-daysLeft(b.endDate);
-  });
-  return list;
-}
-
-// ═══════════════════════════════════════
-// CONTRACT CARD
-// ═══════════════════════════════════════
-function renderCard(c,inCompany=false){
-  const days=daysLeft(c.endDate);
-  const uc=urgClass(days);
-  const ub=urgBadge(days);
-  const pct=progressPct(c.startDate,c.endDate).toFixed(1);
-  const pc=progCls(days);
-  const dc=daysCls(days);
-  const cr=causaleForContract(c);
-  const expanded=state.expandedCard===c.id;
-  const showQR=state.quickRenewId===c.id;
-  const dm=durationMonths(c.startDate,c.endDate);
-  const rm=remainingMonths(c.endDate);
-
-  let causaleBadge='';
-  if(cr&&cr.stato!=='OK')causaleBadge=`<span class="badge ${cr.stato==='ERRORE'?'badge-red':'badge-amber'}">${cr.stato==='ERRORE'?'Violazione normativa':'Attenzione normativa'}</span>`;
-
-  let causaleBlock='';
-  if(cr&&cr.stato!=='OK'){
-    const cls=cr.stato==='ERRORE'?'err':'warn';
-    const icon=cr.stato==='ERRORE'
-      ?'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-      :'<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-    causaleBlock=`<div class="causale-inline ${cls}">${icon}<div><span class="causale-title">${cr.stato}: </span>${esc(cr.msg)} <em style="font-style:italic;opacity:.8"> — ${esc(cr.azione)}</em></div></div>`;
-  }
-
-  let cantieriBlock='';
-  if(Array.isArray(c.cantieri)&&c.cantieri.length){
-    cantieriBlock=`<div class="cantieri-inline">
-      <div class="cantieri-label">Scadenze cantieri</div>
-      ${c.cantieri.map((ct,ci)=>{
-        const cd=daysLeft(ct.scadenza);
-        const cls=cd<0||cd<=7?'urgent':'ok';
-        return`<div class="cantiere-row">
-          <span class="cantiere-nome">${esc(ct.nome)}</span>
-          <span class="cantiere-scad ${cd>7&&cd>=0?'ok':''}">${formatDate(ct.scadenza)} (${cd<0?'scaduto':cd+'gg'})</span>
-          ${ct.note?`<span class="cantiere-note">${esc(ct.note)}</span>`:''}
-          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-            <button class="act-btn" onclick="openEditCantiere(${c.id},${ci})">Modifica</button>
-            <button class="act-btn danger" onclick="confirmDeleteCantiere(${c.id},${ci})">Elimina</button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  }
-
-  let quickRenewBlock='';
-  if(showQR&&c.renewable){
-    const curMonths=(state.quickRenewMonths&&state.quickRenewMonths[c.id])||(c.renewMonths||dm||12);
-    quickRenewBlock=`<div class="quick-renew-panel">
-      <div class="qrp-info">Proroga rapida <strong>${esc(c.name)}${c.employeeName?' — '+c.employeeName:''}</strong></div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
-        <label style="font-size:13px;color:var(--text2);min-width:120px">Mesi da prorogare</label>
-        <input id="qr-months-${c.id}" type="number" min="1" value="${curMonths}" style="width:96px;padding:6px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text)" oninput="setQuickRenewMonths(${c.id},this)">
-      </div>
-      <div class="qrp-actions" style="margin-top:12px">
-        <button class="qrp-btn" onclick="cancelQuickRenew()">Annulla</button>
-        <button class="qrp-btn confirm" onclick="doQuickRenew(${c.id})">Conferma proroga</button>
-      </div>
-    </div>`;
-  }
-
-  return`<div class="contract-card ${uc}" id="card-${c.id}" style="animation:cardIn .2s ease">
-    <div class="card-main">
-      <div class="card-top">
-        <div class="card-ident">
-          <div class="card-company-name">${esc(c.name)}</div>
-          ${c.employeeName?`<div class="card-employee">${esc(c.employeeName)}</div>`:''}
-          <div class="card-type">${esc(c.contractType)}</div>
-        </div>
-        <div class="card-badges">
-          <span class="badge ${ub.cls}">${ub.txt}</span>
-          ${c.renewable?'<span class="badge badge-blue">Prorogabile</span>':'<span class="badge badge-gray">Non prorogabile</span>'}
-          ${(c.renewCount||0)>0?`<span class="badge badge-purple">${c.renewCount}× pror.</span>`:''}
-          ${causaleBadge}
-        </div>
-      </div>
-      <div class="prog-bar"><div class="prog-fill ${pc}" style="width:${pct}%"></div></div>
-      <div class="card-fields">
-        <div><div class="field-label">Inizio</div><div class="field-val">${formatDate(c.startDate)}</div></div>
-        <div><div class="field-label">Scadenza</div><div class="field-val ${dc}">${formatDate(c.endDate)}</div></div>
-        <div><div class="field-label">Giorni rimasti</div><div class="field-val ${dc}">${days<0?'Scaduto':days+' gg'}</div></div>
-        <div><div class="field-label">Mesi rimasti</div><div class="field-val ${dc}">${days<0?'—':rm+' mesi'}</div></div>
-        <div><div class="field-label">Proroghe</div><div class="field-val">${c.renewCount||0}/4</div></div>
-      </div>
-      ${causaleBlock}
-      ${c.notes?`<div class="card-notes"><span class="notes-label">Note</span>${esc(c.notes)}</div>`:''}
-      ${cantieriBlock}
-    </div>
-    ${quickRenewBlock}
-    <div class="card-actions">
-      <button class="act-btn primary" onclick="openEmailModal(${c.id})">
-        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        Email
-      </button>
-      ${c.renewable&&days>=0?`<button class="act-btn quick-renew" onclick="startQuickRenew(${c.id})">
-        <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-        Proroga rapida
-      </button>`:''}
-      <button class="act-btn" onclick="openEditModal(${c.id})">
-        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Modifica
-      </button>
-      <button class="act-btn" onclick="openAddCantiere(${c.id})">
-        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-        + Cantiere
-      </button>
-      <button class="act-btn danger" onclick="confirmDelete(${c.id})" style="margin-left:auto">
-        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-        Elimina
-      </button>
-    </div>
-  </div>`;
-}
-
-// quick renew
-window.startQuickRenew=function(id){
-  const idx=state.companies.findIndex(c=>c.id===id);
-  if(idx<0)return;
-  const c=state.companies[idx];
-  state.quickRenewId = state.quickRenewId===id?null:id;
-  state.quickRenewMonths = state.quickRenewMonths||{};
-  if(state.quickRenewId===id){
-    const dm=durationMonths(c.startDate,c.endDate);
-    state.quickRenewMonths[id]=state.quickRenewMonths[id]??(c.renewMonths||dm||12);
-  }
-  renderPage();
-}
-window.cancelQuickRenew=function(){state.quickRenewId=null;renderPage()}
-window.setQuickRenewMonths=function(id,el){
-  state.quickRenewMonths = state.quickRenewMonths||{};
-  const v=parseInt((el||{}).value,10);
-  state.quickRenewMonths[id]=isNaN(v)||v<1?1:v;
-}
-window.doQuickRenew=function(id){
-  const idx=state.companies.findIndex(c=>c.id===id);
-  if(idx<0)return;
-  const c=state.companies[idx];
-  const addMonths=(state.quickRenewMonths&&state.quickRenewMonths[id])||c.renewMonths||durationMonths(c.startDate,c.endDate)||12;
-  const old=new Date(c.endDate);old.setMonth(old.getMonth()+addMonths);
-  state.companies[idx]={...c,endDate:old.toISOString().split('T')[0],renewCount:(c.renewCount||0)+1};
-  state.quickRenewId=null;
-  saveData();renderPage();
-  showToast('Contratto prorogato di '+addMonths+' mesi');
-}
-
-// search
-window.onSearch=function(v){state.searchQuery=v;renderPage()}
-
-// ═══════════════════════════════════════
-// COMPANY PAGE
-// ═══════════════════════════════════════
-function renderCompanyPage(){
-  const name=state.activeCompany;
-  const contracts=state.companies.filter(c=>c.name===name);
-  if(!contracts.length)return`<div class="empty-state">Azienda non trovata.</div>`;
-  const first=contracts[0];
-  const allCantieri=contracts.flatMap(c=>(c.cantieri||[]).map((ct,idx)=>({...ct,contract:c,_idx:idx})));
-  let h=`<div class="company-hero">
-    <div class="company-avatar">${name.substring(0,2).toUpperCase()}</div>
-    <div class="company-info">
-      <div class="company-name">${esc(name)}</div>
-      <div class="company-meta">
-        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        ${esc(first.adminEmail)} · ${esc(first.companyEmail)}
-      </div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="tb-btn" onclick="exportExcelCompany('${escAttr(name)}')">Esporta Excel</button>
-      <button class="tb-btn" onclick="openEditCompanyModal('${escAttr(name)}')">Modifica azienda</button>
-      <button class="tb-btn primary" onclick="openAddContractModal('${escAttr(name)}')">+ Dipendente</button>
-    </div>
-  </div>`;
-
-  h+=`<div class="section-head"><div class="section-title">Contratti (${contracts.length})</div></div>`;
-  [...contracts].sort((a,b)=>daysLeft(a.endDate)-daysLeft(b.endDate)).forEach(c=>{h+=renderCard(c,true)});
-
-  if(allCantieri.length){
-    h+=`<div style="margin-top:24px"><div class="section-head"><div class="section-title">Tutti i cantieri</div></div>`;
-    h+=allCantieri.map(ct=>{
-      const d=daysLeft(ct.scadenza);
-      const uc=d<0||d<=7?'urgent':d<=30?'warning':'ok';
-      return`<div class="cantiere-card">
-        <div class="cantiere-urgency-bar ${uc}"></div>
-        <div class="cantiere-info">
-          <div class="cantiere-name">${esc(ct.nome)}</div>
-          <div class="cantiere-company">${esc(ct.contract.employeeName||ct.contract.contractType)}</div>
-          ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic">${esc(ct.note)}</div>`:''}
-        </div>
-        <div class="cantiere-right">
-          <div class="cantiere-days ${d<0?'urgent':d<=7?'urgent':d<=30?'warning':'ok'}">${d<0?'Sc.':d}</div>
-          <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
-          <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
-            <button class="act-btn" onclick="openEditCantiere(${ct.contract.id},${ct._idx})">Modifica</button>
-            <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct.contract.id},${ct._idx})">Elimina</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-    h+=`</div>`;
-  }
-
-  // Add cantiere form
-  h+=`<div class="settings-card" style="margin-top:16px">
-    <h4><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Aggiungi scadenza cantiere</h4>
-    <div class="settings-row triple">
-      <div class="field-group"><label>Nome cantiere</label><input class="f-input" id="ct-nome" type="text" placeholder="Es. Cantiere Nord"></div>
-      <div class="field-group"><label>Data scadenza</label><input class="f-input" id="ct-scad" type="date"></div>
-      <div class="field-group"><label>Note (opz.)</label><input class="f-input" id="ct-note" type="text" placeholder="Note aggiuntive"></div>
-    </div>
-    <button class="tb-btn" onclick="addCantiere('${escAttr(name)}')">Aggiungi cantiere</button>
-  </div>`;
-  return h;
-}
-
-window.addCantiere=function(companyName){
-  const nome=(document.getElementById('ct-nome')||{}).value?.trim();
-  const scad=(document.getElementById('ct-scad')||{}).value;
-  const note=(document.getElementById('ct-note')||{}).value?.trim();
-  if(!nome||!scad){showToast('Inserire nome e data scadenza cantiere');return}
-  // Add cantiere only to the canonical company record (first contract for that company)
-  const canonical=state.companies.find(c=>c.name===companyName);
-  if(!canonical){showToast('Azienda non trovata');return}
-  if(!Array.isArray(canonical.cantieri))canonical.cantieri=[];
-  const key=((nome||'').trim().toLowerCase())+'|'+scad;
-  if(canonical.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key)){showToast('Cantiere già presente per questa azienda');return}
-  canonical.cantieri.push({nome,scadenza:scad,note:note||''});
-  saveData();renderPage();showToast('Cantiere aggiunto');
-}
-
-// ═══════════════════════════════════════
-// CALENDAR
-// ═══════════════════════════════════════
-function renderCalendar(){
-  const y=state.calYear,m=state.calMonth;
-  const monthName=new Date(y,m,1).toLocaleString('it-IT',{month:'long',year:'numeric'});
-  const first=new Date(y,m,1);
-  const startDow=(first.getDay()+6)%7; // Mon=0
-  const daysInMonth=new Date(y,m+1,0).getDate();
-  const today=new Date();
-
-  // Build events map
-  const events={};
-  function addEvent(dateStr,evt){if(!events[dateStr])events[dateStr]=[];events[dateStr].push(evt)}
-
-  state.companies.forEach(c=>{
-    if(c.endDate)addEvent(c.endDate,{type:urgClass(daysLeft(c.endDate)),label:c.name+(c.employeeName?' ('+c.employeeName+')':'' )});
-    (c.cantieri||[]).forEach(ct=>{
-      if(ct.scadenza)addEvent(ct.scadenza,{type:'cantiere',label:'🏗️ '+ct.nome});
-    });
-  });
-
-  let h=`<div class="cal-nav">
-    <button class="tb-btn" onclick="calPrev()">
-      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
-    <div class="cal-month-label">${monthName.charAt(0).toUpperCase()+monthName.slice(1)}</div>
-    <button class="tb-btn" onclick="calNext()">
-      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
-    <button class="tb-btn" onclick="calToday()" style="margin-left:8px">Oggi</button>
-  </div>
-  <div class="calendar-grid">
-    ${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>`<div class="cal-header-cell">${d}</div>`).join('')}`;
-
-  // Empty cells before month start
-  for(let i=0;i<startDow;i++){
-    const bd=new Date(y,m,1-startDow+i);
-    const bdStr=bd.toISOString().split('T')[0];
-    h+=`<div class="cal-day other-month" onclick="openDayEvents('${bdStr}')"><div class="cal-day-num" style="color:var(--text3)">${bd.getDate()}</div></div>`;
-  }
-
-  for(let d=1;d<=daysInMonth;d++){
-    const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
-    const dayEvents=events[dateStr]||[];
-    h+=`<div class="cal-day${isToday?' today':''}" onclick="openDayEvents('${dateStr}')">
-      <div class="cal-day-num">${d}</div>
-      ${dayEvents.slice(0,3).map(e=>`<div class="cal-event ${e.type}" title="${escAttr(e.label)}">${esc(e.label)}</div>`).join('')}
-      ${dayEvents.length>3?`<div style="font-size:10px;color:var(--text3)">+${dayEvents.length-3} altri</div>`:''}
-    </div>`;
-  }
-
-  // Fill end
-  const total=startDow+daysInMonth;const remaining=(7-total%7)%7;
-  for(let i=1;i<=remaining;i++){
-    const ad=new Date(y,m+1,i);
-    const adStr=ad.toISOString().split('T')[0];
-    h+=`<div class="cal-day other-month" onclick="openDayEvents('${adStr}')"><div class="cal-day-num" style="color:var(--text3)">${i}</div></div>`;
-  }
-
-  h+=`</div>
-  <div class="cal-legend">
-    <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div>Urgente/Scaduto</div>
-    <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>In scadenza</div>
-    <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Regolare</div>
-    <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Cantiere</div>
-  </div>`;
-  return h;
-}
-window.calPrev=()=>{state.calMonth--;if(state.calMonth<0){state.calMonth=11;state.calYear--}renderPage()}
-window.calNext=()=>{state.calMonth++;if(state.calMonth>11){state.calMonth=0;state.calYear++}renderPage()}
-window.calToday=()=>{state.calYear=new Date().getFullYear();state.calMonth=new Date().getMonth();renderPage()}
-
-// ═══════════════════════════════════════
-// CANTIERI PAGE
-// ═══════════════════════════════════════
-function renderCantieriPage(){
-  const all=state.companies.flatMap(c=>(c.cantieri||[]).map((ct,idx)=>({...ct,company:c,_idx:idx,_contractId:c.id})));
-  all.sort((a,b)=>daysLeft(a.scadenza)-daysLeft(b.scadenza));
-  if(!all.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>`;
-
-  const groups=[
-    {label:'Scaduti',items:all.filter(ct=>daysLeft(ct.scadenza)<0),cls:'danger'},
-    {label:'Urgenti — entro 7 giorni',items:all.filter(ct=>{const d=daysLeft(ct.scadenza);return d>=0&&d<=7}),cls:'danger'},
-    {label:'In scadenza — entro 30 giorni',items:all.filter(ct=>{const d=daysLeft(ct.scadenza);return d>7&&d<=30}),cls:'warn'},
-    {label:'Regolari',items:all.filter(ct=>daysLeft(ct.scadenza)>30),cls:'ok'},
-  ];
-
-  let h=`<div class="section-head" style="align-items:center">
-    <div class="section-title">Cantieri (${all.length})</div>
-    <div><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>
-  </div>`;
-  groups.forEach(g=>{
-    if(!g.items.length)return;
-    h+=`<div class="urgency-group">
-      <div class="group-header"><span class="group-title">${g.label}</span><span class="group-count ${g.cls}">${g.items.length}</span></div>
-      ${g.items.map(ct=>{
-        const d=daysLeft(ct.scadenza);
-        const uc=d<0||d<=7?'urgent':d<=30?'warning':'ok';
-        return `<div class="cantiere-card">
-            <div class="cantiere-urgency-bar ${uc}"></div>
-            <div class="cantiere-info">
-              <div class="cantiere-name">${esc(ct.nome)}</div>
-              <div class="cantiere-company">${esc(ct.company.name)}${ct.company.employeeName?' — '+ct.company.employeeName:''}</div>
-              ${ct.note?`<div style=\"font-size:11px;color:var(--text3);margin-top:2px;font-style:italic\">${esc(ct.note)}</div>`:''}
-            </div>
-            <div class="cantiere-right">
               <div class="cantiere-days ${uc}">${d<0?'Sc.':d}</div>
               <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
               <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
               <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
-                <button class="act-btn" onclick="openEditCantiere(${ct._contractId},${ct._idx})">Modifica</button>
-                <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct._contractId},${ct._idx})">Elimina</button>
+                <button class="act-btn" onclick="openEditCantiere(${ct.company.id},${ct._idx})">Modifica</button>
+                <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct.company.id},${ct._idx})">Elimina</button>
               </div>
             </div>
           </div>`;
@@ -1663,7 +1227,7 @@ window.saveModalCantiereGlobal=function(){
   const key=((nome||'').trim().toLowerCase())+'|'+scad;
   const exists=c.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key);
   if(exists){showToast('Cantiere già presente per questa azienda');return}
-  c.cantieri.push({nome,scadenza:scad,note});
+  c.cantieri.push({nome,scadenza:scad,note:note||''});
   saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
 }
 
@@ -1989,7 +1553,7 @@ window.saveModalCantiere=function(id,idx){
   if(idx===null||idx===undefined){
     const key=((nome||'').trim().toLowerCase())+'|'+scad;
     if(c.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key)){showToast('Cantiere già presente per questa azienda');return}
-    c.cantieri.push({nome,scadenza:scad,note});
+    c.cantieri.push({nome,scadenza:scad,note:note||''});
     saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
   }else{
     if(!c.cantieri[idx]){showToast('Cantiere non trovato');return}
@@ -2149,7 +1713,7 @@ window.saveContract=function(editId){
     }
     showToast('Contratto aggiornato');
   }else{
-    const newId=Math.max(0,...state.companies.map(c=>c.id))+1;
+    const newId=Math.max(0,...state.companies.map(c=>c.id||0))+1;
     state.companies.push({id:newId,name,employeeName:emp,contractType:type,startDate:start,endDate:end,adminEmail:admin,companyEmail:company,renewable,renewMonths:months,renewType:rtype,renewNotice:notice,renewCount:rcount,notes,cantieri:[]});
     showToast('Contratto aggiunto');
   }
@@ -2301,7 +1865,7 @@ window.exportPDF=()=>{
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text('Gestione Contratti',14,14);
   doc.setFontSize(9);doc.setFont(undefined,'normal');doc.setTextColor(100);doc.text(`Esportato il ${new Date().toLocaleDateString('it-IT')} — ${state.companies.length} contratti`,14,20);doc.setTextColor(0);
-  doc.autoTable({head:[['Azienda','Dipendente','Tipo','Inizio','Scadenza','Gg','Stato','Pror.']],body:state.companies.map(c=>{const d=daysLeft(c.endDate);return[c.name,c.employeeName||'—',c.contractType,formatDate(c.startDate),formatDate(c.endDate),String(d),d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'OK',c.renewable?'Sì':'No']}),startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}});
+  doc.autoTable({head:[['Azienda','Dipendente','Tipo Contratto','Inizio','Scadenza','Gg','Stato','Pror.']],body:state.companies.map(c=>{const d=daysLeft(c.endDate);return[c.name,c.employeeName||'—',c.contractType,formatDate(c.startDate),formatDate(c.endDate),String(d),d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'OK',c.renewable?'Sì':'No',c.renewMonths||'',c.renewType||'',c.renewNotice||'',c.renewCount||0,c.adminEmail||'',c.companyEmail||'',c.notes||'']}).slice(0,100),startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}});
   doc.save(`contratti_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF esportato');
 }
 window.triggerImportExcel=()=>{
@@ -2375,181 +1939,49 @@ function connectSync(){
 }
 function syncToCloud(){
   if(!syncState.db||!syncConfig.enabled||!syncConfig.roomName)return;
-  syncState.skipNext=true;
-  syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').set(JSON.parse(JSON.stringify(state.companies))).then(()=>{syncState.lastSync=new Date().toISOString();updateSyncUI()}).catch(()=>{syncState.skipNext=false});
-}
-window.pullFromCloud=()=>{
-  if(!syncState.db||!syncConfig.enabled)return;
-  syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').once('value').then(s=>{
-    const d=fbArrayFromVal(s.val());
-    if(d){state.companies=d;save(SK.data,d);syncState.lastSync=new Date().toISOString();renderPage();renderSidebarCompanies();showToast('Dati scaricati dal cloud')}
-    updateSyncUI();
-  }).catch(e=>console.error('Pull error',e));
-}
-window.forcePushToCloud=()=>{
-  if(!syncState.connected||!syncState.db)return;
-  syncState.skipNext=true;
-  syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').set(JSON.parse(JSON.stringify(state.companies))).then(()=>{syncState.lastSync=new Date().toISOString();updateSyncUI();showToast('Dati caricati sul cloud')}).catch(e=>{syncState.skipNext=false});
-}
-function disconnectSync(){if(syncState.listener){syncState.listener.off();syncState.listener=null}try{const a=firebase.apps.find(x=>x.name==='syncApp');if(a)a.delete()}catch(e){}syncState.connected=false;syncState.db=null;updateSyncUI()}
-function updateSyncUI(){
-  const el=document.getElementById('sync-status');
-  if(!el)return;
-  if(!syncConfig.enabled)el.innerHTML='<span class="status-pill off"><span class="status-dot off"></span>Disattivata</span>';
-  else if(syncState.connected)el.innerHTML=`<span class="status-pill ok"><span class="status-dot ok"></span>Connesso${syncState.lastSync?' — '+new Date(syncState.lastSync).toLocaleTimeString('it-IT'):''}</span>`;
-  else el.innerHTML='<span class="status-pill warn"><span class="status-dot warn"></span>Connessione in corso…</span>';
-}
-window.toggleCloudSync=checked=>{syncConfig.enabled=checked;save(SK.sync,syncConfig);if(checked)initSync();else disconnectSync();renderPage()}
-window.saveSyncField=(f,v)=>{syncConfig[f]=v;save(SK.sync,syncConfig)}
-window.applySyncConfig=()=>{save(SK.sync,syncConfig);initSync();renderPage()}
-
-// ═══════════════════════════════════════
-// SAVE DATA
-// ═══════════════════════════════════════
-function saveData(){
-  // Ensure cantieri are canonicalized per azienda before saving
-  normalizeCompanyCantieri();
-  save(SK.data,state.companies);syncToCloud()
-}
-
-// ═══════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════
-function showToast(msg){const e=document.querySelector('.toast');if(e)e.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
-
-// ══ AUTH ══
-function loadAuthCfg(){return load(SK.auth,{apiKey:'',authDomain:''})}
-function saveAuthCfg(c){save(SK.auth,c)}
-function getAuthApp(){
-  const c=loadAuthCfg();if(!c.apiKey||!c.authDomain)return null;
-  try{
-    if(authFirebaseApp)return authFirebaseApp;
-    authFirebaseApp=firebase.initializeApp({apiKey:c.apiKey,authDomain:c.authDomain},'authApp');
-    return authFirebaseApp;
-  }catch(e){const ex=firebase.apps.find(a=>a.name==='authApp');if(ex){authFirebaseApp=ex;return ex}return null}
-}
-
-function renderLogin(){
-  const ls=document.getElementById('login-screen');
-  const cfg=loadAuthCfg();const hasConfig=!!cfg.apiKey;
-  ls.innerHTML=`<div class="login-screen">
-    <div class="login-card">
-      <div class="login-logo">
-        <div class="logo-mark"><svg viewBox="0 0 24 24" width="18" height="18" stroke="white" fill="none" stroke-width="2" stroke-linecap="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
-        <span class="login-logo-text">Gestione Contratti</span>
-      </div>
-      <div class="login-subtitle">Accedi al tuo account per continuare</div>
-      <div class="login-err" id="login-err"></div>
-      ${!hasConfig?`
-      <div style="margin-bottom:16px;padding:12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--text2);line-height:1.6">
-        <strong>Prima configurazione:</strong> vai su <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a>, crea un progetto, abilita Authentication (Email/Password) e copia API Key e Auth Domain.
-      </div>
-      <div class="form-field" style="margin-bottom:12px"><label class="field-label">Firebase API Key</label><input class="f-input" id="auth-key" type="text" value="${escAttr(cfg.apiKey)}" placeholder="AIzaSy…" style="width:100%"></div>
-      <div class="form-field" style="margin-bottom:16px"><label class="field-label">Auth Domain</label><input class="f-input" id="auth-domain" type="text" value="${escAttr(cfg.authDomain||'')}" placeholder="progetto.firebaseapp.com" style="width:100%"></div>
-      <button class="m-btn primary" onclick="saveAuthAndReload()" style="width:100%">Salva configurazione</button>`
-      :`<div id="login-form">
-        <div class="form-field" style="margin-bottom:12px"><label class="field-label">Email</label><input class="f-input" id="login-email" type="email" placeholder="nome@email.com" autocomplete="email" style="width:100%"></div>
-        <div class="form-field" style="margin-bottom:16px"><label class="field-label">Password</label><div class="pw-wrap"><input class="f-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"><button class="pw-eye" onclick="togglePw('login-pass',this)" type="button"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <button class="m-btn primary" id="login-btn" onclick="doLogin()" style="width:100%">Accedi</button>
-        <div class="login-toggle-link">Non hai un account? <a onclick="showReg()">Registrati</a></div>
-      </div>
-      <div id="reg-form" style="display:none">
-        <div class="form-field" style="margin-bottom:12px"><label class="field-label">Email</label><input class="f-input" id="reg-email" type="email" placeholder="nome@email.com" style="width:100%"></div>
-        <div class="form-field" style="margin-bottom:12px"><label class="field-label">Password (min. 6 caratteri)</label><div class="pw-wrap"><input class="f-input" id="reg-pass" type="password" placeholder="••••••••" minlength="6"><button class="pw-eye" onclick="togglePw('reg-pass',this)" type="button"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <div class="form-field" style="margin-bottom:16px"><label class="field-label">Conferma password</label><input class="f-input" id="reg-pass2" type="password" placeholder="••••••••" style="width:100%"></div>
-        <button class="m-btn primary" id="reg-btn" onclick="doRegister()" style="width:100%">Crea account</button>
-        <div class="login-toggle-link">Hai già un account? <a onclick="showLogin()">Accedi</a></div>
-      </div>
-      <div style="margin-top:12px;text-align:center"><a style="font-size:11px;color:var(--text3);cursor:pointer" onclick="resetAuth()">Cambia configurazione Firebase</a></div>`}
-      <div style="margin-top:16px;text-align:center">
-        <button class="icon-btn" onclick="toggleTheme()" title="Cambia tema" style="display:inline-flex"><svg id="theme-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
-      </div>
-    </div>
-  </div>`;
-
-  setTimeout(()=>{
-    const ei=document.getElementById('login-email'),pi=document.getElementById('login-pass');
-    if(ei)ei.addEventListener('keydown',e=>{if(e.key==='Enter'&&pi)pi.focus()});
-    if(pi)pi.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
-    applyTheme(state.theme);
-  },50);
-}
-
-function showLoginErr(m){const e=document.getElementById('login-err');if(e){e.textContent=m;e.style.display=m?'block':'none'}}
-window.showReg=()=>{document.getElementById('login-form').style.display='none';document.getElementById('reg-form').style.display='block';showLoginErr('')}
-window.showLogin=()=>{document.getElementById('reg-form').style.display='none';document.getElementById('login-form').style.display='block';showLoginErr('')}
-window.togglePw=(id,btn)=>{const i=document.getElementById(id);if(!i)return;i.type=i.type==='password'?'text':'password';btn.innerHTML=i.type==='password'?'<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>':'<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'}
-
-function authErrMsg(code){const m={'auth/invalid-email':'Email non valida.','auth/user-not-found':'Nessun account con questa email.','auth/wrong-password':'Password errata.','auth/invalid-credential':'Credenziali non valide.','auth/email-already-in-use':'Email già registrata.','auth/weak-password':'Password troppo corta (min. 6 caratteri).','auth/too-many-requests':'Troppi tentativi. Riprova più tardi.','auth/network-request-failed':'Errore di rete.'};return m[code]||'Errore: '+code}
-
-function setBtnLoading(id,loading,text){const b=document.getElementById(id);if(!b)return;b.disabled=loading;b.innerHTML=loading?`<span class="spin"></span> Caricamento…`:text}
-
-window.doLogin=()=>{
-  const email=(document.getElementById('login-email')||{}).value?.trim();
-  const pass=(document.getElementById('login-pass')||{}).value;
-  if(!email||!pass){showLoginErr('Inserisci email e password');return}
-  const app=getAuthApp();if(!app){showLoginErr('Configurazione Firebase mancante');return}
-  showLoginErr('');setBtnLoading('login-btn',true,'Accedi');
-  app.auth().signInWithEmailAndPassword(email,pass).then(c=>{authUser=c.user;enterApp()}).catch(e=>{showLoginErr(authErrMsg(e.code));setBtnLoading('login-btn',false,'Accedi')});
-}
-window.doRegister=()=>{
-  const email=(document.getElementById('reg-email')||{}).value?.trim();
-  const pass=(document.getElementById('reg-pass')||{}).value;
-  const pass2=(document.getElementById('reg-pass2')||{}).value;
-  if(!email||!pass){showLoginErr('Inserisci email e password');return}
-  if(pass.length<6){showLoginErr('Password min. 6 caratteri');return}
-  if(pass!==pass2){showLoginErr('Le password non corrispondono');return}
-  const app=getAuthApp();if(!app){showLoginErr('Config Firebase mancante');return}
-  showLoginErr('');setBtnLoading('reg-btn',true,'Crea account');
-  app.auth().createUserWithEmailAndPassword(email,pass).then(c=>{authUser=c.user;enterApp()}).catch(e=>{showLoginErr(authErrMsg(e.code));setBtnLoading('reg-btn',false,'Crea account')});
-}
-window.saveAuthAndReload=()=>{
-  const k=(document.getElementById('auth-key')||{}).value?.trim();
-  const d=(document.getElementById('auth-domain')||{}).value?.trim();
-  if(!k){showLoginErr('Inserisci API Key');return}
-  if(!d){showLoginErr("Inserisci Auth Domain");return}
-  saveAuthCfg({apiKey:k,authDomain:d});location.reload();
-}
-window.resetAuth=()=>{saveAuthCfg({apiKey:'',authDomain:''});location.reload()}
-window.doLogout=()=>{
-  const app=getAuthApp();
-  const logout=()=>{authUser=null;document.getElementById('app-shell').style.display='none';document.getElementById('login-screen').style.display='';renderLogin()};
-  if(app)app.auth().signOut().then(logout).catch(logout);else logout();
-}
-
-function enterApp(){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app-shell').style.display='flex';
-  document.getElementById('mobile-menu-btn').style.display=window.innerWidth<640?'flex':'none';
-  updateNav();
-  normalizeCompanyCantieri();
-  renderSidebarCompanies();renderPage();
-  if(emailSettings.autoSend.enabled)startAutoSend();
-  if(syncConfig.enabled)initSync();
-
-  // Close notif center on outside click
-  document.addEventListener('click',e=>{
-    const nc=document.getElementById('notif-center');
-    const nb=document.getElementById('notif-btn');
-    if(nc&&nb&&!nc.contains(e.target)&&!nb.contains(e.target)){state.showNotifCenter=false;nc.style.display='none'}
+  // Prima di sincronizzare, controlla se ci sono differenze rispetto al cloud
+  syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').once('value').then(snap=>{
+    const cloudData = fbArrayFromVal(snap.val());
+    if(cloudData && JSON.stringify(cloudData)!==JSON.stringify(state.companies)){
+      // Merge intelligente: unisce dati locali e cloud, evitando duplicati
+      const merged = mergeCompanies(cloudData, state.companies);
+      if(JSON.stringify(merged)!==JSON.stringify(state.companies)){
+        // Avvisa l'utente del conflitto
+        showToast('⚠️ Dati cloud diversi: unione automatica effettuata.');
+        state.companies = merged;
+        save(SK.data, merged);
+        renderPage();
+        renderSidebarCompanies();
+      }
+    }
+    // Procedi con la sincronizzazione
+    syncState.skipNext=true;
+    syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').set(JSON.parse(JSON.stringify(state.companies))).then(()=>{syncState.lastSync=new Date().toISOString();updateSyncUI()}).catch(()=>{syncState.skipNext=false});
+  }).catch(()=>{
+    // In caso di errore, fallback sync classico
+    syncState.skipNext=true;
+    syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').set(JSON.parse(JSON.stringify(state.companies))).then(()=>{syncState.lastSync=new Date().toISOString();updateSyncUI()}).catch(()=>{syncState.skipNext=false});
   });
-  // Keyboard shortcuts
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){hideModal();state.showNotifCenter=false;const nc=document.getElementById('notif-center');if(nc)nc.style.display='none'}});
-  // Responsive
-  window.addEventListener('resize',()=>{const mb=document.getElementById('mobile-menu-btn');if(mb)mb.style.display=window.innerWidth<640?'flex':'none'});
 }
 
-// ═══════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════
-(function boot(){
-  const cfg=loadAuthCfg();
-  if(cfg.apiKey){
-    const app=getAuthApp();
-    if(app){app.auth().onAuthStateChanged(u=>{if(u){authUser=u;enterApp()}else renderLogin()});return}
-  }
-  renderLogin();
-})();
+// Merge intelligente tra dati cloud e locali
+function mergeCompanies(cloud, local){
+  // Unisce per id, mantiene il più recente (in base a endDate o modifiche)
+  const map = {};
+  [...cloud, ...local].forEach(c => {
+    if(!c.id) return;
+    if(!map[c.id]) map[c.id] = c;
+    else {
+      // Se esistono due versioni, tiene quella con endDate più recente o più campi valorizzati
+      const a = map[c.id], b = c;
+      if(new Date(b.endDate||0) > new Date(a.endDate||0)) map[c.id] = b;
+      else if(JSON.stringify(b).length > JSON.stringify(a).length) map[c.id] = b;
+    }
+  });
+  // Ordina per id
+  return Object.values(map).sort((a,b)=>a.id-b.id);
+}
+// ...existing code...
 </script>
 </body>
 </html>
