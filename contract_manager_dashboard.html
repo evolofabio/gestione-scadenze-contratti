@@ -414,7 +414,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
   color:var(--text2);background:var(--surface2);
 }
 .cal-day{
-  min-height:80px;padding:5px;
+  min-height:60px;padding:6px;
   background:var(--surface);
   border-top:1px solid var(--border);
   transition:background var(--t);cursor:pointer;
@@ -1116,7 +1116,7 @@ function updateNav(){
   if(el)el.textContent=titles[state.page]||'';
   const sw=document.getElementById('topbar-search-wrap');
   if(sw)sw.style.display=(['dashboard','company'].includes(state.page))?'':'none';
-  // update small nav badges (cantieri count)
+  // update small nav badges (cantieri count) and notification badge
   try{
     const seenCompany={};
     const cantieriCount = state.companies.flatMap(c=>{
@@ -1128,6 +1128,12 @@ function updateNav(){
     if(cb){
       if(cantieriCount>0){cb.style.display='';cb.textContent=String(cantieriCount)}
       else{cb.style.display='none';cb.textContent='0'}
+    }
+    const urgentCount = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate) <= ALERT_DAYS).length;
+    const nb=document.getElementById('notif-badge');
+    if(nb){
+      if(urgentCount>0){nb.style.display='';nb.textContent=String(urgentCount)}
+      else{nb.style.display='none';nb.textContent='0'}
     }
   }catch(e){console.error('updateNav badges',e)}
 }
@@ -1650,6 +1656,7 @@ function renderContractCard(c){
       <div class="card-actions">
         <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
         <button class="act-btn" onclick="openAddCantiere(${escAttr(c.id)})">+ Cantiere</button>
+        ${c.renewable?`<button class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button>`:''}
         <button class="act-btn primary" onclick="openEmailModal(${escAttr(c.id)})">Email</button>
         <button class="act-btn danger" onclick="confirmDelete(${escAttr(c.id)})">Elimina</button>
       </div>
@@ -1681,7 +1688,7 @@ function renderCompanyContracts(name){
       <div class="company-avatar">${esc(first.name.substring(0,2).toUpperCase())}</div>
       <div class="company-info"><div class="company-name">${esc(first.name)}</div><div class="company-meta">${first.companyEmail?esc(first.companyEmail):''}${first.adminEmail?` • ${esc(first.adminEmail)}`:''}</div></div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center"><button class="tb-btn primary" onclick="openAddContractModal('${escAttr(first.name)}')">+ Aggiungi dipendente</button><button class="tb-btn" onclick="openEditCompanyModal('${escAttr(first.name)}')">Modifica azienda</button></div>
+    <div style="display:flex;gap:8px;align-items:center"><button class="tb-btn primary" onclick="openAddContractModal('${escAttr(first.name)}')">+ Aggiungi dipendente</button><button class="tb-btn" onclick="exportExcelCompany('${escAttr(first.name)}')">Esporta azienda</button><button class="tb-btn" onclick="openEditCompanyModal('${escAttr(first.name)}')">Modifica azienda</button></div>
   </div>`;
 
   h+=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="flex:1"></div><div><label style="font-size:12px;color:var(--text3);margin-right:8px">Filtra mese</label><select id="company-filter-month" class="f-input" onchange="state.filterMonth=this.value;renderPage();">${opts}</select></div></div>`;
@@ -1707,18 +1714,18 @@ function renderCalendarPage(){
   const daysInMonth = new Date(year,month+1,0).getDate();
   const totalCells = Math.max(42, lead + daysInMonth);
 
-  // collect events by day
+  // collect events by day (include contract id and cantiere index so events are clickable)
   const eventsMap = {};
   state.companies.forEach(c=>{
     if(c.endDate && String(c.endDate).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
       const d = parseInt(String(c.endDate).split('-')[2],10);
-      (eventsMap[d] = eventsMap[d]||[]).push({type:'contract',title:`${c.employeeName||c.name} — ${c.name}`,urg:daysLeft(c.endDate)});
+      (eventsMap[d] = eventsMap[d]||[]).push({type:'contract',contractId:c.id,title:`${c.employeeName||c.name} — ${c.name}`,urg:daysLeft(c.endDate)});
     }
     if(Array.isArray(c.cantieri)){
-      c.cantieri.forEach(ct=>{
+      c.cantieri.forEach((ct,idx)=>{
         if(ct.scadenza && String(ct.scadenza).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
           const d = parseInt(String(ct.scadenza).split('-')[2],10);
-          (eventsMap[d] = eventsMap[d]||[]).push({type:'cantiere',title:`${ct.nome} — ${c.name}`,urg:daysLeft(ct.scadenza)});
+          (eventsMap[d] = eventsMap[d]||[]).push({type:'cantiere',contractId:c.id,idx:idx,title:`${ct.nome} — ${c.name}`,urg:daysLeft(ct.scadenza)});
         }
       });
     }
@@ -1735,11 +1742,46 @@ function renderCalendarPage(){
       const isToday = (new Date()).toDateString()===dateObj.toDateString();
       const evs = eventsMap[day]||[];
       const cls = `cal-day${isToday? ' today':''}`;
-      html += `<div class="${cls}"><div class="cal-day-num">${day}</div>` + evs.map(ev=>`<div class="cal-event ${ev.type==='cantiere'?'cantiere':(ev.urg<=0?'urgent':(ev.urg<=15?'warning':'ok'))}" title="${escAttr(ev.title)}">${esc(ev.title)}</div>`).join('') + `</div>`;
+      html += `<div class="${cls}"><div class="cal-day-num">${day}</div>` + evs.map(ev=>{
+        const evCls = ev.type==='cantiere' ? 'cantiere' : (ev.urg<=0 ? 'urgent' : (ev.urg<=15 ? 'warning' : 'ok'));
+        const onclick = ev.type==='contract' ? `onCalendarEventClick(${ev.contractId},null,'contract')` : `onCalendarEventClick(${ev.contractId},${ev.idx},'cantiere')`;
+        return `<div class="cal-event ${evCls}" title="${escAttr(ev.title)}" onclick="${onclick}">${esc(ev.title)}</div>`;
+      }).join('') + `</div>`;
     }
   }
   html += `</div><div class="cal-legend"><div class="leg-item"><span class="leg-dot" style="background:var(--red-bg)"></span>Scadenze urgenti</div><div class="leg-item"><span class="leg-dot" style="background:var(--purple-bg)"></span>Cantieri</div></div>`;
   return html;
+}
+
+// Calendar / notification helpers
+window.onCalendarEventClick=function(contractId,idx,type){
+  try{
+    if(type==='contract'){
+      const c=state.companies.find(x=>x.id===contractId);
+      if(c)showModal(renderContractModal(c));
+    }else if(type==='cantiere'){
+      openEditCantiere(contractId,idx);
+    }
+  }catch(e){console.error('onCalendarEventClick',e)}
+}
+
+window.openContractFromNotif=function(id){const c=state.companies.find(x=>x.id===id);if(c)showModal(renderContractModal(c))}
+window.closeNotifCenter=function(){state.showNotifCenter=false;const nc=document.getElementById('notif-center');if(nc)nc.style.display='none'}
+window.toggleNotifCenter=function(){
+  state.showNotifCenter=!state.showNotifCenter;const nc=document.getElementById('notif-center');if(!nc)return; if(!state.showNotifCenter){nc.style.display='none';return}
+  const urgent=state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate)<=ALERT_DAYS);
+  if(!urgent.length){nc.innerHTML=`<div class="notif-empty">Nessuna notifica</div>`;nc.style.display='block';return}
+  nc.innerHTML=`<div class="notif-header"><div>Notifiche</div><div><button class="m-btn" onclick="closeNotifCenter()">Chiudi</button></div></div>`+urgent.map(c=>`<div class="notif-item" onclick="openContractFromNotif(${c.id})"><div class="notif-item-title">${esc(c.employeeName||c.name)}</div><div class="notif-item-sub">${esc(c.name)} • ${formatDate(c.endDate)} • ${daysLeft(c.endDate)}gg</div></div>`).join('');
+  nc.style.display='block';
+}
+
+window.openQuickRenew=function(id){
+  const c=state.companies.find(x=>x.id===id);if(!c)return;const months=c.renewMonths||12;
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Proroga rapida — ${esc(c.employeeName||c.name)}</h3><div class="form-row"><div class="form-field"><label>Mesi da aggiungere</label><input id="qr-months" class="f-input" type="number" min="1" value="${months}"></div></div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="doQuickRenew(${id})">Applica proroga</button></div></div></div>`);
+}
+window.doQuickRenew=function(id){
+  const m=parseInt((document.getElementById('qr-months')||{}).value)||0;const idx=state.companies.findIndex(c=>c.id===id);if(idx<0)return;const c=state.companies[idx];if(!c.endDate){showToast('Contratto senza data di scadenza');return}
+  const d=new Date(c.endDate);d.setMonth(d.getMonth()+m);state.companies[idx].endDate=d.toISOString().split('T')[0];state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData();hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata');
 }
 
 // Main page renderer
