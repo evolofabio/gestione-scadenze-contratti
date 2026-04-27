@@ -1120,6 +1120,20 @@ function updateNav(){
   if(el)el.textContent=titles[state.page]||'';
   const sw=document.getElementById('topbar-search-wrap');
   if(sw)sw.style.display=(['dashboard','company'].includes(state.page))?'':'none';
+  // update small nav badges (cantieri count)
+  try{
+    const seenCompany={};
+    const cantieriCount = state.companies.flatMap(c=>{
+      if(seenCompany[c.name]) return [];
+      seenCompany[c.name]=true;
+      return Array.isArray(c.cantieri)?c.cantieri:[];
+    }).length;
+    const cb=document.getElementById('cantieri-badge');
+    if(cb){
+      if(cantieriCount>0){cb.style.display='';cb.textContent=String(cantieriCount)}
+      else{cb.style.display='none';cb.textContent='0'}
+    }
+  }catch(e){console.error('updateNav badges',e)}
 }
 
 // ═══════════════════════════════════════
@@ -1680,6 +1694,58 @@ function renderCompanyContracts(name){
   return h;
 }
 
+// Calendar rendering (basic month view with contract + cantiere events)
+function changeCalendarMonth(offset){
+  let m = (typeof state.calMonth==='number')?state.calMonth:new Date().getMonth();
+  let y = (typeof state.calYear==='number')?state.calYear:new Date().getFullYear();
+  m += offset;
+  if(m<0){m=11;y-=1}else if(m>11){m=0;y+=1}
+  state.calMonth=m;state.calYear=y;renderPage();
+}
+
+function renderCalendarPage(){
+  const month = (typeof state.calMonth==='number')?state.calMonth:new Date().getMonth();
+  const year = (typeof state.calYear==='number')?state.calYear:new Date().getFullYear();
+  const first = new Date(year,month,1);
+  const lead = first.getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  const totalCells = Math.max(42, lead + daysInMonth);
+
+  // collect events by day
+  const eventsMap = {};
+  state.companies.forEach(c=>{
+    if(c.endDate && String(c.endDate).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
+      const d = parseInt(String(c.endDate).split('-')[2],10);
+      (eventsMap[d] = eventsMap[d]||[]).push({type:'contract',title:`${c.employeeName||c.name} — ${c.name}`,urg:daysLeft(c.endDate)});
+    }
+    if(Array.isArray(c.cantieri)){
+      c.cantieri.forEach(ct=>{
+        if(ct.scadenza && String(ct.scadenza).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
+          const d = parseInt(String(ct.scadenza).split('-')[2],10);
+          (eventsMap[d] = eventsMap[d]||[]).push({type:'cantiere',title:`${ct.nome} — ${c.name}`,urg:daysLeft(ct.scadenza)});
+        }
+      });
+    }
+  });
+
+  let html = `<div class="cal-nav"><button class="tb-btn" onclick="changeCalendarMonth(-1)">◀</button><div class="cal-month-label">${new Date(year,month,1).toLocaleString('it-IT',{month:'long',year:'numeric'})}</div><button class="tb-btn" onclick="changeCalendarMonth(1)">▶</button></div>`;
+  html += `<div class="calendar-grid"><div class="cal-header-cell">Dom</div><div class="cal-header-cell">Lun</div><div class="cal-header-cell">Mar</div><div class="cal-header-cell">Mer</div><div class="cal-header-cell">Gio</div><div class="cal-header-cell">Ven</div><div class="cal-header-cell">Sab</div>`;
+  for(let i=0;i<totalCells;i++){
+    const day = i - lead + 1;
+    if(day<1 || day>daysInMonth){
+      html += `<div class="cal-day other-month"><div class="cal-day-num"></div></div>`;
+    }else{
+      const dateObj = new Date(year,month,day);
+      const isToday = (new Date()).toDateString()===dateObj.toDateString();
+      const evs = eventsMap[day]||[];
+      const cls = `cal-day${isToday? ' today':''}`;
+      html += `<div class="${cls}"><div class="cal-day-num">${day}</div>` + evs.map(ev=>`<div class="cal-event ${ev.type==='cantiere'?'cantiere':(ev.urg<=0?'urgent':(ev.urg<=15?'warning':'ok'))}" title="${escAttr(ev.title)}">${esc(ev.title)}</div>`).join('') + `</div>`;
+    }
+  }
+  html += `</div><div class="cal-legend"><div class="leg-item"><span class="leg-dot" style="background:var(--red-bg)"></span>Scadenze urgenti</div><div class="leg-item"><span class="leg-dot" style="background:var(--purple-bg)"></span>Cantieri</div></div>`;
+  return html;
+}
+
 // Main page renderer
 function renderPage(){
   const el=document.getElementById('page-content');
@@ -1688,6 +1754,18 @@ function renderPage(){
     let html='';
     switch(state.page){
       case 'dashboard':
+        // Dashboard metrics (quick counts)
+        const expiredCnt = state.companies.filter(c=>daysLeft(c.endDate)<0).length;
+        const urgentCnt = state.companies.filter(c=>{const d=daysLeft(c.endDate);return d>=0&&d<=30}).length;
+        const renewableCnt = state.companies.filter(c=>c.renewable).length;
+        const avgDur = state.companies.length?Math.round(state.companies.reduce((s,c)=>s+durationMonths(c.startDate,c.endDate),0)/state.companies.length):0;
+        html+=`<div class="metrics-grid" style="margin-bottom:20px">
+    <div class="metric-card"><div class="metric-label">Durata media</div><div class="metric-val">${avgDur}<span style="font-size:16px;font-weight:400"> mesi</span></div></div>
+    <div class="metric-card"><div class="metric-label">Prorogabili</div><div class="metric-val c-blue">${renewableCnt}</div><div class="metric-delta">su ${state.companies.length} totali</div></div>
+    <div class="metric-card m-amber"><div class="metric-label">In scadenza 30gg</div><div class="metric-val c-amber">${urgentCnt}</div></div>
+    <div class="metric-card m-red"><div class="metric-label">Scaduti</div><div class="metric-val c-red">${expiredCnt}</div></div>
+  </div>`;
+
         html+=`<div class="section-head"><div class="section-title">Contratti (${state.companies.length})</div><div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div></div>`;
         // apply search filter
         const q=(state.searchQuery||'').toLowerCase();
@@ -1708,7 +1786,8 @@ function renderPage(){
         html=renderSettingsPage();
         break;
       case 'calendar':
-        html=`<div class="section-head"><div class="section-title">Calendario</div></div><div>Calendario</div>`;
+        html=`<div class="section-head"><div class="section-title">Calendario</div></div>`;
+        html+=renderCalendarPage();
         break;
       default:
         html='';
