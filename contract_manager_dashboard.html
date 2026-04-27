@@ -325,6 +325,12 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .badge-gray{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
 .badge-purple{background:var(--purple-bg);color:var(--purple);border:1px solid rgba(109,63,207,.2)}
 
+/* renew status pill */
+.renew-pill{font-size:11px;padding:4px 8px;border-radius:99px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);margin-left:8px;display:inline-block}
+.renew-pill.yes{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.renew-pill.no{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+.renew-count{font-size:12px;color:var(--text3);margin-top:6px}
+
 /* progress */
 .prog-bar{height:3px;background:var(--surface3);border-radius:99px;margin-bottom:12px;overflow:hidden}
 .prog-fill{height:100%;border-radius:99px;transition:width .5s ease}
@@ -1640,6 +1646,7 @@ function renderContractCard(c){
           </div>
           <div class="card-badges">
             <div class="badge ${badge.cls}">${esc(badge.txt)}</div>
+            <div class="renew-pill ${c.renewable ? 'yes' : 'no'}">${c.renewable ? 'Prorogabile' : 'Non prorogabile'}</div>
           </div>
         </div>
         <div class="prog-bar"><div class="prog-fill ${pcls}" style="width:${prog}%"></div></div>
@@ -1648,7 +1655,7 @@ function renderContractCard(c){
           <div><div class="field-label">Giorni</div><div class="field-val">${d<0?'Scaduto':d+' gg'}</div></div>
           <div><div class="field-label">Inizio</div><div class="field-val">${formatDate(c.startDate)}</div></div>
           <div><div class="field-label">Tipo</div><div class="field-val">${esc(c.contractType||'')}</div></div>
-          <div><div class="field-label">Proroghe</div><div class="field-val">${c.renewCount||0}</div></div>
+          <div><div class="field-label">Proroghe</div><div class="field-val">${c.renewCount||0}/4</div></div>
         </div>
         ${c.notes?`<div class="card-notes"><span class="notes-label">Note</span>${esc(c.notes)}</div>`:''}
         ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(ct=>`<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(ct.scadenza)<=0?'':'ok'}">${formatDate(ct.scadenza)}</div></div>`).join('')+`</div>`:''}
