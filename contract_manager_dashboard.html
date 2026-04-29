@@ -2298,7 +2298,9 @@ function renderRegisterScreen(msg) {
 window.showLogin = function() { renderLoginScreen(); };
 window.showRegister = function() { renderRegisterScreen(); };
 
+
 window.doLogin = function() {
+  ensureFirebaseApp();
   const email = (document.getElementById('login-email')||{}).value?.trim();
   const password = (document.getElementById('login-password')||{}).value;
   if (!email || !password) { renderLoginScreen('Inserisci email e password'); return; }
@@ -2307,7 +2309,9 @@ window.doLogin = function() {
     .catch(e => { renderLoginScreen('Credenziali non valide'); });
 };
 
+
 window.doRegister = function() {
+  ensureFirebaseApp();
   const email = (document.getElementById('register-email')||{}).value?.trim();
   const password = (document.getElementById('register-password')||{}).value;
   if (!email || !password) { renderRegisterScreen('Inserisci email e password'); return; }
@@ -2370,6 +2374,7 @@ window.saveSyncField=(f,v)=>{syncConfig[f]=v.trim();save(SK.sync,syncConfig);sav
 }
 
 function checkAuth() {
+  ensureFirebaseApp();
   firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
       authUser = user;
