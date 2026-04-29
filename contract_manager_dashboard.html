@@ -1000,10 +1000,29 @@ function ensureFirebaseApp() {
     });
     return true;
   } else {
-    // Mostra errore visibile in pagina
+    // Mostra form per inserire le chiavi Firebase
     var el = document.getElementById('login-screen') || document.body;
     if (el) {
-      el.innerHTML = '<div class="login-card"><h3>Configurazione Firebase mancante</h3><p>Imposta le chiavi di accesso in <b>Impostazioni &rarr; Sincronizzazione Cloud</b> e ricarica la pagina.</p></div>';
+      el.innerHTML = `<div class="login-card">
+        <h3>Configurazione Firebase mancante</h3>
+        <p>Inserisci qui le chiavi di accesso del tuo progetto Firebase:</p>
+        <div class="form-field"><label>API Key</label><input id="firebase-api-key" class="f-input" type="text" placeholder="API Key"></div>
+        <div class="form-field"><label>Auth Domain</label><input id="firebase-auth-domain" class="f-input" type="text" placeholder="Auth Domain"></div>
+        <div class="form-field"><label>Database URL</label><input id="firebase-db-url" class="f-input" type="text" placeholder="Database URL"></div>
+        <button class="tb-btn primary" style="margin-top:16px" onclick="window.saveFirebaseConfig()">Salva e ricarica</button>
+      </div>`;
+      window.saveFirebaseConfig = function() {
+        var apiKey = document.getElementById('firebase-api-key').value.trim();
+        var authDomain = document.getElementById('firebase-auth-domain').value.trim();
+        var databaseURL = document.getElementById('firebase-db-url').value.trim();
+        if (!apiKey || !authDomain || !databaseURL) {
+          alert('Compila tutti i campi!');
+          return;
+        }
+        var config = { apiKey, authDomain, databaseURL };
+        try { localStorage.setItem(SK.auth, JSON.stringify(config)); } catch(e) {}
+        location.reload();
+      }
     }
     if (document.getElementById('app-shell')) document.getElementById('app-shell').style.display = 'none';
     return false;
