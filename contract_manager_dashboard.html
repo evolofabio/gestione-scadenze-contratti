@@ -1,3 +1,7 @@
+// Espone funzioni di sync/config su window per evitare ReferenceError
+window.saveSyncField = function(f,v){syncConfig[f]=v.trim();save(SK.sync,syncConfig);saveUserConfig();}
+window.toggleCloudSync = function(checked){syncConfig.enabled=checked;save(SK.sync,syncConfig);saveUserConfig();initSync();renderPage();}
+window.applySyncConfig = function(){initSync();showToast('Configurazione applicata');}
 <!DOCTYPE html>
 <html lang="it">
 <head>
