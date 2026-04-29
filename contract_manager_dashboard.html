@@ -984,7 +984,7 @@ let autoSendInterval=null;
 
 // Inizializza Firebase App principale se non già presente
 function ensureFirebaseApp() {
-  if (!window.firebase || (firebase.apps && firebase.apps.length > 0)) return;
+  if (!window.firebase || (firebase.apps && firebase.apps.length > 0)) return true;
   // Configurazione di default: usa authConfig se presente, altrimenti syncConfig
   var config = null;
   if (typeof defaultAuth === 'function') {
@@ -998,6 +998,15 @@ function ensureFirebaseApp() {
       authDomain: config.authDomain,
       databaseURL: config.databaseURL
     });
+    return true;
+  } else {
+    // Mostra errore visibile in pagina
+    var el = document.getElementById('login-screen') || document.body;
+    if (el) {
+      el.innerHTML = '<div class="login-card"><h3>Configurazione Firebase mancante</h3><p>Imposta le chiavi di accesso in <b>Impostazioni &rarr; Sincronizzazione Cloud</b> e ricarica la pagina.</p></div>';
+    }
+    if (document.getElementById('app-shell')) document.getElementById('app-shell').style.display = 'none';
+    return false;
   }
 }
 ensureFirebaseApp();
