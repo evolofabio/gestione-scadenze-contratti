@@ -981,6 +981,26 @@ let syncState={connected:false,lastSync:null,listener:null,db:null,skipNext:fals
 let authUser=null,authFirebaseApp=null;
 let autoSendInterval=null;
 
+
+// Inizializza Firebase App principale se non già presente
+function ensureFirebaseApp() {
+  if (!window.firebase || (firebase.apps && firebase.apps.length > 0)) return;
+  // Configurazione di default: usa authConfig se presente, altrimenti syncConfig
+  var config = null;
+  if (typeof defaultAuth === 'function') {
+    config = load(SK.auth, defaultAuth);
+  } else if (typeof defaultSync === 'function') {
+    config = load(SK.sync, defaultSync);
+  }
+  if (config && config.apiKey && config.authDomain && config.databaseURL) {
+    firebase.initializeApp({
+      apiKey: config.apiKey,
+      authDomain: config.authDomain,
+      databaseURL: config.databaseURL
+    });
+  }
+}
+ensureFirebaseApp();
 applyTheme(state.theme);
 
 // Normalize cantieri so they are stored per azienda (first contract entry) and deduplicated
