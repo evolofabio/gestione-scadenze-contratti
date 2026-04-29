@@ -2354,15 +2354,17 @@ window.doRegister = function() {
 
 function afterLogin() {
   document.getElementById('login-screen').innerHTML = '';
-  document.getElementById('app-shell').style.display = 'flex';
-  // Carica configurazione utente dal database
-  loadUserConfig().then(()=>{
-    renderSidebarCompanies();
-    renderPage();
-    updateNav();
-  });
-}
-
+    <div class="login-card">
+      <div class="login-logo"><div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><span class="login-logo-text">Contratti</span></div>
+      <div class="login-subtitle">Accedi al portale</div>
+      <div class="login-err" id="login-err" style="display:${err?'block':'none'}">${err||''}</div>
+      <form onsubmit="doLogin();return false;">
+        <div class="form-field"><label>Email</label><input id="login-email" class="f-input" type="email" autocomplete="username" required></div>
+        <div class="form-field pw-wrap"><label>Password</label><input id="login-password" class="f-input" type="password" autocomplete="current-password" style="width:100%" required></div>
+        <button class="tb-btn primary" style="width:100%;margin-top:12px" type="submit">Accedi</button>
+      </form>
+      <div class="login-toggle-link">Non hai un account? <a onclick="renderRegisterScreen()">Registrati</a></div>
+    </div>`;
 // Salva la configurazione utente su Firebase DB
 function saveUserConfig() {
   if (!authUser) return;
