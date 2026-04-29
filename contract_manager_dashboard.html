@@ -2242,20 +2242,127 @@ function mergeCompanies(cloud, local){
   return Object.values(map).sort((a,b)=>a.id-b.id);
 }
 // If no explicit login flow is active, show the app and render initial UI
-function initApp(){
-  try{
-    console.log('initApp start');
-    const loginEl=document.getElementById('login-screen');
-    const appEl=document.getElementById('app-shell');
-    if(loginEl)loginEl.innerHTML='';
-    if(appEl)appEl.style.display='flex';
+// === LOGIN SCREEN & AUTH ===
+function renderLoginScreen(msg) {
+  const loginEl = document.getElementById('login-screen');
+  if (!loginEl) return;
+  loginEl.innerHTML = `
+    <div class="login-card">
+      <div class="login-logo"><div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><span class="login-logo-text">Contratti</span></div>
+      <div class="login-subtitle">Accedi con email e password</div>
+      <div class="login-err" id="login-err" style="display:${msg?'block':'none'}">${msg||''}</div>
+      <div class="form-row single"><div class="form-field"><label>Email</label><input id="login-email" class="f-input" type="email" autocomplete="username" style="width:100%"></div></div>
+      <div class="form-row single"><div class="form-field"><label>Password</label><input id="login-password" class="f-input" type="password" autocomplete="current-password" style="width:100%"></div></div>
+      <div class="modal-actions" style="margin-top:18px"><button class="m-btn primary" onclick="doLogin()">Accedi</button></div>
+      <div class="login-toggle-link"><a href="#" onclick="showRegister()">Non hai un account? Registrati</a></div>
+    </div>
+  `;
+}
+
+function renderRegisterScreen(msg) {
+  const loginEl = document.getElementById('login-screen');
+  if (!loginEl) return;
+  loginEl.innerHTML = `
+    <div class="login-card">
+      <div class="login-logo"><div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><span class="login-logo-text">Contratti</span></div>
+      <div class="login-subtitle">Crea un nuovo account</div>
+      <div class="login-err" id="register-err" style="display:${msg?'block':'none'}">${msg||''}</div>
+      <div class="form-row single"><div class="form-field"><label>Email</label><input id="register-email" class="f-input" type="email" autocomplete="username" style="width:100%"></div></div>
+      <div class="form-row single"><div class="form-field"><label>Password</label><input id="register-password" class="f-input" type="password" autocomplete="new-password" style="width:100%"></div></div>
+      <div class="modal-actions" style="margin-top:18px"><button class="m-btn primary" onclick="doRegister()">Registrati</button></div>
+      <div class="login-toggle-link"><a href="#" onclick="showLogin()">Hai già un account? Accedi</a></div>
+    </div>
+  `;
+}
+
+window.showLogin = function() { renderLoginScreen(); };
+window.showRegister = function() { renderRegisterScreen(); };
+
+window.doLogin = function() {
+  const email = (document.getElementById('login-email')||{}).value?.trim();
+  const password = (document.getElementById('login-password')||{}).value;
+  if (!email || !password) { renderLoginScreen('Inserisci email e password'); return; }
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .then(user => { authUser = user.user; afterLogin(); })
+    .catch(e => { renderLoginScreen('Credenziali non valide'); });
+};
+
+window.doRegister = function() {
+  const email = (document.getElementById('register-email')||{}).value?.trim();
+  const password = (document.getElementById('register-password')||{}).value;
+  if (!email || !password) { renderRegisterScreen('Inserisci email e password'); return; }
+  firebase.auth().createUserWithEmailAndPassword(email, password)
+    .then(user => { authUser = user.user; afterLogin(); })
+    .catch(e => { renderRegisterScreen('Errore: '+(e.message||'Impossibile registrare')); });
+};
+
+function afterLogin() {
+  document.getElementById('login-screen').innerHTML = '';
+  document.getElementById('app-shell').style.display = 'flex';
+  // Carica configurazione utente dal database
+  loadUserConfig().then(()=>{
     renderSidebarCompanies();
     renderPage();
     updateNav();
-  }catch(e){console.error('initApp',e)}
+  });
 }
-// Run init after a short delay so DOM is ready
-setTimeout(initApp,20);
+
+// Salva la configurazione utente su Firebase DB
+function saveUserConfig() {
+  if (!authUser) return;
+  const uid = authUser.uid;
+  const userConfig = {
+    settings: emailSettings,
+    sync: syncConfig
+  };
+  try {
+    firebase.database().ref('userConfig/' + uid).set(userConfig);
+  } catch(e) { console.error('saveUserConfig', e); }
+}
+
+// Carica la configurazione utente da Firebase DB
+function loadUserConfig() {
+  return new Promise((resolve) => {
+    if (!authUser) return resolve();
+    const uid = authUser.uid;
+    firebase.database().ref('userConfig/' + uid).once('value').then(snap => {
+      const val = snap.val();
+      if (val && val.settings) {
+        emailSettings = val.settings;
+        save(SK.settings, emailSettings);
+      }
+      if (val && val.sync) {
+        syncConfig = val.sync;
+        save(SK.sync, syncConfig);
+      }
+      resolve();
+    }).catch(()=>resolve());
+  });
+}
+window.setSendMethod=v=>{emailSettings.sendMethod=v;save(SK.settings,emailSettings);saveUserConfig();renderPage()}
+window.saveEJSField=(f,v)=>{emailSettings.emailjs[f]=v.trim();save(SK.settings,emailSettings);saveUserConfig();}
+window.toggleAutoSend=checked=>{emailSettings.autoSend.enabled=checked;save(SK.settings,emailSettings);saveUserConfig();if(checked)startAutoSend();else stopAutoSend();renderPage()}
+window.toggleDay=d=>{const a=emailSettings.autoSend.daysBeforeExpiry;const i=a.indexOf(d);if(i>=0)a.splice(i,1);else a.push(d);a.sort((x,y)=>y-x);save(SK.settings,emailSettings);saveUserConfig();renderPage()}
+window.saveCheckInterval=v=>{emailSettings.autoSend.checkIntervalMinutes=Math.max(5,Math.min(1440,v||60));save(SK.settings,emailSettings);saveUserConfig();if(emailSettings.autoSend.enabled)startAutoSend()}
+window.clearEmailLog=()=>{emailLog=[];save(SK.log,[]);renderPage();showToast('Log cancellato')}
+window.testEmailJS=async()=>{
+window.saveSyncField=(f,v)=>{syncConfig[f]=v.trim();save(SK.sync,syncConfig);saveUserConfig();}
+}
+
+function checkAuth() {
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (user) {
+      authUser = user;
+      afterLogin();
+    } else {
+      authUser = null;
+      document.getElementById('app-shell').style.display = 'none';
+      renderLoginScreen();
+    }
+  });
+}
+
+setTimeout(checkAuth, 20);
 // ═══════════════════════════════════════
 // LOGOUT
 // ═══════════════════════════════════════
