@@ -2256,6 +2256,21 @@ function initApp(){
 }
 // Run init after a short delay so DOM is ready
 setTimeout(initApp,20);
+// ═══════════════════════════════════════
+// LOGOUT
+// ═══════════════════════════════════════
+function doLogout() {
+  authUser = null;
+  if (typeof firebase !== 'undefined' && firebase.auth) {
+    try { firebase.auth().signOut(); } catch(e) {}
+  }
+  var appShell = document.getElementById('app-shell');
+  if(appShell) appShell.style.display = 'none';
+  var loginScreen = document.getElementById('login-screen');
+  if(loginScreen) {
+    loginScreen.innerHTML = '<div class="login-card"><h3>Sei stato disconnesso</h3><button class="tb-btn primary" onclick="location.reload()">Accedi di nuovo</button></div>';
+  }
+}
 </script>
 </body>
 </html>
