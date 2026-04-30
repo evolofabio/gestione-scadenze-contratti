@@ -1759,6 +1759,7 @@ window.doDeleteCantiere=function(contractId,idx){
 function renderContractCard(c){
   try{
     const d=daysLeft(c.endDate);
+    const monthsTo12 = monthsRemainingTo12(c);
     const badge=urgBadge(d)||{cls:'badge-gray',txt:'—'};
     const prog=Math.round(progressPct(c.startDate,c.endDate)||0);
     const pcls=progCls(d)||'gray';
@@ -1776,6 +1777,7 @@ function renderContractCard(c){
               <div class="renew-pill ${c.renewable ? 'yes' : 'no'}">${c.renewable ? 'Prorogabile' : 'Non prorogabile'}</div>
               ${c.indeterminate?`<div class="badge badge-gray">T.I.</div>`:''}
               ${c.cessato?`<div class="badge badge-gray">Cessato</div>`:''}
+              ${c.inProgress?`<div class="badge badge-purple">In lavorazione</div>`:''}
               ${(c.workNotes && c.workNotes.length)?`<div class="badge badge-blue" title="Note di lavorazione: clicca per visualizzare" onclick="viewWorkNotes(${escAttr(c.id)})">${c.workNotes.length} note</div>`:''}
             </div>
         </div>
@@ -1788,6 +1790,7 @@ function renderContractCard(c){
           <div><div class="field-label">Proroghe</div><div class="field-val">${c.renewCount||0}/4</div></div>
         </div>
         ${c.notes?`<div class="card-notes"><span class="notes-label">Note</span>${esc(c.notes)}</div>`:''}
+        <div style="margin-top:8px;font-size:12px;color:var(--text3)">Mesi rimanenti a 12: <strong>${monthsTo12}</strong></div>
         ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(ct=>`<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(ct.scadenza)<=0?'':'ok'}">${formatDate(ct.scadenza)}</div></div>`).join('')+`</div>`:''}
       </div>
         <div class="card-actions">
@@ -2069,16 +2072,48 @@ function attachModalListeners(){
       state.companies[idx].endDate=newEndStr;state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData();hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata (procedi comunque)');
     }catch(e){console.error('doQuickRenewConfirm',e);showToast('Errore')}
   }
-  const rc=parseInt((document.getElementById('f-rcount')||{}).value)||0;
-  if(!s||!e){fb.innerHTML='';return}
-  const dm=durationMonths(s,e);
-  const r=verificaCausale(dm,rc,rt==='Con causale');
-  if(r.stato==='OK'){fb.innerHTML='';return}
-  const cls=r.stato==='ERRORE'?'err':'warn';
-  const icon=r.stato==='ERRORE'
-    ?'<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-    :'<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-  fb.innerHTML=`<div class="causale-inline ${cls}">${icon}<div><span class="causale-title">${r.stato}: </span>${esc(r.msg)}</div></div>`;
+  // Aggiorna messaggio causale quando si modificano campi nel modal
+  function updateCausaleLive(){
+    const s = (document.getElementById('f-start')||{}).value;
+    const e = (document.getElementById('f-end')||{}).value;
+    const rt = (document.getElementById('f-rtype')||{}).value || '';
+    const rc = parseInt((document.getElementById('f-rcount')||{}).value) || 0;
+    const fb = document.getElementById('causale-live');
+    if(!fb) return;
+    if(!s||!e){fb.innerHTML='';return}
+    const dm = durationMonths(s,e);
+    const r = verificaCausale(dm,rc,rt==='Con causale');
+    if(r.stato==='OK'){fb.innerHTML='';return}
+    const cls = r.stato==='ERRORE' ? 'err' : 'warn';
+    const icon = r.stato==='ERRORE'
+      ? '<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    fb.innerHTML = `<div class="causale-inline ${cls}">${icon}<div><span class="causale-title">${r.stato}: </span>${esc(r.msg)}</div></div>`;
+  }
+
+  // Funzione di utilità per la modal di Quick Renew
+  window.updateQuickRenewCausale = function(id){
+    try{
+      const el = document.getElementById('qr-months'); if(!el) return;
+      const m = parseInt(el.value)||0;
+      const idx = state.companies.findIndex(c=>c.id===id); if(idx<0) return;
+      const c = state.companies[idx]; if(!c.startDate||!c.endDate){document.getElementById('qr-causale').innerHTML='';return}
+      const d = new Date(c.endDate); d.setMonth(d.getMonth()+m); const newEnd = d.toISOString().split('T')[0];
+      const newDur = durationMonths(c.startDate,newEnd);
+      const newRenew = (c.renewCount||0)+1;
+      const r = verificaCausale(newDur,newRenew,c.renewType==='Con causale');
+      const elC = document.getElementById('qr-causale'); if(!elC) return;
+      if(r.stato==='OK'){elC.innerHTML='';document.getElementById('qr-apply').disabled=false;return}
+      const cls = r.stato==='ERRORE' ? 'err' : 'warn';
+      const icon = r.stato==='ERRORE'
+        ? '<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      elC.innerHTML = `<div class="causale-inline ${cls}">${icon}<div><span class="causale-title">${r.stato}: </span>${esc(r.msg)}</div></div>`;
+      document.getElementById('qr-apply').disabled = (r.stato==='ERRORE');
+    }catch(e){console.error('updateQuickRenewCausale',e)}
+  }
+  // inizializza stato causale
+  updateCausaleLive();
 }
 
 window.saveContract=function(editId){
