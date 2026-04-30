@@ -1,14 +1,4 @@
-// Calcola i mesi mancanti per arrivare a 12 mesi di durata totale del contratto
-function monthsRemainingTo12(c) {
-  if (!c || !c.startDate || !c.endDate) return '';
-  const tot = durationMonths(c.startDate, c.endDate);
-  return Math.max(0, 12 - tot);
-}
-// Espone funzioni di sync/config su window per evitare ReferenceError
-window.saveSyncField = function(f,v){syncConfig[f]=v.trim();save(SK.sync,syncConfig);saveUserConfig();}
-window.toggleCloudSync = function(checked){syncConfig.enabled=checked;save(SK.sync,syncConfig);saveUserConfig();initSync();renderPage();}
-window.applySyncConfig = function(){initSync();showToast('Configurazione applicata');}
-<!DOCTYPE html>
+<!-- rimosso duplicato iniziale; documento principale segue -->
 <html lang="it">
 <head>
   <meta charset="UTF-8">
@@ -239,61 +229,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
   display:flex;align-items:center;justify-content:center;
   border:2px solid var(--surface);
 }
-
-// Funzioni per indeterminati / cessati / note di lavorazione
-window.monthsRemainingTo12 = function(c){
-  if(!c||!c.startDate||!c.endDate) return 0;
-  const dur = durationMonths(c.startDate,c.endDate);
-  return Math.max(0, 12 - dur);
-}
-
-window.markIndeterminate = function(id){
-  const c = state.companies.find(x=>x.id===id); if(!c) return;
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Converti a tempo indeterminato</h3><p>Sei sicuro di voler convertire il contratto di <strong>${esc(c.employeeName||c.name)}</strong> a tempo indeterminato?</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="(function(){hideModal();(function doIt(){const idx=state.companies.findIndex(x=>x.id===${id});if(idx<0)return;state.companies[idx].indeterminate=true;state.companies[idx].renewable=false;saveData();renderPage();renderSidebarCompanies();showToast('Contratto convertito a tempo indeterminato');})();})()">Conferma</button></div></div></div>`);
-}
-
-window.markCessato = function(id){
-  const c = state.companies.find(x=>x.id===id); if(!c) return;
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Segna come cessato</h3><p>Segnare come cessato il contratto di <strong>${esc(c.employeeName||c.name)}</strong>?</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn danger" onclick="(function(){hideModal();(function doIt(){const idx=state.companies.findIndex(x=>x.id===${id});if(idx<0)return;state.companies[idx].cessato=true;saveData();renderPage();renderSidebarCompanies();showToast('Contratto segnato come cessato');})();})()">Conferma</button></div></div></div>`);
-}
-
-window.openWorkNoteModal = function(id){
-  const c = state.companies.find(x=>x.id===id); if(!c) return;
-  const lastNote = (c.workNotes && c.workNotes.length) ? c.workNotes[c.workNotes.length-1].text : '';
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Nota lavorazione — ${esc(c.employeeName||c.name)}</h3><div class="form-row single"><div class="form-field"><label>Nota</label><textarea id="work-note-text" class="f-input">${esc(lastNote)}</textarea></div></div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="saveWorkNote(${id})">Salva nota</button></div></div></div>`);
-}
-
-window.saveWorkNote = function(id){
-  const txt = (document.getElementById('work-note-text')||{}).value?.trim();
-  if(!txt){showToast('Inserisci una nota');return}
-  const idx = state.companies.findIndex(x=>x.id===id); if(idx<0) return;
-  const now = new Date().toISOString();
-  if(!state.companies[idx].workNotes) state.companies[idx].workNotes = [];
-  state.companies[idx].workNotes.push({date:now,text:txt});
-  state.companies[idx].inProgress = true;
-  saveData(); hideModal(); renderPage(); renderSidebarCompanies(); showToast('Nota salvata');
-}
-
-window.viewWorkNotes = function(id){
-  const c = state.companies.find(x=>x.id===id); if(!c) return;
-  const notes = (c.workNotes||[]).map(n=>`<div style="margin-bottom:8px"><div style="font-size:12px;color:var(--text3)">${new Date(n.date).toLocaleString()}</div><div style="margin-top:4px">${esc(n.text)}</div></div>`).join('')||'<div class="empty-state">Nessuna nota</div>';
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Note lavorazione — ${esc(c.employeeName||c.name)}</h3>${notes}<div class="modal-actions"><button class="m-btn" onclick="hideModal()">Chiudi</button></div></div></div>`);
-}
-
-// Pagine dedicate
-function renderIndeterminatiPage(){
-  const list = state.companies.filter(c=>c.indeterminate===true);
-  if(!list.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto a tempo indeterminato.</div>`;
-  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
-  return `<div class="section-head"><div class="section-title">Contratti a tempo indeterminato (${list.length})</div></div><div id="indeterminati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
-}
-
-function renderCessatiPage(){
-  const list = state.companies.filter(c=>c.cessato===true);
-  if(!list.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto cessato.</div>`;
-  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
-  return `<div class="section-head"><div class="section-title">Contratti cessati (${list.length})</div></div><div id="cessati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
-}
+/* Funzioni JS spostate in basso (pulizia) */
 
 /* ═══ SECTIONS ═══ */
 .section-head{
@@ -2545,6 +2481,61 @@ function checkAuth() {
       renderLoginScreen();
     }
   });
+}
+
+// Funzioni per indeterminati / cessati / note di lavorazione (spostate qui)
+window.monthsRemainingTo12 = function(c){
+  if(!c||!c.startDate||!c.endDate) return 0;
+  const dur = durationMonths(c.startDate,c.endDate);
+  return Math.max(0, 12 - dur);
+}
+
+window.markIndeterminate = function(id){
+  const c = state.companies.find(x=>x.id===id); if(!c) return;
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Converti a tempo indeterminato</h3><p>Sei sicuro di voler convertire il contratto di <strong>${esc(c.employeeName||c.name)}</strong> a tempo indeterminato?</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="(function(){hideModal();(function doIt(){const idx=state.companies.findIndex(x=>x.id===${id});if(idx<0)return;state.companies[idx].indeterminate=true;state.companies[idx].renewable=false;saveData();renderPage();renderSidebarCompanies();showToast('Contratto convertito a tempo indeterminato');})();})()">Conferma</button></div></div></div>`);
+}
+
+window.markCessato = function(id){
+  const c = state.companies.find(x=>x.id===id); if(!c) return;
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Segna come cessato</h3><p>Segnare come cessato il contratto di <strong>${esc(c.employeeName||c.name)}</strong>?</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn danger" onclick="(function(){hideModal();(function doIt(){const idx=state.companies.findIndex(x=>x.id===${id});if(idx<0)return;state.companies[idx].cessato=true;saveData();renderPage();renderSidebarCompanies();showToast('Contratto segnato come cessato');})();})()">Conferma</button></div></div></div>`);
+}
+
+window.openWorkNoteModal = function(id){
+  const c = state.companies.find(x=>x.id===id); if(!c) return;
+  const lastNote = (c.workNotes && c.workNotes.length) ? c.workNotes[c.workNotes.length-1].text : '';
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Nota lavorazione — ${esc(c.employeeName||c.name)}</h3><div class="form-row single"><div class="form-field"><label>Nota</label><textarea id="work-note-text" class="f-input">${esc(lastNote)}</textarea></div></div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="saveWorkNote(${id})">Salva nota</button></div></div></div>`);
+}
+
+window.saveWorkNote = function(id){
+  const txt = (document.getElementById('work-note-text')||{}).value?.trim();
+  if(!txt){showToast('Inserisci una nota');return}
+  const idx = state.companies.findIndex(x=>x.id===id); if(idx<0) return;
+  const now = new Date().toISOString();
+  if(!state.companies[idx].workNotes) state.companies[idx].workNotes = [];
+  state.companies[idx].workNotes.push({date:now,text:txt});
+  state.companies[idx].inProgress = true;
+  saveData(); hideModal(); renderPage(); renderSidebarCompanies(); showToast('Nota salvata');
+}
+
+window.viewWorkNotes = function(id){
+  const c = state.companies.find(x=>x.id===id); if(!c) return;
+  const notes = (c.workNotes||[]).map(n=>`<div style="margin-bottom:8px"><div style="font-size:12px;color:var(--text3)">${new Date(n.date).toLocaleString()}</div><div style="margin-top:4px">${esc(n.text)}</div></div>`).join('')||'<div class="empty-state">Nessuna nota</div>';
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Note lavorazione — ${esc(c.employeeName||c.name)}</h3>${notes}<div class="modal-actions"><button class="m-btn" onclick="hideModal()">Chiudi</button></div></div></div>`);
+}
+
+// Pagine dedicate
+function renderIndeterminatiPage(){
+  const list = state.companies.filter(c=>c.indeterminate===true);
+  if(!list.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto a tempo indeterminato.</div>`;
+  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
+  return `<div class="section-head"><div class="section-title">Contratti a tempo indeterminato (${list.length})</div></div><div id="indeterminati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+}
+
+function renderCessatiPage(){
+  const list = state.companies.filter(c=>c.cessato===true);
+  if(!list.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto cessato.</div>`;
+  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
+  return `<div class="section-head"><div class="section-title">Contratti cessati (${list.length})</div></div><div id="cessati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
 }
 
 setTimeout(checkAuth, 20);
