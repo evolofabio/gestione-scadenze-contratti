@@ -2434,6 +2434,7 @@ function renderLoginScreen(msg) {
       <div class="login-toggle-link"><a href="#" onclick="showRegister()">Non hai un account? Registrati</a></div>
     </div>
   `;
+  loginEl.style.display = 'flex';
 }
 
 function renderRegisterScreen(msg) {
@@ -2450,6 +2451,7 @@ function renderRegisterScreen(msg) {
       <div class="login-toggle-link"><a href="#" onclick="showLogin()">Hai già un account? Accedi</a></div>
     </div>
   `;
+  loginEl.style.display = 'flex';
 }
 
 window.showLogin = function() { renderLoginScreen(); };
@@ -2479,7 +2481,7 @@ window.doRegister = function() {
 
 function afterLogin() {
   // Nasconde la schermata di login e mostra la dashboard
-  document.getElementById('login-screen').innerHTML = '';
+  const ls = document.getElementById('login-screen'); if (ls) { ls.innerHTML = ''; ls.style.display = 'none'; }
   const appShell = document.getElementById('app-shell'); if (appShell) appShell.style.display = 'flex';
   updateNav();
   renderSidebarCompanies();
@@ -2639,6 +2641,7 @@ function doLogout() {
   var loginScreen = document.getElementById('login-screen');
   if(loginScreen) {
     loginScreen.innerHTML = '<div class="login-card"><h3>Sei stato disconnesso</h3><button class="tb-btn primary" onclick="location.reload()">Accedi di nuovo</button></div>';
+    loginScreen.style.display = 'flex';
   }
 }
 </script>
