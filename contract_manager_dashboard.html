@@ -1,3 +1,9 @@
+// Calcola i mesi mancanti per arrivare a 12 mesi di durata totale del contratto
+function monthsRemainingTo12(c) {
+  if (!c || !c.startDate || !c.endDate) return '';
+  const tot = durationMonths(c.startDate, c.endDate);
+  return Math.max(0, 12 - tot);
+}
 // Espone funzioni di sync/config su window per evitare ReferenceError
 window.saveSyncField = function(f,v){syncConfig[f]=v.trim();save(SK.sync,syncConfig);saveUserConfig();}
 window.toggleCloudSync = function(checked){syncConfig.enabled=checked;save(SK.sync,syncConfig);saveUserConfig();initSync();renderPage();}
