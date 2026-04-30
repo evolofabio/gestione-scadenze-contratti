@@ -995,6 +995,19 @@ function defaultAuth(){return{apiKey:'',authDomain:''}}
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){} }
 function load(key,def){try{const r=localStorage.getItem(key);if(r!==null)return JSON.parse(r)}catch(e){}return typeof def==='function'?def():def}
 
+// Salva lo stato delle aziende su localStorage e, se attivo, prova a sincronizzare col cloud
+function saveData(){
+  try{
+    save(SK.data, state.companies);
+  }catch(e){ console.error('saveData', e); }
+  try{
+    if(syncConfig && syncConfig.enabled && syncState && syncState.db){
+      // Non forzare merge in ogni salvataggio, ma tenta upload se connesso
+      syncToCloud();
+    }
+  }catch(e){ console.error('saveData sync', e); }
+}
+
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
