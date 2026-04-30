@@ -2232,18 +2232,7 @@ async function runAutoCheck(){
   }
 }
 
-// settings handlers
-window.setSendMethod=v=>{emailSettings.sendMethod=v;save(SK.settings,emailSettings);renderPage()}
-window.saveEJSField=(f,v)=>{emailSettings.emailjs[f]=v.trim();save(SK.settings,emailSettings)}
-window.toggleAutoSend=checked=>{emailSettings.autoSend.enabled=checked;save(SK.settings,emailSettings);if(checked)startAutoSend();else stopAutoSend();renderPage()}
-window.toggleDay=d=>{const a=emailSettings.autoSend.daysBeforeExpiry;const i=a.indexOf(d);if(i>=0)a.splice(i,1);else a.push(d);a.sort((x,y)=>y-x);save(SK.settings,emailSettings);renderPage()}
-window.saveCheckInterval=v=>{emailSettings.autoSend.checkIntervalMinutes=Math.max(5,Math.min(1440,v||60));save(SK.settings,emailSettings);if(emailSettings.autoSend.enabled)startAutoSend()}
-window.clearEmailLog=()=>{emailLog=[];save(SK.log,[]);renderPage();showToast('Log cancellato')}
-window.testEmailJS=async()=>{
-  if(!isEmailJSConfigured()){showToast('Configura EmailJS prima');return}
-  try{emailjs.init(emailSettings.emailjs.publicKey);await emailjs.send(emailSettings.emailjs.serviceId,emailSettings.emailjs.templateId,{to_email:'test@test.com',subject:'Test',message:'Test connessione',contract_name:'Test'});showToast('Connessione EmailJS riuscita!');addLog('Test','test@test.com','success','emailjs','Test riuscito');renderPage()}
-  catch(e){showToast('Errore: '+(e.text||e));addLog('Test','test@test.com','error','emailjs',e.text||String(e));renderPage()}
-}
+// settings handlers (defined below once)
 
 // ═══════════════════════════════════════
 // EXPORT / IMPORT
@@ -2437,7 +2426,12 @@ window.doRegister = function() {
 function afterLogin() {
   // Nasconde la schermata di login e mostra la dashboard
   document.getElementById('login-screen').innerHTML = '';
+  const appShell = document.getElementById('app-shell'); if (appShell) appShell.style.display = 'flex';
+  updateNav();
+  renderSidebarCompanies();
   renderPage();
+  startAutoSend();
+  initSync();
 }
 // Salva la configurazione utente su Firebase DB
 function saveUserConfig() {
@@ -2471,15 +2465,29 @@ function loadUserConfig() {
     }).catch(()=>resolve());
   });
 }
-window.setSendMethod=v=>{emailSettings.sendMethod=v;save(SK.settings,emailSettings);saveUserConfig();renderPage()}
-window.saveEJSField=(f,v)=>{emailSettings.emailjs[f]=v.trim();save(SK.settings,emailSettings);saveUserConfig();}
-window.toggleAutoSend=checked=>{emailSettings.autoSend.enabled=checked;save(SK.settings,emailSettings);saveUserConfig();if(checked)startAutoSend();else stopAutoSend();renderPage()}
-window.toggleDay=d=>{const a=emailSettings.autoSend.daysBeforeExpiry;const i=a.indexOf(d);if(i>=0)a.splice(i,1);else a.push(d);a.sort((x,y)=>y-x);save(SK.settings,emailSettings);saveUserConfig();renderPage()}
-window.saveCheckInterval=v=>{emailSettings.autoSend.checkIntervalMinutes=Math.max(5,Math.min(1440,v||60));save(SK.settings,emailSettings);saveUserConfig();if(emailSettings.autoSend.enabled)startAutoSend()}
-window.clearEmailLog=()=>{emailLog=[];save(SK.log,[]);renderPage();showToast('Log cancellato')}
-window.testEmailJS=async()=>{
-window.saveSyncField=(f,v)=>{syncConfig[f]=v.trim();save(SK.sync,syncConfig);saveUserConfig();}
-}
+window.setSendMethod = v => { emailSettings.sendMethod = v; save(SK.settings, emailSettings); saveUserConfig(); renderPage(); };
+window.saveEJSField = (f, v) => { emailSettings.emailjs[f] = (v||'').trim(); save(SK.settings, emailSettings); saveUserConfig(); };
+window.toggleAutoSend = checked => { emailSettings.autoSend.enabled = checked; save(SK.settings, emailSettings); saveUserConfig(); if (checked) startAutoSend(); else stopAutoSend(); renderPage(); };
+window.toggleDay = d => { const a = emailSettings.autoSend.daysBeforeExpiry; const i = a.indexOf(d); if (i >= 0) a.splice(i, 1); else a.push(d); a.sort((x, y) => y - x); save(SK.settings, emailSettings); saveUserConfig(); renderPage(); };
+window.saveCheckInterval = v => { emailSettings.autoSend.checkIntervalMinutes = Math.max(5, Math.min(1440, v || 60)); save(SK.settings, emailSettings); saveUserConfig(); if (emailSettings.autoSend.enabled) startAutoSend(); };
+window.clearEmailLog = () => { emailLog = []; save(SK.log, []); renderPage(); showToast('Log cancellato'); };
+
+window.testEmailJS = async () => {
+  if (!isEmailJSConfigured()) { showToast('Configura EmailJS prima'); return; }
+  try {
+    emailjs.init(emailSettings.emailjs.publicKey);
+    await emailjs.send(emailSettings.emailjs.serviceId, emailSettings.emailjs.templateId, { to_email: 'test@test.com', subject: 'Test', message: 'Test connessione', contract_name: 'Test' });
+    showToast('Connessione EmailJS riuscita!');
+    addLog('Test', 'test@test.com', 'success', 'emailjs', 'Test riuscito');
+    renderPage();
+  } catch (e) {
+    showToast('Errore: ' + (e.text || e));
+    addLog('Test', 'test@test.com', 'error', 'emailjs', e.text || String(e));
+    renderPage();
+  }
+};
+
+window.saveSyncField = (f, v) => { syncConfig[f] = (v || '').trim(); save(SK.sync, syncConfig); saveUserConfig(); };
 
 function checkAuth() {
   if (!ensureFirebaseApp()) {
@@ -2563,7 +2571,7 @@ function renderCessatiPage(){
   return `<div class="section-head"><div class="section-title">Contratti cessati (${list.length})</div></div><div id="cessati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
 }
 
-setTimeout(checkAuth, 20);
+window.addEventListener('load', checkAuth);
 // ═══════════════════════════════════════
 // LOGOUT
 // ═══════════════════════════════════════
