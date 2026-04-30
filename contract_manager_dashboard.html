@@ -823,6 +823,24 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .modal-bg{display:none!important}
 }
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+/* Mobile helpers */
+#mobile-menu-btn{display:none}
+@media(max-width:900px){
+  #mobile-menu-btn{display:flex}
+  .app-shell{flex-direction:column;height:auto}
+  .main-area{min-height:calc(100vh - var(--header-h))}
+  .sidebar{width:70%;max-width:320px;transform:translateX(-100%);box-shadow:var(--shadow-lg);z-index:1000}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;z-index:990}
+  .sidebar-overlay.show{display:block}
+  .page-content{padding:12px}
+  .topbar{padding:0 12px}
+  .nav-item,.company-nav-item{padding:12px}
+  .tb-btn{padding:8px 10px}
+  .modal{width:94vw;max-width:640px}
+  .sidebar-logo .logo-mark img{height:28px}
+}
 </style>
 </head>
 <body>
@@ -879,7 +897,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
 
   <div class="main-area">
     <header class="topbar">
-      <button class="icon-btn" onclick="toggleMobileSidebar()" id="mobile-menu-btn" style="display:none">
+      <button class="icon-btn" onclick="toggleMobileSidebar()" id="mobile-menu-btn">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title" id="topbar-title">Dashboard</div>
@@ -944,6 +962,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   </div>
 </div>
 
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
 <div id="modal-layer"></div>
 
 <script>
@@ -1187,7 +1206,9 @@ function toggleSidebar(){
 }
 function toggleMobileSidebar(){
   const sb=document.getElementById('sidebar');
-  sb.classList.toggle('mobile-open');
+  const ov=document.getElementById('sidebar-overlay');
+  const opened = sb.classList.toggle('mobile-open');
+  if(ov){ if(opened) ov.classList.add('show'); else ov.classList.remove('show'); }
 }
 
 // ═══════════════════════════════════════
