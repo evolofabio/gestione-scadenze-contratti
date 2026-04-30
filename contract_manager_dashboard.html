@@ -2364,6 +2364,60 @@ function mergeCompanies(cloud, local){
   // Ordina per id
   return Object.values(map).sort((a,b)=>a.id-b.id);
 }
+// Gestione della sincronizzazione: metodi utili mancanti
+function disconnectSync(){
+  try{
+    if(syncState.listener){ try{ syncState.listener.off(); }catch(e){} syncState.listener=null; }
+    if(syncState.db){ try{ if(typeof syncState.db.goOffline==='function') syncState.db.goOffline(); }catch(e){} syncState.db=null; }
+    if(typeof firebase!=='undefined' && firebase.apps){ const ex = firebase.apps.find(a=>a.name==='syncApp'); if(ex) try{ ex.delete(); }catch(e){} }
+  }catch(e){}
+  syncState.connected=false; syncState.lastSync=null; syncState.skipNext=false; updateSyncUI();
+}
+
+function toggleCloudSync(checked){
+  syncConfig.enabled = !!checked;
+  save(SK.sync, syncConfig);
+  saveUserConfig();
+  if(syncConfig.enabled){ initSync(); showToast('Sincronizzazione attivata'); }
+  else{ disconnectSync(); showToast('Sincronizzazione disattivata'); }
+}
+
+function applySyncConfig(){
+  save(SK.sync, syncConfig);
+  saveUserConfig();
+  initSync();
+  showToast('Configurazione sincronizzazione applicata');
+}
+
+function pullFromCloud(){
+  if(!syncState.db || !syncState.connected){ showToast('Non connesso al cloud'); return; }
+  syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').once('value').then(snap=>{
+    const cloudData = fbArrayFromVal(snap.val());
+    if(!cloudData){ showToast('Nessun dato nel cloud'); return; }
+    const merged = mergeCompanies(cloudData, state.companies);
+    if(JSON.stringify(merged)!==JSON.stringify(state.companies)){
+      state.companies = merged; save(SK.data, merged); renderPage(); renderSidebarCompanies(); showToast('Dati importati dal cloud');
+    } else showToast('Dati cloud identici a quelli locali');
+  }).catch(e=>{ showToast('Errore download: '+(e.message||e)); });
+}
+
+function forcePushToCloud(){
+  if(!syncState.db || !syncState.connected){ showToast('Non connesso al cloud'); return; }
+  syncToCloud();
+  showToast('Invio dati al cloud...');
+}
+
+function updateSyncUI(){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  let html = '';
+  if(!syncConfig.enabled) html = '<div style="font-size:13px;color:var(--text3)">Sincronizzazione disattivata</div>';
+  else if(syncState.connected) html = `<div style="font-size:13px;color:var(--text3)"><span class="status-pill ok"><span class="status-dot ok"></span>Connesso</span>${syncState.lastSync? ' Ultima sincronizzazione: '+new Date(syncState.lastSync).toLocaleString() : ''}</div>`;
+  else html = '<div style="font-size:13px;color:var(--text3)"><span class="status-pill warn"><span class="status-dot warn"></span>Non connesso</span></div>';
+  el.innerHTML = html;
+  const btnPull = document.getElementById('btn-pull'); const btnPush = document.getElementById('btn-push');
+  if(btnPull) btnPull.disabled = !syncState.connected; if(btnPush) btnPush.disabled = !syncState.connected;
+}
 // If no explicit login flow is active, show the app and render initial UI
 // === LOGIN SCREEN & AUTH ===
 function renderLoginScreen(msg) {
