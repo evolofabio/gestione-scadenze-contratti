@@ -1,4 +1,4 @@
-# Gestione Scadenze Contratti
+# Evolution System - Gestione Scadenze Contratti
 
 Dashboard web per la gestione e il monitoraggio delle scadenze contrattuali aziendali. Applicazione single-page senza dipendenze server — basta aprire il file HTML in un browser.
 
@@ -11,7 +11,7 @@ Dashboard web per la gestione e il monitoraggio delle scadenze contrattuali azie
 
 ## Funzionalità
 
-### Gestione Contratti
+### Gestione Scadenze Contratti
 - **Multi-contratto per azienda** — ogni azienda può avere più contratti, ciascuno con il proprio dipendente
 - **Nome dipendente** associato a ogni contratto
 - **Vista globale** con panoramica di tutti i contratti e metriche riepilogative

@@ -1,7 +1,7 @@
 {
-  "name": "gestione-scadenze-contratti",
+  "name": "evolution-system-gestione-scadenze-contratti",
   "version": "1.0.0",
-  "description": "Dashboard web per la gestione e il monitoraggio delle scadenze contrattuali aziendali. Applicazione single-page senza dipendenze server — basta aprire il file HTML in un browser.",
+  "description": "Evolution System - Gestione Scadenze Contratti: dashboard web per la gestione e il monitoraggio delle scadenze contrattuali aziendali.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

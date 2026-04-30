@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contratti</title>
+  <title>Evolution System - Gestione Scadenze Contratti</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -130,6 +130,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
   flex-shrink:0;
 }
 .logo-mark svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round}
+.logo-mark img{width:100%;height:100%;object-fit:contain;display:block}
 .logo-text{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden}
 .sidebar-nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:1px}
 .sidebar-section-label{
@@ -823,11 +824,11 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
 <div id="login-screen" class="login-screen"></div>
 <div id="app-shell" class="app-shell" style="display:none">
   <nav class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
+      <div class="sidebar-logo">
       <div class="logo-mark">
-        <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <img src="logo.svg" alt="Evolution System">
       </div>
-      <span class="logo-text">Contratti</span>
+      <span class="logo-text">Evolution System</span>
     </div>
     <div class="sidebar-nav" id="sidebar-main-nav">
       <span class="sidebar-section-label">Navigazione</span>
@@ -879,7 +880,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
       <div class="topbar-title" id="topbar-title">Dashboard</div>
       <div class="topbar-search" id="topbar-search-wrap">
         <span class="si"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-        <input type="text" placeholder="Cerca contratti…" id="search-input" oninput="onSearch(this.value)">
+        <input type="text" placeholder="Cerca scadenze…" id="search-input" oninput="onSearch(this.value)">
       </div>
       <div class="topbar-actions">
         <div class="export-dd" id="export-dd">
@@ -2241,15 +2242,15 @@ function getHeaders(){return['Nome Azienda','Dipendente','Tipo Contratto','Data 
 function getRows(companies){
   return(companies||state.companies).map(c=>{const d=daysLeft(c.endDate);const s=d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'Regolare';return[c.name,c.employeeName||'',c.contractType,formatDate(c.startDate),formatDate(c.endDate),d,s,c.renewable?'Sì':'No',c.renewMonths||'',c.renewType||'',c.renewNotice||'',c.renewCount||0,c.adminEmail||'',c.companyEmail||'',c.notes||'']});
 }
-window.exportCSV=()=>{const h=getHeaders();const r=getRows();const csv=[h,...r].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`contratti_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(u);showToast('CSV esportato')}
-window.exportExcel=()=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows()]);ws['!cols']=[22,20,22,12,12,8,12,10,10,14,10,8,24,24,40].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Contratti');XLSX.writeFile(wb,`contratti_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel esportato')}
-window.exportExcelCompany=name=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows(state.companies.filter(c=>c.name===name))]);XLSX.utils.book_append_sheet(wb,ws,name.substring(0,30));XLSX.writeFile(wb,`contratti_${name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel azienda esportato')}
+window.exportCSV=()=>{const h=getHeaders();const r=getRows();const csv=[h,...r].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(u);showToast('CSV esportato')}
+window.exportExcel=()=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows()]);ws['!cols']=[22,20,22,12,12,8,12,10,10,14,10,8,24,24,40].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Contratti');XLSX.writeFile(wb,`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel esportato')}
+window.exportExcelCompany=name=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows(state.companies.filter(c=>c.name===name))]);XLSX.utils.book_append_sheet(wb,ws,name.substring(0,30));XLSX.writeFile(wb,`evolution_system_gestione_scadenze_${name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel azienda esportato')}
 window.exportPDF=()=>{
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text('Gestione Contratti',14,14);
+  doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text('Evolution System - Gestione Scadenze Contratti',14,14);
   doc.setFontSize(9);doc.setFont(undefined,'normal');doc.setTextColor(100);doc.text(`Esportato il ${new Date().toLocaleDateString('it-IT')} — ${state.companies.length} contratti`,14,20);doc.setTextColor(0);
   doc.autoTable({head:[['Azienda','Dipendente','Tipo Contratto','Inizio','Scadenza','Gg','Stato','Pror.']],body:state.companies.map(c=>{const d=daysLeft(c.endDate);return[c.name,c.employeeName||'—',c.contractType,formatDate(c.startDate),formatDate(c.endDate),String(d),d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'OK',c.renewable?'Sì':'No',c.renewMonths||'',c.renewType||'',c.renewNotice||'',c.renewCount||0,c.adminEmail||'',c.companyEmail||'',c.notes||'']}).slice(0,100),startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}});
-  doc.save(`contratti_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF esportato');
+  doc.save(`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF esportato');
 }
 window.triggerImportExcel=()=>{
   const inp=document.createElement('input');inp.type='file';inp.accept='.xlsx,.xls,.csv';
@@ -2425,7 +2426,7 @@ function renderLoginScreen(msg) {
   if (!loginEl) return;
   loginEl.innerHTML = `
     <div class="login-card">
-      <div class="login-logo"><div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><span class="login-logo-text">Contratti</span></div>
+      <div class="login-logo"><div class="logo-mark"><img src="logo.svg" alt="Evolution System"></div><span class="login-logo-text">Evolution System - Gestione Scadenze Contratti</span></div>
       <div class="login-subtitle">Accedi con email e password</div>
       <div class="login-err" id="login-err" style="display:${msg?'block':'none'}">${msg||''}</div>
       <div class="form-row single"><div class="form-field"><label>Email</label><input id="login-email" class="f-input" type="email" autocomplete="username" style="width:100%"></div></div>
@@ -2442,7 +2443,7 @@ function renderRegisterScreen(msg) {
   if (!loginEl) return;
   loginEl.innerHTML = `
     <div class="login-card">
-      <div class="login-logo"><div class="logo-mark"><svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><span class="login-logo-text">Contratti</span></div>
+      <div class="login-logo"><div class="logo-mark"><img src="logo.svg" alt="Evolution System"></div><span class="login-logo-text">Evolution System - Gestione Scadenze Contratti</span></div>
       <div class="login-subtitle">Crea un nuovo account</div>
       <div class="login-err" id="register-err" style="display:${msg?'block':'none'}">${msg||''}</div>
       <div class="form-row single"><div class="form-field"><label>Email</label><input id="register-email" class="f-input" type="email" autocomplete="username" style="width:100%"></div></div>
