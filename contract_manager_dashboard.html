@@ -820,7 +820,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
 </style>
 </head>
 <body>
-<div id="login-screen"></div>
+<div id="login-screen" class="login-screen"></div>
 <div id="app-shell" class="app-shell" style="display:none">
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
@@ -1001,21 +1001,30 @@ let autoSendInterval=null;
 
 // Inizializza Firebase App principale se non già presente
 function ensureFirebaseApp() {
-  if (!window.firebase || (firebase.apps && firebase.apps.length > 0)) return true;
+  // If Firebase script hasn't loaded yet, signal failure
+  if (typeof window.firebase === 'undefined') return false;
+  // If an app is already initialized, we're good
+  if (firebase.apps && firebase.apps.length > 0) return true;
+
   // Configurazione di default: usa authConfig se presente, altrimenti syncConfig
   var config = null;
   if (typeof defaultAuth === 'function') {
     config = load(SK.auth, defaultAuth);
-  } else if (typeof defaultSync === 'function') {
+  } else {
     config = load(SK.sync, defaultSync);
   }
   if (config && config.apiKey && config.authDomain && config.databaseURL) {
-    firebase.initializeApp({
-      apiKey: config.apiKey,
-      authDomain: config.authDomain,
-      databaseURL: config.databaseURL
-    });
-    return true;
+    try {
+      firebase.initializeApp({
+        apiKey: config.apiKey,
+        authDomain: config.authDomain,
+        databaseURL: config.databaseURL
+      });
+      return true;
+    } catch (e) {
+      console.error('firebase.initializeApp error', e);
+      return false;
+    }
   } else {
     // Mostra form per inserire le chiavi Firebase
     var el = document.getElementById('login-screen') || document.body;
@@ -1029,19 +1038,20 @@ function ensureFirebaseApp() {
         <button class="tb-btn primary" style="margin-top:16px" onclick="window.saveFirebaseConfig()">Salva e ricarica</button>
       </div>`;
       window.saveFirebaseConfig = function() {
-        var apiKey = document.getElementById('firebase-api-key').value.trim();
-        var authDomain = document.getElementById('firebase-auth-domain').value.trim();
-        var databaseURL = document.getElementById('firebase-db-url').value.trim();
+        var apiKey = (document.getElementById('firebase-api-key')||{}).value?.trim();
+        var authDomain = (document.getElementById('firebase-auth-domain')||{}).value?.trim();
+        var databaseURL = (document.getElementById('firebase-db-url')||{}).value?.trim();
         if (!apiKey || !authDomain || !databaseURL) {
           alert('Compila tutti i campi!');
           return;
         }
-        var config = { apiKey, authDomain, databaseURL };
-        try { localStorage.setItem(SK.auth, JSON.stringify(config)); } catch(e) {}
+        var cfg = { apiKey, authDomain, databaseURL };
+        try { localStorage.setItem(SK.auth, JSON.stringify(cfg)); } catch(e) {}
         location.reload();
       }
     }
-    if (document.getElementById('app-shell')) document.getElementById('app-shell').style.display = 'none';
+    var appShell = document.getElementById('app-shell');
+    if (appShell) appShell.style.display = 'none';
     return false;
   }
 }
@@ -2472,14 +2482,27 @@ window.saveSyncField=(f,v)=>{syncConfig[f]=v.trim();save(SK.sync,syncConfig);sav
 }
 
 function checkAuth() {
-  ensureFirebaseApp();
+  if (!ensureFirebaseApp()) {
+    // Firebase non inizializzato: mostra schermata di login/configurazione
+    const appShell = document.getElementById('app-shell');
+    if (appShell) appShell.style.display = 'none';
+    renderLoginScreen();
+    return;
+  }
+  if (!firebase || !firebase.auth) {
+    const appShell = document.getElementById('app-shell');
+    if (appShell) appShell.style.display = 'none';
+    renderLoginScreen('Impossibile inizializzare l\'autenticazione Firebase');
+    return;
+  }
   firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
       authUser = user;
       afterLogin();
     } else {
       authUser = null;
-      document.getElementById('app-shell').style.display = 'none';
+      const appShell = document.getElementById('app-shell');
+      if (appShell) appShell.style.display = 'none';
       renderLoginScreen();
     }
   });
