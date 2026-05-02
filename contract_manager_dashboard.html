@@ -989,8 +989,13 @@ function defaultData(){return[
 ]} 
 
 function defaultSettings(){return{sendMethod:'mailto',emailjs:{serviceId:'',templateId:'',publicKey:''},autoSend:{enabled:false,daysBeforeExpiry:[30,15,7,3,1],checkIntervalMinutes:60}}}
-function defaultSync(){return{enabled:false,apiKey:'',databaseURL:'',roomName:''}}
-function defaultAuth(){return{apiKey:'',authDomain:''}}
+const FIREBASE_CONFIG = {
+  apiKey: 'iUiunhVYrCZh3nlsNKAlJdSrat9TcvvIsGp2JmsQNUk',
+  authDomain: 'gestione-scadenze-d2eed.firebaseapp.com',
+  databaseURL: 'https://gestione-scadenze-d2eed-default-rtdb.europe-west1.firebasedatabase.app/'
+};
+function defaultSync(){return{enabled:false,apiKey:FIREBASE_CONFIG.apiKey,databaseURL:FIREBASE_CONFIG.databaseURL,roomName:'gestione-scadenze'}}
+function defaultAuth(){return{apiKey:FIREBASE_CONFIG.apiKey,authDomain:FIREBASE_CONFIG.authDomain,databaseURL:FIREBASE_CONFIG.databaseURL}}
 
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){} }
 function load(key,def){try{const r=localStorage.getItem(key);if(r!==null)return JSON.parse(r)}catch(e){}return typeof def==='function'?def():def}
@@ -1081,12 +1086,16 @@ function ensureFirebaseApp() {
   // If an app is already initialized, we're good
   if (firebase.apps && firebase.apps.length > 0) return true;
 
-  // Configurazione di default: usa authConfig se presente, altrimenti syncConfig
+  // Configurazione: usa localStorage se presente, altrimenti usa il config hardcoded
   var config = null;
   if (typeof defaultAuth === 'function') {
     config = load(SK.auth, defaultAuth);
   } else {
     config = load(SK.sync, defaultSync);
+  }
+  // Fallback al config hardcoded se mancano campi essenziali
+  if (!config || !config.apiKey || !config.authDomain || !config.databaseURL) {
+    config = Object.assign({}, FIREBASE_CONFIG, config || {});
   }
   if (config && config.apiKey && config.authDomain && config.databaseURL) {
     try {
