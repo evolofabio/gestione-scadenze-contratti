@@ -428,6 +428,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
   gap:1px;background:var(--border);
   border:1px solid var(--border);border-radius:var(--radius-lg);
   overflow:hidden;
+  min-width:760px;
 }
 .cal-header-cell{
   padding:10px 4px;text-align:center;
@@ -480,7 +481,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 }
 .calendar-scroll{
   overflow-y:auto;
-  overflow-x:hidden;
+  overflow-x:auto;
   max-height:calc(100vh - var(--header-h) - 210px);
   padding-bottom:8px;
   -webkit-overflow-scrolling:touch;
@@ -893,6 +894,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .cal-header-cell{padding:6px 2px;font-size:10px}
   .cal-month-label{font-size:14px}
   .calendar-scroll{max-height:calc(100vh - var(--header-h) - 180px)}
+  .calendar-grid{min-width:680px}
   /* Notif center mobile */
   .notif-center{position:fixed;top:var(--header-h);right:0;left:0;width:100%;border-radius:0 0 var(--radius-lg) var(--radius-lg);max-height:65vh}
   /* Cantiere card mobile */
