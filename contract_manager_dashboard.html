@@ -478,6 +478,13 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
   font-size:16px;font-weight:600;color:var(--text);flex:1;
   text-align:center;text-transform:capitalize;
 }
+.calendar-scroll{
+  overflow-y:auto;
+  overflow-x:hidden;
+  max-height:calc(100vh - var(--header-h) - 210px);
+  padding-bottom:8px;
+  -webkit-overflow-scrolling:touch;
+}
 .cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
 .leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
 .leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
@@ -885,6 +892,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .cal-event{font-size:9px;padding:1px 3px;margin-bottom:1px}
   .cal-header-cell{padding:6px 2px;font-size:10px}
   .cal-month-label{font-size:14px}
+  .calendar-scroll{max-height:calc(100vh - var(--header-h) - 180px)}
   /* Notif center mobile */
   .notif-center{position:fixed;top:var(--header-h);right:0;left:0;width:100%;border-radius:0 0 var(--radius-lg) var(--radius-lg);max-height:65vh}
   /* Cantiere card mobile */
@@ -2089,7 +2097,7 @@ function renderCalendarPage(){
     ${!isCurrentMonth?`<button class="tb-btn" onclick="goToCalendarToday()" style="font-size:12px">Oggi</button>`:''}
   </div>`;
 
-  html += `<div class="calendar-grid">`;
+  html += `<div class="calendar-scroll"><div class="calendar-grid">`;
   ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].forEach(d=>{html+=`<div class="cal-header-cell">${d}</div>`});
 
   const MAX_EVENTS_PER_DAY = 3;
@@ -2122,7 +2130,7 @@ function renderCalendarPage(){
     <div class="leg-item"><span class="leg-dot" style="background:var(--amber)"></span>In scadenza</div>
     <div class="leg-item"><span class="leg-dot" style="background:var(--green)"></span>Regolare</div>
     <div class="leg-item"><span class="leg-dot" style="background:var(--purple)"></span>Cantiere</div>
-  </div>`;
+  </div></div>`;
   return html;
 }
 
