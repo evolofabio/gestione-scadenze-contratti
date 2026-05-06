@@ -324,7 +324,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .contract-card.expired{border-left:3px solid var(--text3)}
 .card-main{padding:14px 16px}
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
-.card-ident{}
+.card-ident{min-width:0}
 .card-company-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.2}
 .card-employee{font-size:13px;color:var(--text2);margin-top:2px}
 .card-type{font-size:12px;color:var(--text3);margin-top:1px}
@@ -425,40 +425,62 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 /* ═══ CALENDAR ═══ */
 .calendar-grid{
   display:grid;grid-template-columns:repeat(7,1fr);
-  gap:2px;background:var(--surface);
+  gap:1px;background:var(--border);
   border:1px solid var(--border);border-radius:var(--radius-lg);
   overflow:hidden;
 }
 .cal-header-cell{
-  padding:8px 4px;text-align:center;
+  padding:10px 4px;text-align:center;
   font-size:11px;font-weight:600;letter-spacing:.04em;
   color:var(--text2);background:var(--surface2);
 }
 .cal-day{
-  min-height:60px;padding:6px;
+  min-height:72px;padding:6px;
   background:var(--surface);
-  border-top:1px solid var(--border);
   transition:background var(--t);cursor:pointer;
+  position:relative;
 }
 .cal-day:hover{background:var(--surface2)}
 .cal-day.today{background:var(--accent-bg)}
+.cal-day.other-month{background:var(--surface2);opacity:.6;cursor:default}
 .cal-day.other-month .cal-day-num{color:var(--text3)}
-.cal-day-num{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px}
+.cal-day-num{
+  font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px;
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:20px;height:20px;border-radius:50%;
+}
+.cal-day.today .cal-day-num{
+  background:var(--accent);color:#fff;font-weight:700;
+  width:22px;height:22px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+}
 .cal-event{
   font-size:10px;font-weight:500;padding:2px 5px;
   border-radius:4px;margin-bottom:2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  cursor:pointer;
+  cursor:pointer;line-height:1.4;
+  transition:opacity var(--t);
 }
-.cal-event.urgent{background:var(--red-bg);color:var(--red)}
-.cal-event.warning{background:var(--amber-bg);color:var(--amber)}
-.cal-event.ok{background:var(--green-bg);color:var(--green)}
-.cal-event.cantiere{background:var(--purple-bg);color:var(--purple)}
-.cal-nav{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.cal-month-label{font-size:15px;font-weight:600;color:var(--text);flex:1}
-.cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
-.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
-.leg-dot{width:10px;height:10px;border-radius:3px}
+.cal-event:hover{opacity:.8}
+.cal-event.urgent{background:var(--red-bg);color:var(--red);border-left:2px solid var(--red)}
+.cal-event.warning{background:var(--amber-bg);color:var(--amber);border-left:2px solid var(--amber)}
+.cal-event.ok{background:var(--green-bg);color:var(--green);border-left:2px solid var(--green)}
+.cal-event.cantiere{background:var(--purple-bg);color:var(--purple);border-left:2px solid var(--purple)}
+.cal-event-more{
+  font-size:10px;color:var(--accent);padding:1px 4px;
+  cursor:pointer;font-weight:500;
+}
+.cal-event-more:hover{text-decoration:underline}
+.cal-nav{
+  display:flex;align-items:center;gap:8px;margin-bottom:14px;
+}
+.cal-month-label{
+  font-size:16px;font-weight:600;color:var(--text);flex:1;
+  text-align:center;text-transform:capitalize;
+}
+.cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.leg-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 
 /* ═══ ANALYTICS ═══ */
 .chart-card{
@@ -674,26 +696,65 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
 /* notification center */
 .notif-center{
   position:absolute;top:calc(100% + 8px);right:0;
-  width:320px;background:var(--surface);
+  width:360px;max-height:500px;
+  background:var(--surface);
   border:1px solid var(--border);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-lg);z-index:200;
-  animation:modalIn .2s ease;overflow:hidden;
+  animation:modalIn .2s ease;
+  display:flex;flex-direction:column;overflow:hidden;
 }
 .notif-header{
   padding:12px 14px;border-bottom:1px solid var(--border);
   font-size:13px;font-weight:600;color:var(--text);
   display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+.notif-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--red);color:#fff;
+  font-size:10px;font-weight:700;
+  width:18px;height:18px;border-radius:50%;margin-left:6px;
+  vertical-align:middle;
+}
+.notif-close-btn{
+  width:24px;height:24px;border-radius:6px;
+  border:1px solid var(--border2);background:none;color:var(--text3);
+  cursor:pointer;font-size:16px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--t);
+}
+.notif-close-btn:hover{background:var(--surface2);color:var(--text)}
+.notif-body{overflow-y:auto;flex:1}
+.notif-group-label{
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text3);padding:10px 14px 4px;position:sticky;top:0;
+  background:var(--surface);z-index:1;
 }
 .notif-item{
   padding:10px 14px;border-bottom:1px solid var(--border);
   transition:background var(--t);cursor:pointer;
+  display:flex;align-items:center;gap:10px;
 }
 .notif-item:last-child{border-bottom:none}
 .notif-item:hover{background:var(--surface2)}
-.notif-item-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:1px}
-.notif-item-sub{font-size:12px;color:var(--text2)}
+.notif-item-left{flex-shrink:0}
+.notif-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--text3);
+}
+.notif-dot.urgent{background:var(--red)}
+.notif-dot.warning{background:var(--amber)}
+.notif-dot.cantiere{background:var(--purple)}
+.notif-item-body{flex:1;min-width:0}
+.notif-item-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-item-sub{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-badge-pill{
+  font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;
+  flex-shrink:0;white-space:nowrap;
+}
+.notif-badge-pill.urgent{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.notif-badge-pill.warning{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
 .notif-item .badge{margin-left:8px;vertical-align:middle}
-.notif-empty{padding:20px;text-align:center;font-size:13px;color:var(--text3)}
+.notif-empty{padding:28px 20px;text-align:center;font-size:13px;color:var(--text3)}
 
 /* export dropdown */
 .export-dd{position:relative}
@@ -805,6 +866,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .metrics-grid{grid-template-columns:1fr 1fr}
   .card-fields{grid-template-columns:repeat(3,1fr)}
   .sync-grid{grid-template-columns:1fr 1fr}
+  .cal-day{min-height:58px}
 }
 @media(max-width:640px){
   .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:60;transform:translateX(-100%)}
@@ -816,6 +878,27 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .settings-row{grid-template-columns:1fr}
   .settings-row.triple{grid-template-columns:1fr}
   .sync-grid{grid-template-columns:1fr}
+  /* Calendar mobile */
+  .cal-day{min-height:44px;padding:3px 2px}
+  .cal-day-num{font-size:10px;min-width:16px;height:16px}
+  .cal-day.today .cal-day-num{width:18px;height:18px;font-size:10px}
+  .cal-event{font-size:9px;padding:1px 3px;margin-bottom:1px}
+  .cal-header-cell{padding:6px 2px;font-size:10px}
+  .cal-month-label{font-size:14px}
+  /* Notif center mobile */
+  .notif-center{position:fixed;top:var(--header-h);right:0;left:0;width:100%;border-radius:0 0 var(--radius-lg) var(--radius-lg);max-height:65vh}
+  /* Cantiere card mobile */
+  .cantiere-card{flex-wrap:wrap;padding:12px 14px}
+  .cantiere-urgency-bar{width:100%;height:3px;margin-bottom:8px}
+  .cantiere-right{width:100%;text-align:left;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .cantiere-days{font-size:16px}
+  /* Topbar mobile */
+  .btn-label{display:none}
+  .topbar-search{max-width:140px}
+  .topbar-actions{gap:4px}
+  /* Modal mobile scroll */
+  .modal{max-height:88vh;display:flex;flex-direction:column}
+  .modal>*:not(.modal-actions){overflow-y:auto;flex:1}
 }
 @media print{
   .sidebar,.topbar,.card-actions{display:none!important}
@@ -909,7 +992,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
         <div class="export-dd" id="export-dd">
           <button class="tb-btn" onclick="toggleExportMenu(event)">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Esporta
+            <span class="btn-label">Esporta</span>
           </button>
           <div class="export-menu" id="export-menu" style="display:none">
             <button onclick="exportExcel();closeExportMenu()">
@@ -934,11 +1017,11 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
         <div style="display:flex;gap:8px;align-items:center">
           <button class="tb-btn primary" onclick="openAddCompanyModal()">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
-            Aggiungi azienda
+            <span class="btn-label">Aggiungi azienda</span>
           </button>
           <button class="tb-btn" onclick="openAddEmployeeModal()">
             <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Aggiungi dipendente
+            <span class="btn-label">Aggiungi dipendente</span>
           </button>
         </div>
         <div style="position:relative">
@@ -1343,7 +1426,13 @@ function updateNav(){
       if(cantieriCount>0){cb.style.display='';cb.textContent=String(cantieriCount)}
       else{cb.style.display='none';cb.textContent='0'}
     }
-    const urgentCount = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate) <= ALERT_DAYS).length;
+    const urgentContracts = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate) <= ALERT_DAYS*5).length;
+    const seenCo2={};
+    const urgentCantieriCount = state.companies.reduce((acc,c)=>{
+      if(seenCo2[c.name])return acc;seenCo2[c.name]=true;
+      return acc+(c.cantieri||[]).filter(ct=>daysLeft(getCantiereEndDate(ct))<=ALERT_DAYS*5).length;
+    },0);
+    const urgentCount = urgentContracts + urgentCantieriCount;
     const nb=document.getElementById('notif-badge');
     if(nb){
       if(urgentCount>0){nb.style.display='';nb.textContent=String(urgentCount)}
@@ -1963,48 +2052,87 @@ function renderCalendarPage(){
   const month = (typeof state.calMonth==='number')?state.calMonth:new Date().getMonth();
   const year = (typeof state.calYear==='number')?state.calYear:new Date().getFullYear();
   const first = new Date(year,month,1);
-  const lead = first.getDay();
+  // Monday-first (Italian convention): Sun=0 → position 6, Mon=1 → position 0, ...
+  const lead = (first.getDay() + 6) % 7;
   const daysInMonth = new Date(year,month+1,0).getDate();
-  const totalCells = Math.max(42, lead + daysInMonth);
+  const totalCells = Math.ceil((lead + daysInMonth) / 7) * 7;
+  const now = new Date();
+  const isCurrentMonth = year===now.getFullYear() && month===now.getMonth();
 
-  // collect events by day (include contract id and cantiere index so events are clickable)
+  // collect events by day — deduplicate cantieri to canonical company
   const eventsMap = {};
+  const seenCantiereCompany={};
   state.companies.forEach(c=>{
     if(c.endDate && String(c.endDate).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
       const d = parseInt(String(c.endDate).split('-')[2],10);
-      (eventsMap[d] = eventsMap[d]||[]).push({type:'contract',contractId:c.id,title:`${c.employeeName||c.name} — ${c.name}`,urg:daysLeft(c.endDate)});
+      (eventsMap[d] = eventsMap[d]||[]).push({type:'contract',contractId:c.id,title:`${c.employeeName||c.name}${c.employeeName?' ('+c.name+')':''}`,urg:daysLeft(c.endDate)});
     }
-    if(Array.isArray(c.cantieri)){
+    if(Array.isArray(c.cantieri)&&!seenCantiereCompany[c.name]){
+      seenCantiereCompany[c.name]=true;
       c.cantieri.forEach((ct,idx)=>{
         const endDate=getCantiereEndDate(ct);
         if(endDate && String(endDate).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
           const d = parseInt(String(endDate).split('-')[2],10);
-          (eventsMap[d] = eventsMap[d]||[]).push({type:'cantiere',contractId:c.id,idx:idx,title:`${ct.nome} — ${c.name}`,urg:daysLeft(endDate)});
+          (eventsMap[d] = eventsMap[d]||[]).push({type:'cantiere',contractId:c.id,idx:idx,title:`${ct.nome}`,urg:daysLeft(endDate),dateStr:`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`});
         }
       });
     }
   });
 
-  let html = `<div class="cal-nav"><button class="tb-btn" onclick="changeCalendarMonth(-1)">◀</button><div class="cal-month-label">${new Date(year,month,1).toLocaleString('it-IT',{month:'long',year:'numeric'})}</div><button class="tb-btn" onclick="changeCalendarMonth(1)">▶</button></div>`;
-  html += `<div class="calendar-grid"><div class="cal-header-cell">Dom</div><div class="cal-header-cell">Lun</div><div class="cal-header-cell">Mar</div><div class="cal-header-cell">Mer</div><div class="cal-header-cell">Gio</div><div class="cal-header-cell">Ven</div><div class="cal-header-cell">Sab</div>`;
+  const rawLabel = new Date(year,month,1).toLocaleString('it-IT',{month:'long',year:'numeric'});
+  const monthLabel = rawLabel.charAt(0).toUpperCase()+rawLabel.slice(1);
+
+  let html = `<div class="cal-nav">
+    <button class="tb-btn" onclick="changeCalendarMonth(-1)" title="Mese precedente"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="cal-month-label">${monthLabel}</div>
+    <button class="tb-btn" onclick="changeCalendarMonth(1)" title="Mese successivo"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+    ${!isCurrentMonth?`<button class="tb-btn" onclick="goToCalendarToday()" style="font-size:12px">Oggi</button>`:''}
+  </div>`;
+
+  html += `<div class="calendar-grid">`;
+  ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].forEach(d=>{html+=`<div class="cal-header-cell">${d}</div>`});
+
+  const MAX_EVENTS_PER_DAY = 3;
   for(let i=0;i<totalCells;i++){
     const day = i - lead + 1;
     if(day<1 || day>daysInMonth){
       html += `<div class="cal-day other-month"><div class="cal-day-num"></div></div>`;
     }else{
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
       const dateObj = new Date(year,month,day);
-      const isToday = (new Date()).toDateString()===dateObj.toDateString();
+      const isToday = now.toDateString()===dateObj.toDateString();
       const evs = eventsMap[day]||[];
-      const cls = `cal-day${isToday? ' today':''}`;
-      html += `<div class="${cls}"><div class="cal-day-num">${day}</div>` + evs.map(ev=>{
-        const evCls = ev.type==='cantiere' ? 'cantiere' : (ev.urg<=0 ? 'urgent' : (ev.urg<=15 ? 'warning' : 'ok'));
-        const onclick = ev.type==='contract' ? `onCalendarEventClick(${ev.contractId},null,'contract')` : `onCalendarEventClick(${ev.contractId},${ev.idx},'cantiere')`;
+      const cls = `cal-day${isToday?' today':''}`;
+      html += `<div class="${cls}" onclick="handleCalDayClick(event,'${dateStr}')">`;
+      html += `<div class="cal-day-num">${day}</div>`;
+      const visible = evs.slice(0,MAX_EVENTS_PER_DAY);
+      const moreCount = evs.length - MAX_EVENTS_PER_DAY;
+      html += visible.map(ev=>{
+        const evCls = ev.type==='cantiere' ? 'cantiere' : (ev.urg<=0?'urgent':ev.urg<=7?'urgent':ev.urg<=30?'warning':'ok');
+        const onclick = `event.stopPropagation();onCalendarEventClick(${ev.contractId},${ev.type==='cantiere'?ev.idx:'null'},'${ev.type}')`;
         return `<div class="cal-event ${evCls}" title="${escAttr(ev.title)}" onclick="${onclick}">${esc(ev.title)}</div>`;
-      }).join('') + `</div>`;
+      }).join('');
+      if(moreCount>0) html += `<div class="cal-event-more" onclick="event.stopPropagation();openDayEvents('${dateStr}')">+${moreCount} altri</div>`;
+      html += `</div>`;
     }
   }
-  html += `</div><div class="cal-legend"><div class="leg-item"><span class="leg-dot" style="background:var(--red-bg)"></span>Scadenze urgenti</div><div class="leg-item"><span class="leg-dot" style="background:var(--purple-bg)"></span>Cantieri</div></div>`;
+  html += `</div>`;
+  html += `<div class="cal-legend">
+    <div class="leg-item"><span class="leg-dot" style="background:var(--red)"></span>Scaduto</div>
+    <div class="leg-item"><span class="leg-dot" style="background:var(--amber)"></span>In scadenza</div>
+    <div class="leg-item"><span class="leg-dot" style="background:var(--green)"></span>Regolare</div>
+    <div class="leg-item"><span class="leg-dot" style="background:var(--purple)"></span>Cantiere</div>
+  </div>`;
   return html;
+}
+
+window.goToCalendarToday=function(){
+  const n=new Date();state.calYear=n.getFullYear();state.calMonth=n.getMonth();renderPage();
+}
+window.handleCalDayClick=function(event,dateStr){
+  if(event.target===event.currentTarget||event.target.classList.contains('cal-day-num')){
+    openDayEvents(dateStr);
+  }
 }
 
 // Calendar / notification helpers
@@ -2019,14 +2147,113 @@ window.onCalendarEventClick=function(contractId,idx,type){
   }catch(e){console.error('onCalendarEventClick',e)}
 }
 
-window.openContractFromNotif=function(id){const c=state.companies.find(x=>x.id===id);if(c)showModal(renderContractModal(c))}
-window.closeNotifCenter=function(){state.showNotifCenter=false;const nc=document.getElementById('notif-center');if(nc)nc.style.display='none'}
+window.openContractFromNotif=function(id){closeNotifCenter();const c=state.companies.find(x=>x.id===id);if(c)showModal(renderContractModal(c))}
+window.closeNotifCenter=function(){
+  state.showNotifCenter=false;
+  const nc=document.getElementById('notif-center');
+  if(nc){nc.style.display='none';nc.innerHTML=''}
+}
+window.hideNotifAndOpen=function(contractId,idx,type){
+  closeNotifCenter();
+  if(type==='cantiere'){openEditCantiere(contractId,idx)}
+  else{const c=state.companies.find(x=>x.id===contractId);if(c)showModal(renderContractModal(c))}
+}
 window.toggleNotifCenter=function(){
-  state.showNotifCenter=!state.showNotifCenter;const nc=document.getElementById('notif-center');if(!nc)return; if(!state.showNotifCenter){nc.style.display='none';return}
-  const urgent=state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate)<=ALERT_DAYS);
-  if(!urgent.length){nc.innerHTML=`<div class="notif-empty">Nessuna notifica</div>`;nc.style.display='block';return}
-  nc.innerHTML=`<div class="notif-header"><div>Notifiche</div><div><button class="m-btn" onclick="closeNotifCenter()">Chiudi</button></div></div>`+urgent.map(c=>`<div class="notif-item" onclick="openContractFromNotif(${c.id})"><div class="notif-item-title">${esc(c.employeeName||c.name)}</div><div class="notif-item-sub">${esc(c.name)} • ${formatDate(c.endDate)} • ${daysLeft(c.endDate)}gg</div></div>`).join('');
-  nc.style.display='block';
+  state.showNotifCenter=!state.showNotifCenter;
+  const nc=document.getElementById('notif-center');
+  if(!nc)return;
+  if(!state.showNotifCenter){closeNotifCenter();return}
+
+  // Contracts
+  const urgentContracts=state.companies.filter(c=>typeof c.endDate!=='undefined'&&daysLeft(c.endDate)<=ALERT_DAYS*5);
+
+  // Cantieri — canonical per azienda
+  const seenCo={};
+  const urgentCantieri=[];
+  state.companies.forEach(c=>{
+    if(seenCo[c.name])return;seenCo[c.name]=true;
+    (c.cantieri||[]).forEach((ct,idx)=>{
+      const endDate=getCantiereEndDate(ct);
+      if(endDate&&daysLeft(endDate)<=ALERT_DAYS*5){
+        urgentCantieri.push({...normalizeCantiere(ct),_contractId:c.id,_idx:idx,_companyName:c.name,endDate});
+      }
+    });
+  });
+
+  const total=urgentContracts.length+urgentCantieri.length;
+  const nc_header=`<div class="notif-header"><div>Notifiche${total>0?`<span class="notif-count">${total}</span>`:''}</div><button class="notif-close-btn" onclick="closeNotifCenter()">×</button></div>`;
+
+  if(!total){
+    nc.innerHTML=nc_header+`<div class="notif-empty"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.35;display:block;margin:0 auto 8px"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Nessuna notifica urgente</div>`;
+    nc.style.display='flex';return;
+  }
+
+  const scadutiC=urgentContracts.filter(c=>daysLeft(c.endDate)<0);
+  const urgC=urgentContracts.filter(c=>{const d=daysLeft(c.endDate);return d>=0&&d<=7});
+  const inScadC=urgentContracts.filter(c=>{const d=daysLeft(c.endDate);return d>7});
+  const scadutiCt=urgentCantieri.filter(ct=>daysLeft(ct.endDate)<0);
+  const urgCt=urgentCantieri.filter(ct=>{const d=daysLeft(ct.endDate);return d>=0&&d<=7});
+  const inScadCt=urgentCantieri.filter(ct=>{const d=daysLeft(ct.endDate);return d>7});
+
+  function cItem(c){
+    const d=daysLeft(c.endDate);
+    const cls=d<0?'urgent':d<=7?'urgent':'warning';
+    const badge=d<0?'Scaduto':d+' gg';
+    return `<div class="notif-item" onclick="hideNotifAndOpen(${c.id},null,'contract')">
+      <div class="notif-item-left"><div class="notif-dot ${cls}"></div></div>
+      <div class="notif-item-body">
+        <div class="notif-item-title">${esc(c.employeeName||c.name)}</div>
+        <div class="notif-item-sub">${esc(c.name)} · ${formatDate(c.endDate)}</div>
+      </div>
+      <span class="notif-badge-pill ${cls}">${badge}</span>
+    </div>`;
+  }
+  function ctItem(ct){
+    const d=daysLeft(ct.endDate);
+    const cls=d<0?'urgent':d<=7?'urgent':'warning';
+    const badge=d<0?'Scaduto':d+' gg';
+    return `<div class="notif-item" onclick="hideNotifAndOpen(${ct._contractId},${ct._idx},'cantiere')">
+      <div class="notif-item-left"><div class="notif-dot cantiere"></div></div>
+      <div class="notif-item-body">
+        <div class="notif-item-title">${esc(ct.nome)}</div>
+        <div class="notif-item-sub">${esc(ct._companyName)}${ct.committente?' · '+esc(ct.committente):''} · ${formatDate(ct.endDate)}</div>
+      </div>
+      <span class="notif-badge-pill ${cls}">${badge}</span>
+    </div>`;
+  }
+
+  let body='';
+  if(scadutiC.length||scadutiCt.length){
+    body+=`<div class="notif-group-label">⚠ Scaduti</div>`;
+    body+=scadutiC.map(cItem).join('');
+    body+=scadutiCt.map(ctItem).join('');
+  }
+  if(urgC.length||urgCt.length){
+    body+=`<div class="notif-group-label">Urgenti — entro 7 giorni</div>`;
+    body+=urgC.map(cItem).join('');
+    body+=urgCt.map(ctItem).join('');
+  }
+  if(inScadC.length||inScadCt.length){
+    body+=`<div class="notif-group-label">In scadenza</div>`;
+    body+=inScadC.map(cItem).join('');
+    body+=inScadCt.map(ctItem).join('');
+  }
+
+  nc.innerHTML=nc_header+`<div class="notif-body">${body}</div>`;
+  nc.style.display='flex';
+
+  // close on outside click
+  setTimeout(()=>{
+    function outsideHandler(e){
+      const nc2=document.getElementById('notif-center');
+      const btn=document.getElementById('notif-btn');
+      if(nc2&&!nc2.contains(e.target)&&btn&&!btn.contains(e.target)){
+        closeNotifCenter();
+        document.removeEventListener('click',outsideHandler,true);
+      }
+    }
+    document.addEventListener('click',outsideHandler,true);
+  },0);
 }
 
 window.openQuickRenew=function(id){
