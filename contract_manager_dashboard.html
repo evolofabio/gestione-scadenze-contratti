@@ -1143,6 +1143,40 @@ ensureFirebaseApp();
 applyTheme(state.theme);
 
 // Normalize cantieri so they are stored per azienda (first contract entry) and deduplicated
+function getCantiereStartDate(ct){return ct?.startDate||''}
+function getCantiereEndDate(ct){return ct?.endDate||ct?.scadenza||''}
+function normalizeCurrencyInput(value){
+  const raw=String(value||'').trim();
+  if(!raw)return'';
+  let normalized=raw.replace(/\s+/g,'');
+  if((normalized.match(/\./g)||[]).length>1&&!normalized.includes(','))normalized=normalized.replace(/\./g,'');
+  else if(normalized.includes(',')&&normalized.includes('.'))normalized=normalized.replace(/\./g,'').replace(',','.');
+  else if(normalized.includes(','))normalized=normalized.replace(',','.');
+  const amount=Number(normalized);
+  return Number.isFinite(amount)?amount.toFixed(2):'';
+}
+function formatCurrency(value){
+  if(value===null||value===undefined||value==='')return'—';
+  const amount=Number(value);
+  if(!Number.isFinite(amount))return String(value);
+  return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(amount);
+}
+function normalizeCantiere(ct){
+  const endDate=getCantiereEndDate(ct);
+  return {
+    nome:String(ct?.nome||'').trim(),
+    startDate:getCantiereStartDate(ct),
+    endDate,
+    scadenza:endDate,
+    note:String(ct?.note||'').trim(),
+    committente:String(ct?.committente||'').trim(),
+    importo:ct?.importo===undefined||ct?.importo===null?'':String(ct.importo).trim(),
+  };
+}
+function getCantiereKey(ct){
+  const normalized=normalizeCantiere(ct);
+  return normalized.nome.toLowerCase()+'|'+normalized.endDate;
+}
 function normalizeCompanyCantieri(){
   try{
     const map={};
@@ -1151,8 +1185,9 @@ function normalizeCompanyCantieri(){
       if(!map[name])map[name]={seen:new Set(),cantieri:[]};
       if(Array.isArray(c.cantieri)){
         c.cantieri.forEach(ct=>{
-          const key=((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'');
-          if(!map[name].seen.has(key)){map[name].seen.add(key);map[name].cantieri.push({nome:ct.nome,scadenza:ct.scadenza,note:ct.note||''})}
+          const normalized=normalizeCantiere(ct);
+          const key=getCantiereKey(normalized);
+          if(!map[name].seen.has(key)){map[name].seen.add(key);map[name].cantieri.push(normalized)}
         });
       }
     });
@@ -1326,16 +1361,16 @@ function renderCantieriPage(){
   const all = state.companies.flatMap(c => {
     if (seenCompany[c.name]) return [];
     seenCompany[c.name] = true;
-    return (c.cantieri||[]).map((ct,idx) => ({...ct, company: c, _idx: idx, _contractId: c.id}));
+    return (c.cantieri||[]).map((ct,idx) => ({...normalizeCantiere(ct), company: c, _idx: idx, _contractId: c.id}));
   });
-  all.sort((a,b)=>daysLeft(a.scadenza)-daysLeft(b.scadenza));
+  all.sort((a,b)=>daysLeft(getCantiereEndDate(a))-daysLeft(getCantiereEndDate(b)));
   if(!all.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>`;
 
   const groups=[
-    {label:'Scaduti',items:all.filter(ct=>daysLeft(ct.scadenza)<0),cls:'danger'},
-    {label:'Urgenti — entro 7 giorni',items:all.filter(ct=>{const d=daysLeft(ct.scadenza);return d>=0&&d<=7}),cls:'danger'},
-    {label:'In scadenza — entro 30 giorni',items:all.filter(ct=>{const d=daysLeft(ct.scadenza);return d>7&&d<=30}),cls:'warn'},
-    {label:'Regolari',items:all.filter(ct=>daysLeft(ct.scadenza)>30),cls:'ok'},
+    {label:'Scaduti',items:all.filter(ct=>daysLeft(getCantiereEndDate(ct))<0),cls:'danger'},
+    {label:'Urgenti — entro 7 giorni',items:all.filter(ct=>{const d=daysLeft(getCantiereEndDate(ct));return d>=0&&d<=7}),cls:'danger'},
+    {label:'In scadenza — entro 30 giorni',items:all.filter(ct=>{const d=daysLeft(getCantiereEndDate(ct));return d>7&&d<=30}),cls:'warn'},
+    {label:'Regolari',items:all.filter(ct=>daysLeft(getCantiereEndDate(ct))>30),cls:'ok'},
   ];
 
   let h=`<div class="section-head" style="align-items:center">
@@ -1347,19 +1382,27 @@ function renderCantieriPage(){
     h+=`<div class="urgency-group">
       <div class="group-header"><span class="group-title">${g.label}</span><span class="group-count ${g.cls}">${g.items.length}</span></div>
       ${g.items.map(ct=>{
-        const d=daysLeft(ct.scadenza);
+        const endDate=getCantiereEndDate(ct);
+        const d=daysLeft(endDate);
         const uc=d<0||d<=7?'urgent':d<=30?'warning':'ok';
         return `<div class="cantiere-card">
             <div class="cantiere-urgency-bar ${uc}"></div>
             <div class="cantiere-info">
               <div class="cantiere-name">${esc(ct.nome)}</div>
               <div class="cantiere-company">${esc(ct.company.name)}</div>
-              ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:2px;font-style:italic">${esc(ct.note)}</div>`:''}
+              ${ct.committente?`<div style="font-size:12px;color:var(--text2);margin-top:4px">Committente: <strong>${esc(ct.committente)}</strong></div>`:''}
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px">
+                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Data inizio</div><div style="font-size:12px;color:var(--text)">${formatDate(getCantiereStartDate(ct))}</div></div>
+                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Data fine</div><div style="font-size:12px;color:var(--text)">${formatDate(endDate)}</div></div>
+                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Importo</div><div style="font-size:12px;color:var(--text)">${esc(formatCurrency(ct.importo))}</div></div>
+                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Stato</div><div style="font-size:12px;color:var(--text)">${d<0?'Scaduto':'Attivo'}</div></div>
+              </div>
+              ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:8px;font-style:italic">${esc(ct.note)}</div>`:''}
             </div>
             <div class="cantiere-right">
               <div class="cantiere-days ${uc}">${d<0?'Sc.':d}</div>
               <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
-              <div style="font-size:11px;color:var(--text2);margin-top:2px">${formatDate(ct.scadenza)}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">Fine ${formatDate(endDate)}</div>
               <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
                 <button class="act-btn" onclick="openEditCantiere(${ct.company.id},${ct._idx})">Modifica</button>
                 <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct.company.id},${ct._idx})">Elimina</button>
@@ -1377,7 +1420,7 @@ window.openDayEvents=function(dateStr){
   const items=[];
   state.companies.forEach(c=>{
     if(c.endDate===dateStr)items.push({type:'contratto',label:`${c.name}${c.employeeName?' — '+c.employeeName:''}`,detail:`Scadenza contratto: ${formatDate(c.endDate)}`,contractId:c.id});
-    (c.cantieri||[]).forEach(ct=>{if(ct.scadenza===dateStr)items.push({type:'cantiere',label:`${ct.nome}`,detail:`Cantiere per ${c.name}${c.employeeName?' — '+c.employeeName:''}`,contractId:c.id,cantiereIdx:c.cantieri.indexOf(ct)})});
+    (c.cantieri||[]).forEach(ct=>{if(getCantiereEndDate(ct)===dateStr)items.push({type:'cantiere',label:`${ct.nome}`,detail:`Cantiere per ${c.name}${ct.committente?` • ${ct.committente}`:''}`,contractId:c.id,cantiereIdx:c.cantieri.indexOf(ct)})});
   });
   if(!items.length){showToast('Nessuna scadenza per il giorno selezionato');return}
   const list=items.map(it=>{
@@ -1401,12 +1444,15 @@ window.openAddCantiereGlobal=function(){
   // build a select of unique companies (use first contract id as canonical)
   const seen={};
   const opts=state.companies.reduce((a,c)=>{if(!seen[c.name]){seen[c.name]=true;a.push(`<option value="${c.id}">${esc(c.name)}</option>`)}return a},[]).join('');
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:720px">
     <h3>Nuovo cantiere</h3>
     <div class="form-row"><div class="form-field"><label>Azienda</label><select id="mc-company" class="f-input" style="width:100%">${opts}</select></div></div>
     <div class="form-row single"><div class="form-field"><label>Nome cantiere</label><input id="mc-nome" class="f-input" type="text" placeholder="Es. Cantiere Nord" style="width:100%"></div></div>
-    <div class="form-row"><div class="form-field"><label>Data scadenza</label><input id="mc-scad" class="f-input" type="date" style="width:100%"></div>
-    <div class="form-field"><label>Note</label><input id="mc-note" class="f-input" type="text" placeholder="Opzionale" style="width:100%"></div></div>
+    <div class="form-row"><div class="form-field"><label>Data inizio</label><input id="mc-start" class="f-input" type="date" style="width:100%"></div>
+    <div class="form-field"><label>Data fine</label><input id="mc-end" class="f-input" type="date" style="width:100%"></div></div>
+    <div class="form-row"><div class="form-field"><label>Committente</label><input id="mc-client" class="f-input" type="text" placeholder="Es. Comune di Milano" style="width:100%"></div>
+    <div class="form-field"><label>Importo</label><input id="mc-amount" class="f-input" type="text" placeholder="Es. 1500,00" style="width:100%"></div></div>
+    <div class="form-row single"><div class="form-field"><label>Note</label><textarea id="mc-note" class="f-input" placeholder="Opzionale" style="width:100%;min-height:92px;resize:vertical"></textarea></div></div>
     <div class="modal-actions">
       <button class="m-btn" onclick="hideModal()">Annulla</button>
       <button class="m-btn primary" onclick="saveModalCantiereGlobal()">Aggiungi cantiere</button>
@@ -1417,17 +1463,23 @@ window.openAddCantiereGlobal=function(){
 window.saveModalCantiereGlobal=function(){
   const companyId=parseInt((document.getElementById('mc-company')||{}).value,10);
   const nome=(document.getElementById('mc-nome')||{}).value?.trim();
-  const scad=(document.getElementById('mc-scad')||{}).value;
+  const startDate=(document.getElementById('mc-start')||{}).value;
+  const endDate=(document.getElementById('mc-end')||{}).value;
+  const committente=(document.getElementById('mc-client')||{}).value?.trim()||'';
+  const importoRaw=(document.getElementById('mc-amount')||{}).value?.trim()||'';
   const note=(document.getElementById('mc-note')||{}).value?.trim()||'';
-  if(!companyId||!nome||!scad){showToast('Seleziona azienda, inserisci nome e data');return}
+  const importo=normalizeCurrencyInput(importoRaw);
+  if(importoRaw&&!importo){showToast('Inserisci un importo valido');return}
+  if(!companyId||!nome||!endDate){showToast('Seleziona azienda, inserisci nome e data fine');return}
+  if(startDate&&endDate&&startDate>endDate){showToast('La data inizio non puo superare la data fine');return}
   const c=state.companies.find(x=>x.id===companyId);
   if(!c)return showToast('Azienda non trovata');
   if(!Array.isArray(c.cantieri))c.cantieri=[];
-  // avoid duplicates by nome+scadenza
-  const key=((nome||'').trim().toLowerCase())+'|'+scad;
-  const exists=c.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key);
+  // avoid duplicates by nome+data fine
+  const key=((nome||'').trim().toLowerCase())+'|'+endDate;
+  const exists=c.cantieri.some(ct=>getCantiereKey({nome:ct.nome,endDate:getCantiereEndDate(ct)})===key);
   if(exists){showToast('Cantiere già presente per questa azienda');return}
-  c.cantieri.push({nome,scadenza:scad,note:note||''});
+  c.cantieri.push(normalizeCantiere({nome,startDate,endDate,scadenza:endDate,note,committente,importo}));
   saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
 }
 
@@ -1619,11 +1671,14 @@ window.openEditModal=function(id){
 window.openAddCantiere=function(id){
   const c=state.companies.find(x=>x.id===id);
   if(!c)return;
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:720px">
     <h3>Aggiungi cantiere — ${esc(c.name)}</h3>
     <div class="form-row single"><div class="form-field"><label>Nome cantiere</label><input class="f-input" id="mc-nome" type="text" placeholder="Es. Cantiere Nord" style="width:100%"></div></div>
-    <div class="form-row"><div class="form-field"><label>Data scadenza</label><input class="f-input" id="mc-scad" type="date" style="width:100%"></div>
-    <div class="form-field"><label>Note</label><input class="f-input" id="mc-note" type="text" placeholder="Opzionale" style="width:100%"></div></div>
+    <div class="form-row"><div class="form-field"><label>Data inizio</label><input class="f-input" id="mc-start" type="date" style="width:100%"></div>
+    <div class="form-field"><label>Data fine</label><input class="f-input" id="mc-end" type="date" style="width:100%"></div></div>
+    <div class="form-row"><div class="form-field"><label>Committente</label><input class="f-input" id="mc-client" type="text" placeholder="Es. Comune di Milano" style="width:100%"></div>
+    <div class="form-field"><label>Importo</label><input class="f-input" id="mc-amount" type="text" placeholder="Es. 1500,00" style="width:100%"></div></div>
+    <div class="form-row single"><div class="form-field"><label>Note</label><textarea class="f-input" id="mc-note" placeholder="Opzionale" style="width:100%;min-height:92px;resize:vertical"></textarea></div></div>
     <div class="modal-actions">
       <button class="m-btn" onclick="hideModal()">Annulla</button>
       <button class="m-btn primary" onclick="saveModalCantiere(${id})">Aggiungi</button>
@@ -1742,22 +1797,28 @@ window.doOpenAddContractForSelectedCompany=function(){
 }
 window.saveModalCantiere=function(id,idx){
   const nome=(document.getElementById('mc-nome')||{}).value?.trim();
-  const scad=(document.getElementById('mc-scad')||{}).value;
+  const startDate=(document.getElementById('mc-start')||{}).value;
+  const endDate=(document.getElementById('mc-end')||{}).value;
+  const committente=(document.getElementById('mc-client')||{}).value?.trim()||'';
+  const importoRaw=(document.getElementById('mc-amount')||{}).value?.trim()||'';
   const note=(document.getElementById('mc-note')||{}).value?.trim()||'';
-  if(!nome||!scad){showToast('Inserisci nome e data');return}
+  const importo=normalizeCurrencyInput(importoRaw);
+  if(importoRaw&&!importo){showToast('Inserisci un importo valido');return}
+  if(!nome||!endDate){showToast('Inserisci nome cantiere e data fine');return}
+  if(startDate&&endDate&&startDate>endDate){showToast('La data inizio non puo superare la data fine');return}
   const original=state.companies.find(x=>x.id===id);
   if(!original)return;
   // operate on canonical company record (first contract with same name)
   const c=state.companies.find(x=>x.name===original.name) || original;
   if(!Array.isArray(c.cantieri))c.cantieri=[];
   if(idx===null||idx===undefined){
-    const key=((nome||'').trim().toLowerCase())+'|'+scad;
-    if(c.cantieri.some(ct=>((ct.nome||'').trim().toLowerCase())+'|'+(ct.scadenza||'')===key)){showToast('Cantiere già presente per questa azienda');return}
-    c.cantieri.push({nome,scadenza:scad,note:note||''});
+    const key=((nome||'').trim().toLowerCase())+'|'+endDate;
+    if(c.cantieri.some(ct=>getCantiereKey({nome:ct.nome,endDate:getCantiereEndDate(ct)})===key)){showToast('Cantiere già presente per questa azienda');return}
+    c.cantieri.push(normalizeCantiere({nome,startDate,endDate,scadenza:endDate,note,committente,importo}));
     saveData();hideModal();renderPage();showToast('Cantiere aggiunto');
   }else{
     if(!c.cantieri[idx]){showToast('Cantiere non trovato');return}
-    c.cantieri[idx]=Object.assign({},c.cantieri[idx],{nome,scadenza:scad,note});
+    c.cantieri[idx]=Object.assign({},c.cantieri[idx],normalizeCantiere({nome,startDate,endDate,scadenza:endDate,note,committente,importo}));
     saveData();hideModal();renderPage();showToast('Cantiere aggiornato');
   }
 }
@@ -1766,12 +1827,15 @@ window.saveModalCantiere=function(id,idx){
 window.openEditCantiere=function(contractId,idx){
   const c=state.companies.find(x=>x.id===contractId);
   if(!c||!Array.isArray(c.cantieri)||!c.cantieri[idx])return;
-  const ct=c.cantieri[idx];
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+  const ct=normalizeCantiere(c.cantieri[idx]);
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:720px">
     <h3>Modifica cantiere — ${esc(c.name)}</h3>
     <div class="form-row single"><div class="form-field"><label>Nome cantiere</label><input class="f-input" id="mc-nome" type="text" value="${escAttr(ct.nome)}" style="width:100%"></div></div>
-    <div class="form-row"><div class="form-field"><label>Data scadenza</label><input class="f-input" id="mc-scad" type="date" value="${ct.scadenza}" style="width:100%"></div>
-    <div class="form-field"><label>Note</label><input class="f-input" id="mc-note" type="text" value="${escAttr(ct.note||'')}" style="width:100%"></div></div>
+    <div class="form-row"><div class="form-field"><label>Data inizio</label><input class="f-input" id="mc-start" type="date" value="${ct.startDate||''}" style="width:100%"></div>
+    <div class="form-field"><label>Data fine</label><input class="f-input" id="mc-end" type="date" value="${ct.endDate||''}" style="width:100%"></div></div>
+    <div class="form-row"><div class="form-field"><label>Committente</label><input class="f-input" id="mc-client" type="text" value="${escAttr(ct.committente||'')}" style="width:100%"></div>
+    <div class="form-field"><label>Importo</label><input class="f-input" id="mc-amount" type="text" value="${escAttr(ct.importo||'')}" style="width:100%"></div></div>
+    <div class="form-row single"><div class="form-field"><label>Note</label><textarea class="f-input" id="mc-note" style="width:100%;min-height:92px;resize:vertical">${esc(ct.note||'')}</textarea></div></div>
     <div class="modal-actions">
       <button class="m-btn" onclick="hideModal()">Annulla</button>
       <button class="m-btn danger" onclick="confirmDeleteCantiere(${contractId},${idx})">Elimina</button>
@@ -1837,7 +1901,7 @@ function renderContractCard(c){
         </div>
         ${c.notes?`<div class="card-notes"><span class="notes-label">Note</span>${esc(c.notes)}</div>`:''}
         <div style="margin-top:8px;font-size:12px;color:var(--text3)">Mesi rimanenti a 12: <strong>${monthsTo12}</strong></div>
-        ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(ct=>`<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(ct.scadenza)<=0?'':'ok'}">${formatDate(ct.scadenza)}</div></div>`).join('')+`</div>`:''}
+        ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(rawCt=>{const ct=normalizeCantiere(rawCt);const endDate=getCantiereEndDate(ct);return `<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(endDate)<=0?'':'ok'}">${formatDate(endDate)}</div></div>`}).join('')+`</div>`:''}
       </div>
         <div class="card-actions">
         <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
@@ -1912,9 +1976,10 @@ function renderCalendarPage(){
     }
     if(Array.isArray(c.cantieri)){
       c.cantieri.forEach((ct,idx)=>{
-        if(ct.scadenza && String(ct.scadenza).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
-          const d = parseInt(String(ct.scadenza).split('-')[2],10);
-          (eventsMap[d] = eventsMap[d]||[]).push({type:'cantiere',contractId:c.id,idx:idx,title:`${ct.nome} — ${c.name}`,urg:daysLeft(ct.scadenza)});
+        const endDate=getCantiereEndDate(ct);
+        if(endDate && String(endDate).startsWith(`${year}-${String(month+1).padStart(2,'0')}`)){
+          const d = parseInt(String(endDate).split('-')[2],10);
+          (eventsMap[d] = eventsMap[d]||[]).push({type:'cantiere',contractId:c.id,idx:idx,title:`${ct.nome} — ${c.name}`,urg:daysLeft(endDate)});
         }
       });
     }
