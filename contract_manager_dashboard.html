@@ -256,14 +256,37 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 /* ═══ SECTIONS ═══ */
 .section-head{
   display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:16px;
+  margin-bottom:18px;gap:14px;flex-wrap:wrap;
 }
-.section-title{font-size:16px;font-weight:600;color:var(--text)}
-.section-sub{font-size:13px;color:var(--text2);margin-top:1px}
+.section-title{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.section-sub{font-size:13px;color:var(--text2);margin-top:3px}
 .label-tag{
   font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
   color:var(--text3);margin-bottom:10px;display:block;
 }
+
+.dashboard-hero{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  margin-bottom:18px;
+}
+.dashboard-hero-copy{min-width:0}
+.dashboard-kicker{font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.dashboard-title{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--text);line-height:1.02}
+.dashboard-subtitle{font-size:13px;color:var(--text2);margin-top:8px;max-width:720px}
+.dashboard-summary{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
+  margin-bottom:20px;
+}
+.summary-chip{
+  background:linear-gradient(180deg,rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.84) 100%);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px 14px;
+  box-shadow:var(--shadow);
+}
+.summary-chip-label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.summary-chip-value{font-size:20px;font-weight:700;color:var(--text);line-height:1}
+.summary-chip-meta{font-size:11px;color:var(--text2);margin-top:6px}
 
 /* ═══ METRICS GRID ═══ */
 .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
@@ -571,23 +594,30 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 
 /* ═══ CANTIERI PAGE ═══ */
 .cantiere-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-lg);padding:14px 18px;
-  margin-bottom:10px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.88) 100%);border:1px solid var(--border);
+  border-radius:calc(var(--radius-lg) + 2px);padding:16px 18px;
+  margin-bottom:14px;
   display:flex;align-items:center;gap:16px;
+  box-shadow:var(--shadow);
 }
-.cantiere-urgency-bar{width:4px;flex-shrink:0;height:48px;border-radius:99px;background:var(--green)}
+.cantiere-urgency-bar{width:5px;flex-shrink:0;height:76px;border-radius:99px;background:var(--green);box-shadow:0 10px 18px rgba(0,0,0,0.08)}
 .cantiere-urgency-bar.urgent{background:var(--red)}
 .cantiere-urgency-bar.warning{background:var(--amber)}
 .cantiere-info{flex:1;min-width:0}
-.cantiere-name{font-size:14px;font-weight:600;color:var(--text)}
-.cantiere-company{font-size:12px;color:var(--text2)}
+.cantiere-name{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.cantiere-company{font-size:12px;color:var(--text2);margin-top:3px}
 .cantiere-right{text-align:right;flex-shrink:0}
-.cantiere-days{font-size:20px;font-weight:300;color:var(--text)}
+.cantiere-days{font-size:26px;font-weight:700;color:var(--text);line-height:1}
 .cantiere-days.urgent{color:var(--red)}
 .cantiere-days.warning{color:var(--amber)}
 .cantiere-days.ok{color:var(--green)}
-.cantiere-days-label{font-size:11px;color:var(--text3)}
+.cantiere-days-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.cantiere-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.cantiere-meta-item{background:rgba(39,88,207,0.03);border:1px solid rgba(39,88,207,0.06);border-radius:12px;padding:10px 11px}
+.cantiere-meta-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.cantiere-meta-value{font-size:12px;color:var(--text);font-weight:600}
+.cantiere-note-block{font-size:12px;color:var(--text2);margin-top:10px;font-style:italic;line-height:1.55}
+.cantiere-actions{margin-top:10px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 
 /* ═══ SETTINGS ═══ */
 .settings-card{
@@ -958,6 +988,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
 /* ═══ MOBILE ═══ */
 @media(max-width:900px){
   .metrics-grid{grid-template-columns:1fr 1fr}
+  .dashboard-summary{grid-template-columns:1fr 1fr}
   .card-fields{grid-template-columns:repeat(3,1fr)}
   .sync-grid{grid-template-columns:1fr 1fr}
   .cal-day{min-height:58px}
@@ -970,6 +1001,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .sidebar.mobile-open{transform:translateX(0)}
   .page-content{padding:16px}
   .metrics-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .dashboard-summary{grid-template-columns:1fr}
   .card-fields{grid-template-columns:1fr 1fr}
   .form-row{grid-template-columns:1fr}
   .settings-row{grid-template-columns:1fr}
@@ -992,6 +1024,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   /* Cantiere card mobile */
   .cantiere-card{flex-wrap:wrap;padding:12px 14px}
   .cantiere-urgency-bar{width:100%;height:3px;margin-bottom:8px}
+  .cantiere-meta-grid{grid-template-columns:1fr}
   .cantiere-right{width:100%;text-align:left;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
   .cantiere-days{font-size:16px}
   /* Topbar mobile */
@@ -1577,10 +1610,19 @@ function renderCantieriPage(){
     {label:'In scadenza — entro 30 giorni',items:all.filter(ct=>{const d=daysLeft(getCantiereEndDate(ct));return d>7&&d<=30}),cls:'warn'},
     {label:'Regolari',items:all.filter(ct=>daysLeft(getCantiereEndDate(ct))>30),cls:'ok'},
   ];
+  const expiredCount=groups[0].items.length;
+  const urgentCount=groups[1].items.length;
+  const regularCount=groups[3].items.length;
 
   let h=`<div class="section-head" style="align-items:center">
-    <div class="section-title">Cantieri (${all.length})</div>
+    <div><div class="section-title">Cantieri (${all.length})</div><div class="section-sub">Panoramica operativa dei cantieri associati alle aziende.</div></div>
     <div><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>
+  </div>`;
+  h+=`<div class="dashboard-summary" style="margin-bottom:22px">
+    <div class="summary-chip"><div class="summary-chip-label">Totale</div><div class="summary-chip-value">${all.length}</div><div class="summary-chip-meta">cantieri registrati</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Urgenti</div><div class="summary-chip-value">${urgentCount}</div><div class="summary-chip-meta">entro 7 giorni</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Scaduti</div><div class="summary-chip-value">${expiredCount}</div><div class="summary-chip-meta">da riallineare</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Regolari</div><div class="summary-chip-value">${regularCount}</div><div class="summary-chip-meta">oltre 30 giorni</div></div>
   </div>`;
   groups.forEach(g=>{
     if(!g.items.length)return;
@@ -1596,19 +1638,19 @@ function renderCantieriPage(){
               <div class="cantiere-name">${esc(ct.nome)}</div>
               <div class="cantiere-company">${esc(ct.company.name)}</div>
               ${ct.committente?`<div style="font-size:12px;color:var(--text2);margin-top:4px">Committente: <strong>${esc(ct.committente)}</strong></div>`:''}
-              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px">
-                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Data inizio</div><div style="font-size:12px;color:var(--text)">${formatDate(getCantiereStartDate(ct))}</div></div>
-                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Data fine</div><div style="font-size:12px;color:var(--text)">${formatDate(endDate)}</div></div>
-                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Importo</div><div style="font-size:12px;color:var(--text)">${esc(formatCurrency(ct.importo))}</div></div>
-                <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Stato</div><div style="font-size:12px;color:var(--text)">${d<0?'Scaduto':'Attivo'}</div></div>
+              <div class="cantiere-meta-grid">
+                <div class="cantiere-meta-item"><div class="cantiere-meta-label">Data inizio</div><div class="cantiere-meta-value">${formatDate(getCantiereStartDate(ct))}</div></div>
+                <div class="cantiere-meta-item"><div class="cantiere-meta-label">Data fine</div><div class="cantiere-meta-value">${formatDate(endDate)}</div></div>
+                <div class="cantiere-meta-item"><div class="cantiere-meta-label">Importo</div><div class="cantiere-meta-value">${esc(formatCurrency(ct.importo))}</div></div>
+                <div class="cantiere-meta-item"><div class="cantiere-meta-label">Stato</div><div class="cantiere-meta-value">${d<0?'Scaduto':'Attivo'}</div></div>
               </div>
-              ${ct.note?`<div style="font-size:11px;color:var(--text3);margin-top:8px;font-style:italic">${esc(ct.note)}</div>`:''}
+              ${ct.note?`<div class="cantiere-note-block">${esc(ct.note)}</div>`:''}
             </div>
             <div class="cantiere-right">
               <div class="cantiere-days ${uc}">${d<0?'Sc.':d}</div>
               <div class="cantiere-days-label">${d<0?'scaduto':'giorni'}</div>
               <div style="font-size:11px;color:var(--text2);margin-top:2px">Fine ${formatDate(endDate)}</div>
-              <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+              <div class="cantiere-actions">
                 <button class="act-btn" onclick="openEditCantiere(${ct.company.id},${ct._idx})">Modifica</button>
                 <button class="act-btn danger" onclick="confirmDeleteCantiere(${ct.company.id},${ct._idx})">Elimina</button>
               </div>
@@ -2438,14 +2480,34 @@ function renderPage(){
         const urgentCnt = state.companies.filter(c=>{const d=daysLeft(c.endDate);return d>=0&&d<=30}).length;
         const renewableCnt = state.companies.filter(c=>c.renewable).length;
         const avgDur = state.companies.length?Math.round(state.companies.reduce((s,c)=>s+durationMonths(c.startDate,c.endDate),0)/state.companies.length):0;
+        const companyCount = [...new Set(state.companies.map(c=>c.name).filter(Boolean))].length;
+        const nextDeadline = state.companies.reduce((best,c)=>{
+          const d=daysLeft(c.endDate);
+          if(d<0)return best;
+          if(best===null||d<best)return d;
+          return best;
+        },null);
+        html+=`<div class="dashboard-hero">
+    <div class="dashboard-hero-copy">
+      <div class="dashboard-kicker">Controllo operativo</div>
+      <div class="dashboard-title">Tutte le scadenze sotto controllo</div>
+      <div class="dashboard-subtitle">Vista unificata di contratti, rinnovi e priorità per gestire rapidamente le prossime azioni.</div>
+    </div>
+    <div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div>
+  </div>`;
         html+=`<div class="metrics-grid" style="margin-bottom:20px">
     <div class="metric-card"><div class="metric-label">Durata media</div><div class="metric-val">${avgDur}<span style="font-size:16px;font-weight:400"> mesi</span></div></div>
     <div class="metric-card"><div class="metric-label">Prorogabili</div><div class="metric-val c-blue">${renewableCnt}</div><div class="metric-delta">su ${state.companies.length} totali</div></div>
     <div class="metric-card m-amber"><div class="metric-label">In scadenza 30gg</div><div class="metric-val c-amber">${urgentCnt}</div></div>
     <div class="metric-card m-red"><div class="metric-label">Scaduti</div><div class="metric-val c-red">${expiredCnt}</div></div>
   </div>`;
+        html+=`<div class="dashboard-summary">
+    <div class="summary-chip"><div class="summary-chip-label">Aziende</div><div class="summary-chip-value">${companyCount}</div><div class="summary-chip-meta">anagrafiche gestite</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Contratti</div><div class="summary-chip-value">${state.companies.length}</div><div class="summary-chip-meta">in monitoraggio</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Prossima scadenza</div><div class="summary-chip-value">${nextDeadline===null?'—':nextDeadline}</div><div class="summary-chip-meta">${nextDeadline===null?'nessuna futura':'giorni residui'}</div></div>
+  </div>`;
 
-        html+=`<div class="section-head"><div class="section-title">Contratti (${state.companies.length})</div><div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div></div>`;
+        html+=`<div class="section-head"><div><div class="section-title">Contratti (${state.companies.length})</div><div class="section-sub">Elenco ordinato per urgenza con accesso rapido alle azioni operative.</div></div></div>`;
         // apply search filter
         const q=(state.searchQuery||'').toLowerCase();
         const list=state.companies.filter(c=>!q||(`${c.name} ${c.employeeName} ${c.contractType}`).toLowerCase().includes(q));
