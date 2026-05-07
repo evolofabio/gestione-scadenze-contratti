@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <!-- rimosso duplicato iniziale; documento principale segue -->
 <html lang="it">
 <head>
@@ -1222,7 +1223,7 @@ function ensureFirebaseApp() {
         var authDomain = (document.getElementById('firebase-auth-domain')||{}).value?.trim();
         var databaseURL = (document.getElementById('firebase-db-url')||{}).value?.trim();
         if (!apiKey || !authDomain || !databaseURL) {
-          alert('Compila tutti i campi!');
+          showToast('Compila tutti i campi!');
           return;
         }
         var cfg = { apiKey, authDomain, databaseURL };
@@ -1417,6 +1418,24 @@ function setPage(p,company){
 }
 function setCompanyPage(name){setPage('company',name)}
 
+function getUrgentNotifications(){
+  const threshold = ALERT_DAYS * 5;
+  const urgentContracts = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate)<=threshold);
+  const seenCompany={};
+  const urgentCantieri=[];
+  state.companies.forEach(c=>{
+    if(seenCompany[c.name])return;
+    seenCompany[c.name]=true;
+    (c.cantieri||[]).forEach((ct,idx)=>{
+      const endDate=getCantiereEndDate(ct);
+      if(endDate&&daysLeft(endDate)<=threshold){
+        urgentCantieri.push({...normalizeCantiere(ct),_contractId:c.id,_idx:idx,_companyName:c.name,endDate});
+      }
+    });
+  });
+  return {urgentContracts,urgentCantieri,total:urgentContracts.length+urgentCantieri.length};
+}
+
 function updateNav(){
   ['dashboard','calendar','cantieri','indeterminati','cessati','analytics','settings'].forEach(p=>{
     const el=document.getElementById('nav-'+p);
@@ -1440,16 +1459,10 @@ function updateNav(){
       if(cantieriCount>0){cb.style.display='';cb.textContent=compactBadgeCount(cantieriCount)}
       else{cb.style.display='none';cb.textContent='0'}
     }
-    const urgentContracts = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate) <= ALERT_DAYS*5).length;
-    const seenCo2={};
-    const urgentCantieriCount = state.companies.reduce((acc,c)=>{
-      if(seenCo2[c.name])return acc;seenCo2[c.name]=true;
-      return acc+(c.cantieri||[]).filter(ct=>daysLeft(getCantiereEndDate(ct))<=ALERT_DAYS*5).length;
-    },0);
-    const urgentCount = urgentContracts + urgentCantieriCount;
+    const urgentData=getUrgentNotifications();
     const nb=document.getElementById('notif-badge');
     if(nb){
-      if(urgentCount>0){nb.style.display='';nb.textContent=compactBadgeCount(urgentCount);nb.title=`${urgentCount} notifiche`}
+      if(urgentData.total>0){nb.style.display='';nb.textContent=compactBadgeCount(urgentData.total);nb.title=`${urgentData.total} notifiche`}
       else{nb.style.display='none';nb.textContent='0'}
     }
   }catch(e){console.error('updateNav badges',e)}
@@ -1729,6 +1742,15 @@ function renderSettingsPage(){
       <button class="tb-btn" id="btn-push" onclick="forcePushToCloud()" ${!syncState.connected?'disabled':''}>Carica sul cloud</button>
     </div>
     <p class="field-hint" style="margin-top:8px">Crea un progetto gratuito su console.firebase.google.com → Realtime Database. Tutti i dispositivi con la stessa stanza vedranno gli stessi dati.</p>
+  </div>
+
+  <div class="settings-card">
+    <h4><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><rect x="4" y="17" width="16" height="4" rx="1"/></svg>Backup e ripristino (JSON)</h4>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Esporta un backup completo o importa un backup in modalità sicura <strong>Unisci</strong> (non elimina i dati locali).</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="tb-btn" onclick="exportBackupJSON()">Scarica backup JSON</button>
+      <button class="tb-btn" onclick="triggerImportBackupJSON()">Importa backup JSON (Unisci)</button>
+    </div>
   </div>
 
   <div class="settings-card">
@@ -2178,23 +2200,7 @@ window.toggleNotifCenter=function(){
   if(!nc)return;
   if(!state.showNotifCenter){closeNotifCenter();return}
 
-  // Contracts
-  const urgentContracts=state.companies.filter(c=>typeof c.endDate!=='undefined'&&daysLeft(c.endDate)<=ALERT_DAYS*5);
-
-  // Cantieri — canonical per azienda
-  const seenCo={};
-  const urgentCantieri=[];
-  state.companies.forEach(c=>{
-    if(seenCo[c.name])return;seenCo[c.name]=true;
-    (c.cantieri||[]).forEach((ct,idx)=>{
-      const endDate=getCantiereEndDate(ct);
-      if(endDate&&daysLeft(endDate)<=ALERT_DAYS*5){
-        urgentCantieri.push({...normalizeCantiere(ct),_contractId:c.id,_idx:idx,_companyName:c.name,endDate});
-      }
-    });
-  });
-
-  const total=urgentContracts.length+urgentCantieri.length;
+  const { urgentContracts, urgentCantieri, total } = getUrgentNotifications();
   const nc_header=`<div class="notif-header"><div>Notifiche${total>0?`<span class="notif-count">${total}</span>`:''}</div><button class="notif-close-btn" onclick="closeNotifCenter()">×</button></div>`;
 
   if(!total){
@@ -2657,6 +2663,136 @@ window.triggerImportExcel=()=>{
     };r.readAsArrayBuffer(f);inp.remove();
   };document.body.appendChild(inp);inp.click();
 }
+
+let pendingBackupImport=null;
+window.exportBackupJSON=()=>{
+  try{
+    const payload={
+      format:'evolution-backup',
+      version:1,
+      exportedAt:new Date().toISOString(),
+      data:{
+        companies:state.companies,
+        emailSettings,
+        emailLog,
+        sentTracker,
+        syncConfig,
+        theme:state.theme
+      }
+    };
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`evolution_system_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Backup JSON esportato');
+  }catch(e){showToast('Errore export backup: '+(e.message||e))}
+}
+
+function normalizeBackupPayload(raw){
+  const base=(raw&&typeof raw==='object'&&raw.data&&typeof raw.data==='object')?raw.data:raw;
+  return {
+    companies:Array.isArray(base?.companies)?base.companies:[],
+    emailSettings:(base?.emailSettings&&typeof base.emailSettings==='object')?base.emailSettings:null,
+    emailLog:Array.isArray(base?.emailLog)?base.emailLog:[],
+    sentTracker:(base?.sentTracker&&typeof base.sentTracker==='object')?base.sentTracker:{},
+    syncConfig:(base?.syncConfig&&typeof base.syncConfig==='object')?base.syncConfig:null,
+    theme:typeof base?.theme==='string'?base.theme:null
+  };
+}
+
+window.triggerImportBackupJSON=()=>{
+  const inp=document.createElement('input');
+  inp.type='file';
+  inp.accept='.json,application/json';
+  inp.onchange=e=>{
+    const f=e.target.files&&e.target.files[0];
+    if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const parsed=JSON.parse(String(ev.target.result||'{}'));
+        const normalized=normalizeBackupPayload(parsed);
+        if(!Array.isArray(normalized.companies)){
+          showToast('Backup non valido: manca companies');
+          return;
+        }
+        const incomingCount=normalized.companies.length;
+        if(!incomingCount){
+          showToast('Backup vuoto: nessun contratto da importare');
+          return;
+        }
+        pendingBackupImport=normalized;
+        showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
+          <h3>Importa backup JSON</h3>
+          <p style="font-size:14px;color:var(--text2);line-height:1.55">Hai selezionato un backup con <strong style="color:var(--text)">${incomingCount}</strong> contratti.</p>
+          <p style="font-size:14px;color:var(--text2);line-height:1.55">L'importazione avverrà in modalità <strong style="color:var(--text)">Unisci</strong>: i dati locali non vengono cancellati.</p>
+          <div class="modal-actions">
+            <button class="m-btn" onclick="hideModal()">Annulla</button>
+            <button class="m-btn primary" onclick="applyImportedBackupJSON()">Importa e unisci</button>
+          </div>
+        </div></div>`);
+      }catch(err){showToast('Backup JSON non valido: '+(err.message||err))}
+    };
+    r.readAsText(f);
+    inp.remove();
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+
+window.applyImportedBackupJSON=()=>{
+  if(!pendingBackupImport){showToast('Nessun backup selezionato');return}
+  try{
+    const prevCount=state.companies.length;
+    const mergedCompanies=mergeCompanies(pendingBackupImport.companies||[],state.companies||[]);
+    state.companies=mergedCompanies;
+
+    if(pendingBackupImport.emailSettings){
+      emailSettings={
+        ...emailSettings,
+        ...pendingBackupImport.emailSettings,
+        emailjs:{...(emailSettings.emailjs||{}),...((pendingBackupImport.emailSettings||{}).emailjs||{})},
+        autoSend:{...(emailSettings.autoSend||{}),...((pendingBackupImport.emailSettings||{}).autoSend||{})}
+      };
+      save(SK.settings,emailSettings);
+    }
+    if(pendingBackupImport.syncConfig){
+      syncConfig={...syncConfig,...pendingBackupImport.syncConfig};
+      save(SK.sync,syncConfig);
+      saveUserConfig();
+    }
+    if(pendingBackupImport.theme && (pendingBackupImport.theme==='light' || pendingBackupImport.theme==='dark')){
+      state.theme=pendingBackupImport.theme;
+      applyTheme(state.theme);
+    }
+
+    const mergedLog=[...(pendingBackupImport.emailLog||[]),...(emailLog||[])];
+    const seenLog=new Set();
+    emailLog=mergedLog.filter(it=>{
+      const key=`${it?.date||''}|${it?.contractName||''}|${it?.detail||''}`;
+      if(seenLog.has(key))return false;
+      seenLog.add(key);
+      return true;
+    }).slice(0,100);
+    save(SK.log,emailLog);
+
+    sentTracker={...(pendingBackupImport.sentTracker||{}),...(sentTracker||{})};
+    save(SK.sent,sentTracker);
+
+    normalizeCompanyCantieri();
+    saveData();
+    renderSidebarCompanies();
+    renderPage();
+    hideModal();
+    const added=Math.max(0,state.companies.length-prevCount);
+    showToast(`Backup importato: ${added} contratti aggiunti (${state.companies.length} totali)`);
+  }catch(e){showToast('Errore import backup: '+(e.message||e))}
+  finally{pendingBackupImport=null}
+}
+
 function importRows(rows){
   if(!rows.length){showToast('File vuoto');return}
   const map={nome:'name',azienda:'name','nome azienda':'name',dipendente:'employeeName','tipo contratto':'contractType','tipo':'contractType','data inizio':'startDate',inizio:'startDate','data scadenza':'endDate',scadenza:'endDate',prorogabile:'renewable','durata proroga':'renewMonths','durata proroga (mesi)':'renewMonths','tipo proroga':'renewType',preavviso:'renewNotice','preavviso (gg)':'renewNotice','proroghe effettuate':'renewCount','email admin':'adminEmail','email azienda':'companyEmail',note:'notes'};
