@@ -1068,6 +1068,7 @@ const SK = { data:'cm2_data', settings:'cm2_settings', log:'cm2_log', sent:'cm2_
 
 function esc(s){if(!s)return'';const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"};return String(s).replace(/[&<>"']/g,c=>m[c])}
 function escAttr(s){return esc(s)}
+function escJsArg(s){return JSON.stringify(String(s??'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
 // ═══════════════════════════════════════
 // DEFAULT DATA
@@ -1365,7 +1366,7 @@ function renderSidebarCompanies(){
   el.innerHTML=names.map(n=>{
     const active=state.page==='company'&&state.activeCompany===n;
     const init=n.substring(0,2).toUpperCase();
-    return`<button class="company-nav-item${active?' active':''}" onclick="setCompanyPage('${escAttr(n)}')" title="${escAttr(n)}">
+    return`<button class="company-nav-item${active?' active':''}" onclick="setCompanyPage(${escJsArg(n)})" title="${escAttr(n)}">
       <span class="company-initial">${init}</span>
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)}</span>
     </button>`;
@@ -1833,8 +1834,8 @@ window.openEditCompanyModal=function(name){
     <div class="form-row single"><div class="form-field"><label>Note</label><input id="ec-notes" class="f-input" type="text" value="${escAttr(first.notes||'')}" style="width:100%"></div></div>
     <div class="modal-actions">
       <button class="m-btn" onclick="hideModal()">Annulla</button>
-      <button class="m-btn danger" onclick="confirmDeleteCompany('${escAttr(name)}')">Elimina azienda</button>
-      <button class="m-btn primary" onclick="saveEditedCompany('${escAttr(name)}')">Salva</button>
+      <button class="m-btn danger" onclick="confirmDeleteCompany(${escJsArg(name)})">Elimina azienda</button>
+      <button class="m-btn primary" onclick="saveEditedCompany(${escJsArg(name)})">Salva</button>
     </div>
   </div></div>`);
 }
@@ -1862,7 +1863,7 @@ window.confirmDeleteCompany=function(name){
   showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
     <h3>Conferma eliminazione azienda</h3>
     <p style="font-size:14px;color:var(--text2);">Eliminare l'azienda <strong style="color:var(--text)">${esc(name)}</strong> e tutti i suoi ${cnt} contratti e cantieri associati? Questa azione è irreversibile.</p>
-    <div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn danger" onclick="doDeleteCompany('${escAttr(name)}')">Elimina</button></div>
+    <div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn danger" onclick="doDeleteCompany(${escJsArg(name)})">Elimina</button></div>
   </div></div>`);
 }
 
@@ -2020,7 +2021,7 @@ function renderContractCard(c){
 function renderCompanyContracts(name){
   const contracts=state.companies.filter(c=>c.name===name);
   if(!contracts.length){
-    return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto per ${esc(name)}.<br><br><button class="tb-btn primary" onclick="openAddContractModal('${escAttr(name)}')">+ Aggiungi dipendente</button></div>`;
+    return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto per ${esc(name)}.<br><br><button class="tb-btn primary" onclick="openAddContractModal(${escJsArg(name)})">+ Aggiungi dipendente</button></div>`;
   }
   const first=contracts[0];
   // build month options from contracts (defensive: ensure endDate coerced to string)
@@ -2040,7 +2041,7 @@ function renderCompanyContracts(name){
       <div class="company-avatar">${esc(first.name.substring(0,2).toUpperCase())}</div>
       <div class="company-info"><div class="company-name">${esc(first.name)}</div><div class="company-meta">${first.companyEmail?esc(first.companyEmail):''}${first.adminEmail?` • ${esc(first.adminEmail)}`:''}</div></div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center"><button class="tb-btn primary" onclick="openAddContractModal('${escAttr(first.name)}')">+ Aggiungi dipendente</button><button class="tb-btn" onclick="exportExcelCompany('${escAttr(first.name)}')">Esporta azienda</button><button class="tb-btn" onclick="openEditCompanyModal('${escAttr(first.name)}')">Modifica azienda</button></div>
+    <div style="display:flex;gap:8px;align-items:center"><button class="tb-btn primary" onclick="openAddContractModal(${escJsArg(first.name)})">+ Aggiungi dipendente</button><button class="tb-btn" onclick="exportExcelCompany(${escJsArg(first.name)})">Esporta azienda</button><button class="tb-btn" onclick="openEditCompanyModal(${escJsArg(first.name)})">Modifica azienda</button></div>
   </div>`;
 
   h+=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="flex:1"></div><div><label style="font-size:12px;color:var(--text3);margin-right:8px">Filtra mese</label><select id="company-filter-month" class="f-input" onchange="state.filterMonth=this.value;renderPage();">${opts}</select></div></div>`;
