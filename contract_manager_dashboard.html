@@ -118,6 +118,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
   background:rgba(255,255,255,0.72);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:12px;
+  flex-wrap:wrap;
   padding:0 24px;
   position:sticky;top:0;z-index:40;
   backdrop-filter:blur(18px);
@@ -365,8 +366,14 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
 .card-ident{min-width:0}
 .card-company-name{font-size:16px;font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.01em}
-.card-employee{font-size:13px;color:var(--text2);margin-top:4px}
-.card-type{font-size:12px;color:var(--text3);margin-top:2px}
+.card-employee{font-size:13px;color:var(--text2);margin-top:5px;font-weight:600}
+.card-type{font-size:12px;color:var(--text3);margin-top:3px}
+.card-kicker{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.card-progress-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 12px;flex-wrap:wrap}
+.card-progress-label{font-size:11px;color:var(--text3)}
+.card-progress-value{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:.04em;text-transform:uppercase}
+.card-footline{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;flex-wrap:wrap}
+.card-foot-pill{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:6px 10px}
 .card-badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;flex-shrink:0}
 .badge{
   font-size:11px;font-weight:500;padding:3px 9px;
@@ -1002,7 +1009,17 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .page-content{padding:16px}
   .metrics-grid{grid-template-columns:1fr 1fr;gap:8px}
   .dashboard-summary{grid-template-columns:1fr}
+  .topbar{height:auto;min-height:var(--header-h);padding:10px 12px;align-items:flex-start;gap:8px}
+  .topbar-title{order:1;flex:1 1 auto;min-width:0;padding-top:7px}
+  #mobile-menu-btn{order:0}
+  .topbar-actions{order:2;width:100%;justify-content:flex-end;flex-wrap:wrap}
+  .topbar-search{order:3;max-width:none;flex:1 1 100%}
   .card-fields{grid-template-columns:1fr 1fr}
+  .card-top{flex-direction:column;align-items:flex-start}
+  .card-progress-meta{align-items:flex-start}
+  .card-footline{align-items:flex-start}
+  .card-actions{padding:12px;gap:8px}
+  .act-btn{flex:1 1 calc(50% - 8px);justify-content:center}
   .form-row{grid-template-columns:1fr}
   .settings-row{grid-template-columns:1fr}
   .settings-row.triple{grid-template-columns:1fr}
@@ -1029,7 +1046,6 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .cantiere-days{font-size:16px}
   /* Topbar mobile */
   .btn-label{display:none}
-  .topbar-search{max-width:140px}
   .topbar-actions{gap:4px}
   /* Modal mobile scroll */
   .modal{max-height:88vh;display:flex;flex-direction:column}
@@ -2147,12 +2163,14 @@ function renderContractCard(c){
     const prog=Math.round(progressPct(c.startDate,c.endDate)||0);
     const pcls=progCls(d)||'gray';
     const urg=urgClass(d)||'';
+    const progressLabel = d<0 ? 'Contratto scaduto' : d<=ALERT_DAYS ? 'Intervento prioritario' : 'Monitoraggio regolare';
     return `<div class="contract-card ${urg}" data-id="${escAttr(c.id)}">
       <div class="card-main">
         <div class="card-top">
           <div class="card-ident">
-            <div class="card-company-name">${esc(c.name)}${c.employeeName?` — ${esc(c.employeeName)}`:''}</div>
-            <div class="card-employee">${esc(c.employeeName||'')}</div>
+            <div class="card-kicker">Scheda contratto</div>
+            <div class="card-company-name">${esc(c.name)}</div>
+            <div class="card-employee">${esc(c.employeeName||'Dipendente non specificato')}</div>
             <div class="card-type">${esc(c.contractType||'')}</div>
           </div>
           <div class="card-badges">
@@ -2165,6 +2183,7 @@ function renderContractCard(c){
             </div>
         </div>
         <div class="prog-bar"><div class="prog-fill ${pcls}" style="width:${prog}%"></div></div>
+        <div class="card-progress-meta"><div class="card-progress-label">${progressLabel}</div><div class="card-progress-value">${prog}% percorso</div></div>
         <div class="card-fields">
           <div><div class="field-label">Scadenza</div><div class="field-val ${d<0?'c-red':d<=ALERT_DAYS?'c-amber':'c-green'}">${formatDate(c.endDate)}</div></div>
           <div><div class="field-label">Giorni</div><div class="field-val">${d<0?'Scaduto':d+' gg'}</div></div>
@@ -2173,7 +2192,7 @@ function renderContractCard(c){
           <div><div class="field-label">Proroghe</div><div class="field-val">${c.renewCount||0}/4</div></div>
         </div>
         ${c.notes?`<div class="card-notes"><span class="notes-label">Note</span>${esc(c.notes)}</div>`:''}
-        <div style="margin-top:8px;font-size:12px;color:var(--text3)">Mesi rimanenti a 12: <strong>${monthsTo12}</strong></div>
+        <div class="card-footline"><div style="font-size:12px;color:var(--text3)">Mesi rimanenti a 12: <strong>${monthsTo12}</strong></div><div class="card-foot-pill">ID ${esc(c.id)}</div></div>
         ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(rawCt=>{const ct=normalizeCantiere(rawCt);const endDate=getCantiereEndDate(ct);return `<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(endDate)<=0?'':'ok'}">${formatDate(endDate)}</div></div>`}).join('')+`</div>`:''}
       </div>
         <div class="card-actions">
