@@ -232,9 +232,10 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round}
 .notif-badge{
   position:absolute;top:-3px;right:-3px;
-  width:16px;height:16px;border-radius:50%;
-  background:var(--red);color:#fff;font-size:9px;font-weight:700;
+  min-width:18px;height:18px;padding:0 4px;border-radius:999px;
+  background:var(--red);color:#fff;font-size:10px;font-weight:700;
   display:flex;align-items:center;justify-content:center;
+  line-height:1;
   border:2px solid var(--surface);
 }
 /* Funzioni JS spostate in basso (pulizia) */
@@ -480,9 +481,9 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
   text-align:center;text-transform:capitalize;
 }
 .calendar-scroll{
-  overflow-y:auto;
+  overflow-y:visible;
   overflow-x:auto;
-  max-height:calc(100vh - var(--header-h) - 210px);
+  max-height:none;
   padding-bottom:8px;
   -webkit-overflow-scrolling:touch;
 }
@@ -893,7 +894,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .cal-event{font-size:9px;padding:1px 3px;margin-bottom:1px}
   .cal-header-cell{padding:6px 2px;font-size:10px}
   .cal-month-label{font-size:14px}
-  .calendar-scroll{max-height:calc(100vh - var(--header-h) - 180px)}
+  .calendar-scroll{overflow-y:visible;max-height:none}
   .calendar-grid{min-width:680px}
   /* Notif center mobile */
   .notif-center{position:fixed;top:var(--header-h);right:0;left:0;width:100%;border-radius:0 0 var(--radius-lg) var(--radius-lg);max-height:65vh}
@@ -1331,6 +1332,7 @@ function urgBadge(days){
 }
 function daysCls(days){if(days<0||days<=ALERT_DAYS)return'c-red';if(days<=30)return'c-amber';return'c-green'}
 function progCls(days){if(days<0)return'gray';if(days<=ALERT_DAYS)return'red';if(days<=30)return'amber';return'green'}
+function compactBadgeCount(n){const v=Number(n)||0;return v>99?'99+':String(v)}
 
 // ═══════════════════════════════════════
 // CAUSALE CHECK
@@ -1434,7 +1436,7 @@ function updateNav(){
     }).length;
     const cb=document.getElementById('cantieri-badge');
     if(cb){
-      if(cantieriCount>0){cb.style.display='';cb.textContent=String(cantieriCount)}
+      if(cantieriCount>0){cb.style.display='';cb.textContent=compactBadgeCount(cantieriCount)}
       else{cb.style.display='none';cb.textContent='0'}
     }
     const urgentContracts = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate) <= ALERT_DAYS*5).length;
@@ -1446,7 +1448,7 @@ function updateNav(){
     const urgentCount = urgentContracts + urgentCantieriCount;
     const nb=document.getElementById('notif-badge');
     if(nb){
-      if(urgentCount>0){nb.style.display='';nb.textContent=String(urgentCount)}
+      if(urgentCount>0){nb.style.display='';nb.textContent=compactBadgeCount(urgentCount);nb.title=`${urgentCount} notifiche`}
       else{nb.style.display='none';nb.textContent='0'}
     }
   }catch(e){console.error('updateNav badges',e)}
