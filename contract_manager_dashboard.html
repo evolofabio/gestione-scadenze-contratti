@@ -1556,6 +1556,13 @@ function setPage(p,company){
 }
 function setCompanyPage(name){setPage('company',name)}
 
+function onSearch(val){
+  state.searchQuery=(val||'').trim();
+  if(state.page==='dashboard'||state.page==='company'){
+    renderPage();
+  }
+}
+
 function getUrgentNotifications(){
   const threshold = ALERT_DAYS * 5;
   const urgentContracts = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate)<=threshold);
@@ -2241,7 +2248,7 @@ function renderCompanyContracts(name){
       <div class="company-avatar">${esc(first.name.substring(0,2).toUpperCase())}</div>
       <div class="company-info"><div class="company-name">${esc(first.name)}</div><div class="company-meta">${first.companyEmail?esc(first.companyEmail):''}${first.adminEmail?` • ${esc(first.adminEmail)}`:''}</div></div>
     </div>
-    <div class="company-hero-actions"><button class="tb-btn primary" onclick="openAddContractModal(${escJsArg(first.name)})">+ Aggiungi dipendente</button><button class="tb-btn" onclick="exportExcelCompany(${escJsArg(first.name)})">Esporta azienda</button><button class="tb-btn" onclick="openEditCompanyModal(${escJsArg(first.name)})">Modifica azienda</button></div>
+    <div class="company-hero-actions"><button class="tb-btn primary" onclick="openAddContractModal(${escJsArg(first.name)})">+ Aggiungi dipendente</button><button class="tb-btn" onclick="exportExcelCompany(${escJsArg(first.name)})">Excel azienda</button><button class="tb-btn" onclick="exportPDFCompany(${escJsArg(first.name)})">PDF azienda</button><button class="tb-btn" onclick="openEditCompanyModal(${escJsArg(first.name)})">Modifica azienda</button></div>
     <div class="company-stats">
       <div class="company-stat"><div class="company-stat-label">Contratti</div><div class="company-stat-value">${contracts.length}</div><div class="company-stat-meta">totale registrati</div></div>
       <div class="company-stat"><div class="company-stat-label">Urgenti</div><div class="company-stat-value">${urgentContracts}</div><div class="company-stat-meta">entro 30 giorni</div></div>
@@ -2843,6 +2850,20 @@ function getRows(companies){
 window.exportCSV=()=>{const h=getHeaders();const r=getRows();const csv=[h,...r].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(u);showToast('CSV esportato')}
 window.exportExcel=()=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows()]);ws['!cols']=[22,20,22,12,12,8,12,10,10,14,10,8,24,24,40].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Contratti');XLSX.writeFile(wb,`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel esportato')}
 window.exportExcelCompany=name=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows(state.companies.filter(c=>c.name===name))]);XLSX.utils.book_append_sheet(wb,ws,name.substring(0,30));XLSX.writeFile(wb,`evolution_system_gestione_scadenze_${name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel azienda esportato')}
+window.exportPDFCompany=name=>{
+  const list=state.companies.filter(c=>c.name===name);
+  if(!list.length){showToast('Nessun contratto per questa azienda');return}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const safeName=String(name||'azienda').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_-]/g,'');
+  doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text(`Evolution System - ${name}`,14,14);
+  doc.setFontSize(9);doc.setFont(undefined,'normal');doc.setTextColor(100);doc.text(`Esportato il ${new Date().toLocaleDateString('it-IT')} - ${list.length} contratti`,14,20);doc.setTextColor(0);
+  doc.autoTable({
+    head:[['Azienda','Dipendente','Tipo Contratto','Inizio','Scadenza','Gg','Stato','Pror.']],
+    body:list.map(c=>{const d=daysLeft(c.endDate);return[c.name,c.employeeName||'—',c.contractType||'',formatDate(c.startDate),formatDate(c.endDate),String(d),d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'OK',c.renewable?'Sì':'No']}),
+    startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}
+  });
+  doc.save(`evolution_system_gestione_scadenze_${safeName}_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF azienda esportato');
+}
 window.exportPDF=()=>{
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text('Evolution System - Gestione Scadenze Contratti',14,14);
