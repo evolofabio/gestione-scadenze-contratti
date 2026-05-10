@@ -2,71 +2,53 @@
 // NOTIFICATIONS
 // ═══════════════════════════════════════
 let _cantieriQ = '';
-window.onCantieriSearch = q => { _cantieriQ = q.trim().toLowerCase(); renderPage(); };
 
-function renderCantieriPage(){
-  // Only show cantieri from the canonical company record (first contract per azienda)
-  const seenCompany = {};
-  let all = state.companies.flatMap(c => {
-    if (seenCompany[c.name]) return [];
-    seenCompany[c.name] = true;
-    return (c.cantieri||[]).map((ct,idx) => ({...normalizeCantiere(ct), company: c, _idx: idx, _contractId: c.id}));
+// Restituisce tutti i cantieri ordinati per urgenza
+function _getCantieriAll() {
+  const seen = {};
+  const all = state.companies.flatMap(c => {
+    if (seen[c.name]) return [];
+    seen[c.name] = true;
+    return (c.cantieri||[]).map((ct,idx) => ({...normalizeCantiere(ct), company: c, _idx: idx}));
   });
-  all.sort((a,b)=>daysLeft(getCantiereEndDate(a))-daysLeft(getCantiereEndDate(b)));
+  all.sort((a,b) => daysLeft(getCantiereEndDate(a)) - daysLeft(getCantiereEndDate(b)));
+  return all;
+}
 
-  const totalAll = all.length;
+// Filtra per query
+function _filterCantieri(all, q) {
+  if (!q) return all;
+  return all.filter(ct =>
+    (ct.nome||'').toLowerCase().includes(q) ||
+    (ct.company.name||'').toLowerCase().includes(q) ||
+    (ct.committente||'').toLowerCase().includes(q) ||
+    (ct.note||'').toLowerCase().includes(q)
+  );
+}
 
-  // Filtra per ricerca
-  if (_cantieriQ) {
-    all = all.filter(ct =>
-      (ct.nome||'').toLowerCase().includes(_cantieriQ) ||
-      (ct.company.name||'').toLowerCase().includes(_cantieriQ) ||
-      (ct.committente||'').toLowerCase().includes(_cantieriQ) ||
-      (ct.note||'').toLowerCase().includes(_cantieriQ)
-    );
-  }
-
-  if(!totalAll) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>`;
-
-  const groups=[
-    {label:'Scaduti',items:all.filter(ct=>daysLeft(getCantiereEndDate(ct))<0),cls:'danger'},
-    {label:'Urgenti — entro 7 giorni',items:all.filter(ct=>{const d=daysLeft(getCantiereEndDate(ct));return d>=0&&d<=7}),cls:'danger'},
-    {label:'In scadenza — entro 30 giorni',items:all.filter(ct=>{const d=daysLeft(getCantiereEndDate(ct));return d>7&&d<=30}),cls:'warn'},
-    {label:'Regolari',items:all.filter(ct=>daysLeft(getCantiereEndDate(ct))>30),cls:'ok'},
+// Costruisce solo l'HTML dei gruppi/risultati (senza header)
+function _buildCantieriResultsHTML(filtered, totalAll) {
+  if (!totalAll) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>`;
+  if (_cantieriQ && !filtered.length) return `<div class="empty-state" style="margin-top:32px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Nessun cantiere trovato per "<strong>${esc(_cantieriQ)}</strong>".</div>`;
+  const groups = [
+    {label:'Scaduti',                    items:filtered.filter(ct=>daysLeft(getCantiereEndDate(ct))<0),cls:'danger'},
+    {label:'Urgenti — entro 7 giorni',   items:filtered.filter(ct=>{const d=daysLeft(getCantiereEndDate(ct));return d>=0&&d<=7}),cls:'danger'},
+    {label:'In scadenza — entro 30 giorni',items:filtered.filter(ct=>{const d=daysLeft(getCantiereEndDate(ct));return d>7&&d<=30}),cls:'warn'},
+    {label:'Regolari',                   items:filtered.filter(ct=>daysLeft(getCantiereEndDate(ct))>30),cls:'ok'},
   ];
-  const expiredCount=groups[0].items.length;
-  const urgentCount=groups[1].items.length;
-  const regularCount=groups[3].items.length;
-
-  let h=`<div class="section-head" style="align-items:center">
-    <div><div class="section-title">Cantieri (${all.length}${_cantieriQ ? ' di '+totalAll : ''})</div><div class="section-sub">Panoramica operativa dei cantieri associati alle aziende.</div></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <div class="cantieri-search-wrap">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" class="cantieri-search-input" placeholder="Cerca cantiere, azienda…" value="${escAttr(_cantieriQ)}" oninput="onCantieriSearch(this.value)" autofocus>
-        ${_cantieriQ?`<button class="cantieri-search-clear" onclick="onCantieriSearch('');document.querySelector('.cantieri-search-input').value=''">×</button>`:''}
-      </div>
-      <button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button>
-    </div>
+  let h = `<div class="dashboard-summary" style="margin-bottom:22px">
+    <div class="summary-chip"><div class="summary-chip-label">Totale</div><div class="summary-chip-value">${filtered.length}</div><div class="summary-chip-meta">cantieri</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Urgenti</div><div class="summary-chip-value">${groups[1].items.length}</div><div class="summary-chip-meta">entro 7 giorni</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Scaduti</div><div class="summary-chip-value">${groups[0].items.length}</div><div class="summary-chip-meta">da riallineare</div></div>
+    <div class="summary-chip"><div class="summary-chip-label">Regolari</div><div class="summary-chip-value">${groups[3].items.length}</div><div class="summary-chip-meta">oltre 30 giorni</div></div>
   </div>`;
-  if (_cantieriQ && !all.length) {
-    h += `<div class="empty-state" style="margin-top:32px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Nessun cantiere trovato per "<strong>${esc(_cantieriQ)}</strong>".</div>`;
-    return h;
-  }
-  h+=`<div class="dashboard-summary" style="margin-bottom:22px">
-    <div class="summary-chip"><div class="summary-chip-label">Totale</div><div class="summary-chip-value">${all.length}</div><div class="summary-chip-meta">cantieri registrati</div></div>
-    <div class="summary-chip"><div class="summary-chip-label">Urgenti</div><div class="summary-chip-value">${urgentCount}</div><div class="summary-chip-meta">entro 7 giorni</div></div>
-    <div class="summary-chip"><div class="summary-chip-label">Scaduti</div><div class="summary-chip-value">${expiredCount}</div><div class="summary-chip-meta">da riallineare</div></div>
-    <div class="summary-chip"><div class="summary-chip-label">Regolari</div><div class="summary-chip-value">${regularCount}</div><div class="summary-chip-meta">oltre 30 giorni</div></div>
-  </div>`;
-  groups.forEach(g=>{
-    if(!g.items.length)return;
-    h+=`<div class="urgency-group">
-      <div class="group-header"><span class="group-title">${g.label}</span><span class="group-count ${g.cls}">${g.items.length}</span></div>
-      ${g.items.map(ct=>{
-        const endDate=getCantiereEndDate(ct);
-        const d=daysLeft(endDate);
-        const uc=d<0||d<=7?'urgent':d<=30?'warning':'ok';
+  groups.forEach(g => {
+    if (!g.items.length) return;
+    h += `<div class="urgency-group"><div class="group-header"><span class="group-title">${g.label}</span><span class="group-count ${g.cls}">${g.items.length}</span></div>
+      ${g.items.map(ct => {
+        const endDate = getCantiereEndDate(ct);
+        const d = daysLeft(endDate);
+        const uc = d<0||d<=7?'urgent':d<=30?'warning':'ok';
         return `<div class="cantiere-card">
             <div class="cantiere-urgency-bar ${uc}"></div>
             <div class="cantiere-info">
@@ -94,6 +76,52 @@ function renderCantieriPage(){
       }).join('')}
     </div>`;
   });
+  return h;
+}
+
+// Ricerca: aggiorna solo il div risultati, l'input rimane intatto
+window.onCantieriSearch = function(q) {
+  _cantieriQ = q.trim().toLowerCase();
+  const all = _getCantieriAll();
+  const filtered = _filterCantieri(all, _cantieriQ);
+  // Aggiorna contatore titolo
+  const titleEl = document.getElementById('cantieri-page-title');
+  if (titleEl) titleEl.textContent = `Cantieri (${filtered.length}${_cantieriQ ? ' di '+all.length : ''})`;
+  // Mostra/nascondi clear button
+  const clearEl = document.querySelector('.cantieri-search-clear');
+  if (_cantieriQ && !clearEl) {
+    const wrap = document.querySelector('.cantieri-search-wrap');
+    if (wrap) {
+      const btn = document.createElement('button');
+      btn.className = 'cantieri-search-clear';
+      btn.textContent = '×';
+      btn.setAttribute('type','button');
+      btn.onclick = () => { _cantieriQ=''; document.querySelector('.cantieri-search-input').value=''; onCantieriSearch(''); };
+      wrap.appendChild(btn);
+    }
+  } else if (!_cantieriQ && clearEl) {
+    clearEl.remove();
+  }
+  // Aggiorna solo i risultati
+  const res = document.getElementById('cantieri-results');
+  if (res) res.innerHTML = _buildCantieriResultsHTML(filtered, all.length);
+};
+
+function renderCantieriPage(){
+  const all      = _getCantieriAll();
+  const filtered = _filterCantieri(all, _cantieriQ);
+  let h = `<div class="section-head" style="align-items:center">
+    <div><div class="section-title" id="cantieri-page-title">Cantieri (${filtered.length}${_cantieriQ?' di '+all.length:''})</div><div class="section-sub">Panoramica operativa dei cantieri associati alle aziende.</div></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="cantieri-search-wrap">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="cantieri-search-input" placeholder="Cerca cantiere, azienda…" value="${escAttr(_cantieriQ)}" oninput="onCantieriSearch(this.value)">
+        ${_cantieriQ?'<button class="cantieri-search-clear" type="button" onclick="onCantieriSearch(\'\');this.closest(\'.cantieri-search-wrap\').querySelector(\'input\').value=\'\'">×</button>':''}
+      </div>
+      <button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button>
+    </div>
+  </div>
+  <div id="cantieri-results">${_buildCantieriResultsHTML(filtered, all.length)}</div>`;
   return h;
 }
 

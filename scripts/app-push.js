@@ -43,7 +43,9 @@ let _swReg = null;
 async function initPushNotifications() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    _swReg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    // Usa percorso relativo per compatibilità con GitHub Pages in sottocartella
+    const swUrl = new URL('sw.js', document.baseURI).href;
+    _swReg = await navigator.serviceWorker.register(swUrl);
 
     // Periodic Background Sync — Chrome 80+ (funziona anche con tab chiusa)
     if ('periodicSync' in _swReg) {
