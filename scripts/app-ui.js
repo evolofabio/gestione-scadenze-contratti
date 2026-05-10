@@ -1,16 +1,32 @@
 // ═══════════════════════════════════════
 // NOTIFICATIONS
 // ═══════════════════════════════════════
+let _cantieriQ = '';
+window.onCantieriSearch = q => { _cantieriQ = q.trim().toLowerCase(); renderPage(); };
+
 function renderCantieriPage(){
   // Only show cantieri from the canonical company record (first contract per azienda)
   const seenCompany = {};
-  const all = state.companies.flatMap(c => {
+  let all = state.companies.flatMap(c => {
     if (seenCompany[c.name]) return [];
     seenCompany[c.name] = true;
     return (c.cantieri||[]).map((ct,idx) => ({...normalizeCantiere(ct), company: c, _idx: idx, _contractId: c.id}));
   });
   all.sort((a,b)=>daysLeft(getCantiereEndDate(a))-daysLeft(getCantiereEndDate(b)));
-  if(!all.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>`;
+
+  const totalAll = all.length;
+
+  // Filtra per ricerca
+  if (_cantieriQ) {
+    all = all.filter(ct =>
+      (ct.nome||'').toLowerCase().includes(_cantieriQ) ||
+      (ct.company.name||'').toLowerCase().includes(_cantieriQ) ||
+      (ct.committente||'').toLowerCase().includes(_cantieriQ) ||
+      (ct.note||'').toLowerCase().includes(_cantieriQ)
+    );
+  }
+
+  if(!totalAll) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun cantiere registrato.<br><br><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>`;
 
   const groups=[
     {label:'Scaduti',items:all.filter(ct=>daysLeft(getCantiereEndDate(ct))<0),cls:'danger'},
@@ -23,9 +39,20 @@ function renderCantieriPage(){
   const regularCount=groups[3].items.length;
 
   let h=`<div class="section-head" style="align-items:center">
-    <div><div class="section-title">Cantieri (${all.length})</div><div class="section-sub">Panoramica operativa dei cantieri associati alle aziende.</div></div>
-    <div><button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button></div>
+    <div><div class="section-title">Cantieri (${all.length}${_cantieriQ ? ' di '+totalAll : ''})</div><div class="section-sub">Panoramica operativa dei cantieri associati alle aziende.</div></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="cantieri-search-wrap">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="cantieri-search-input" placeholder="Cerca cantiere, azienda…" value="${escAttr(_cantieriQ)}" oninput="onCantieriSearch(this.value)" autofocus>
+        ${_cantieriQ?`<button class="cantieri-search-clear" onclick="onCantieriSearch('');document.querySelector('.cantieri-search-input').value=''">×</button>`:''}
+      </div>
+      <button class="tb-btn primary" onclick="openAddCantiereGlobal()">+ Aggiungi cantiere</button>
+    </div>
   </div>`;
+  if (_cantieriQ && !all.length) {
+    h += `<div class="empty-state" style="margin-top:32px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Nessun cantiere trovato per "<strong>${esc(_cantieriQ)}</strong>".</div>`;
+    return h;
+  }
   h+=`<div class="dashboard-summary" style="margin-bottom:22px">
     <div class="summary-chip"><div class="summary-chip-label">Totale</div><div class="summary-chip-value">${all.length}</div><div class="summary-chip-meta">cantieri registrati</div></div>
     <div class="summary-chip"><div class="summary-chip-label">Urgenti</div><div class="summary-chip-value">${urgentCount}</div><div class="summary-chip-meta">entro 7 giorni</div></div>
