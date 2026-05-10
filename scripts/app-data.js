@@ -573,6 +573,8 @@ function proceedAfterLogin() {
   renderPage();
   startAutoSend();
   initSync();
+  // Registra Service Worker e abilita notifiche push di sistema
+  if (typeof initPushNotifications === 'function') initPushNotifications();
 }
 // Salva la configurazione utente su Firebase DB
 function saveUserConfig() {

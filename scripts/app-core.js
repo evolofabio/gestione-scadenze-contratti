@@ -46,6 +46,8 @@ function saveData(){
       syncToCloud();
     }
   }catch(e){ console.error('saveData sync', e); }
+  // Aggiorna i contratti nell'IDB del Service Worker (per notifiche push offline)
+  try{ if(typeof mirrorContractsToIDB==='function') mirrorContractsToIDB(state.companies); }catch(_){}
 }
 
 // Minimal global toast helper (evita ReferenceError quando usato da vari handler)
