@@ -606,10 +606,7 @@ function renderLicenseScreen(licKey) {
         <h4>7. Risoluzione</h4>
         <p>Il Fornitore si riserva il diritto di sospendere o revocare l'accesso al Software in caso di violazione del presente Contratto, senza obbligo di preavviso e senza alcun obbligo di rimborso.</p>
 
-        <h4>8. Legge applicabile e foro competente</h4>
-        <p>Il presente Contratto è regolato dalla legge italiana. Per qualsiasi controversia è competente in via esclusiva il Tribunale di <strong>Catania</strong>.</p>
-
-        <h4>9. Contatti</h4>
+        <h4>8. Contatti</h4>
         <p>Per qualsiasi richiesta relativa alla licenza o al trattamento dei dati: <strong>evolo434@gmail.com</strong></p>
       </div>
       <div class="license-scroll-hint" id="license-hint">↓ Scorri per leggere prima di accettare</div>
