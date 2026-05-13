@@ -565,6 +565,104 @@ function afterLogin() {
 }
 
 function proceedAfterLogin() {
+  // Verifica accettazione licenza per questo utente
+  const licKey = 'cm2_license_v1_' + (authUser?.uid || 'guest');
+  if (!localStorage.getItem(licKey)) {
+    renderLicenseScreen(licKey);
+    return;
+  }
+  _doEnterApp();
+}
+
+function renderLicenseScreen(licKey) {
+  const loginEl = document.getElementById('login-screen');
+  if (!loginEl) return;
+  loginEl.innerHTML = `
+    <div class="login-card license-card">
+      <div class="login-logo"><div class="logo-mark"><img src="evolution-system.png" alt="Evolution System"></div><span class="login-logo-text">Evolution System — Termini di utilizzo</span></div>
+      <div class="license-version">Versione 1.0 — Maggio 2026</div>
+      <div class="license-body" id="license-body">
+        <h4>Contratto di licenza d'uso del software</h4>
+        <p>Il presente Contratto di Licenza d'Uso ("Contratto") disciplina l'accesso e l'utilizzo della piattaforma <strong>Evolution System – Gestione Scadenze Contratti</strong> (il "Software"), sviluppata e di proprietà esclusiva di <strong>Evolution System di Evolo Fabio</strong> (il "Fornitore").</p>
+
+        <h4>1. Concessione di licenza</h4>
+        <p>Il Fornitore concede all'Utente una licenza personale, non esclusiva, non trasferibile e revocabile per l'utilizzo del Software esclusivamente per le finalità di gestione interna dei contratti di lavoro e dei cantieri. È vietato cedere, sublicenziare, distribuire o rivendere il Software o qualsiasi parte di esso.</p>
+
+        <h4>2. Proprietà intellettuale</h4>
+        <p>Il Software, inclusi codice sorgente, interfaccia grafica, logiche applicative, marchi e documentazione, è di proprietà esclusiva del Fornitore ed è protetto dalla normativa italiana ed europea sul diritto d'autore (L. 633/1941 e D.Lgs. 518/1992). L'Utente non acquista alcun diritto di proprietà sul Software.</p>
+
+        <h4>3. Trattamento dei dati personali</h4>
+        <p>I dati inseriti nel Software (inclusi dati di dipendenti e contratti) sono trattati nel rispetto del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003. I dati sono sincronizzati su infrastruttura Firebase (Google LLC) con sede all'interno dell'UE. L'Utente è responsabile della correttezza e liceità dei dati immessi.</p>
+
+        <h4>4. Limitazione di responsabilità</h4>
+        <p>Il Software viene fornito "così com'è". Il Fornitore non garantisce che il Software sia privo di errori, interruzioni o incompatibilità. In nessun caso il Fornitore sarà responsabile per perdite di dati, mancati rinnovi contrattuali, sanzioni o danni diretti/indiretti derivanti dall'utilizzo o dalla non disponibilità del Software. L'Utente è l'unico responsabile delle decisioni aziendali basate sui dati gestiti.</p>
+
+        <h4>5. Riservatezza</h4>
+        <p>L'Utente si impegna a non divulgare a terzi informazioni riservate relative al funzionamento interno del Software, alle sue credenziali di accesso e ai dati aziendali elaborati.</p>
+
+        <h4>6. Aggiornamenti e modifiche</h4>
+        <p>Il Fornitore si riserva il diritto di aggiornare il Software e i presenti Termini in qualsiasi momento. In caso di modifiche sostanziali ai Termini, all'Utente verrà richiesta nuova accettazione. L'uso continuato del Software dopo la notifica costituisce accettazione dei nuovi termini.</p>
+
+        <h4>7. Risoluzione</h4>
+        <p>Il Fornitore si riserva il diritto di sospendere o revocare l'accesso al Software in caso di violazione del presente Contratto, senza obbligo di preavviso e senza alcun obbligo di rimborso.</p>
+
+        <h4>8. Legge applicabile e foro competente</h4>
+        <p>Il presente Contratto è regolato dalla legge italiana. Per qualsiasi controversia è competente in via esclusiva il Tribunale di <strong>Catania</strong>.</p>
+
+        <h4>9. Contatti</h4>
+        <p>Per qualsiasi richiesta relativa alla licenza o al trattamento dei dati: <strong>evolo434@gmail.com</strong></p>
+      </div>
+      <div class="license-scroll-hint" id="license-hint">↓ Scorri per leggere prima di accettare</div>
+      <div class="license-accept-row">
+        <label class="license-checkbox-label">
+          <input type="checkbox" id="license-accept-cb" onchange="onLicenseCbChange()">
+          <span>Ho letto, compreso e accetto i Termini di utilizzo e la Licenza d'uso del Software</span>
+        </label>
+      </div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="m-btn" onclick="firebase.auth().signOut();showLogin()">Annulla</button>
+        <button class="m-btn primary" id="license-accept-btn" disabled onclick="acceptLicense('${licKey}')">Accetta e continua</button>
+      </div>
+    </div>
+  `;
+  loginEl.style.display = 'flex';
+  // Abilita il pulsante solo quando l'utente ha scrollato fino in fondo
+  const body = document.getElementById('license-body');
+  if (body) {
+    body.addEventListener('scroll', function() {
+      if (body.scrollTop + body.clientHeight >= body.scrollHeight - 10) {
+        const hint = document.getElementById('license-hint');
+        if (hint) hint.style.display = 'none';
+      }
+    });
+  }
+}
+
+window.onLicenseCbChange = function() {
+  const cb = document.getElementById('license-accept-cb');
+  const btn = document.getElementById('license-accept-btn');
+  if (btn) btn.disabled = !(cb && cb.checked);
+};
+
+window.acceptLicense = function(licKey) {
+  const cb = document.getElementById('license-accept-cb');
+  if (!cb || !cb.checked) return;
+  const acceptedAt = new Date().toISOString();
+  try { localStorage.setItem(licKey, acceptedAt); } catch(_) {}
+  // Salva anche su Firebase per tracciabilità
+  if (authUser) {
+    try {
+      firebase.database().ref('licenseAcceptance/' + authUser.uid).set({
+        acceptedAt: acceptedAt,
+        email: authUser.email,
+        version: 'v1'
+      });
+    } catch(_) {}
+  }
+  _doEnterApp();
+};
+
+function _doEnterApp() {
   // Nasconde la schermata di login e mostra la dashboard
   const ls = document.getElementById('login-screen'); if (ls) { ls.innerHTML = ''; ls.style.display = 'none'; }
   const appShell = document.getElementById('app-shell'); if (appShell) appShell.style.display = 'flex';
