@@ -448,6 +448,27 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .act-btn.quick-renew:hover{background:var(--green-bg)}
 .act-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 
+/* ═══ STATUS SELECTOR ═══ */
+.status-selector{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+.status-selector-label{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);margin-right:4px;flex-shrink:0}
+.status-btn{font-size:11px;font-weight:600;padding:4px 12px;border-radius:99px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all var(--t);white-space:nowrap}
+.status-btn:hover{background:var(--surface2);color:var(--text2)}
+.status-btn.s-da_gestire.active{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)}
+.status-btn.s-gestita.active{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.status-btn.s-terminato.active{background:var(--surface3);color:var(--text2);border-color:var(--border2)}
+
+/* Status badge in card-badges */
+.status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;border:1px solid;white-space:nowrap;letter-spacing:.02em}
+.status-badge.s-da_gestire{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-border)}
+.status-badge.s-gestita{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.status-badge.s-terminato{background:var(--surface3);color:var(--text2);border-color:var(--border2)}
+
+/* Card coloring by status */
+.contract-card.status-gestita{background:linear-gradient(180deg,rgba(237,247,241,0.98) 0%, rgba(237,247,241,0.88) 100%)}
+.contract-card.status-terminato{opacity:.72;filter:saturate(.65)}
+.contract-card.status-terminato:hover{opacity:.9;filter:saturate(.85)}
+[data-theme="dark"] .contract-card.status-gestita{background:linear-gradient(180deg,rgba(13,34,24,0.96) 0%, rgba(26,26,23,0.90) 100%)}
+
 /* ═══ CALENDAR ═══ */
 .calendar-grid{
   display:grid;grid-template-columns:repeat(7,minmax(0,1fr));

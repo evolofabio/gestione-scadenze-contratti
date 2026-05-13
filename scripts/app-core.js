@@ -386,11 +386,11 @@ function getUrgentNotifications(){
 }
 
 function updateNav(){
-  ['dashboard','calendar','cantieri','indeterminati','cessati','analytics','settings'].forEach(p=>{
+  ['dashboard','calendar','cantieri','indeterminati','cessati','gestite','terminate','analytics','settings'].forEach(p=>{
     const el=document.getElementById('nav-'+p);
     if(el)el.className=`nav-item${state.page===p?' active':''}`;
   });
-  const titles={dashboard:'Dashboard',calendar:'Calendario',cantieri:'Cantieri',indeterminati:'Indeterminati',cessati:'Cessati',analytics:'Analytics',settings:'Impostazioni',company:state.activeCompany||'Azienda'};
+  const titles={dashboard:'Dashboard',calendar:'Calendario',cantieri:'Cantieri',indeterminati:'Indeterminati',cessati:'Cessati',gestite:'Gestite',terminate:'Terminate',analytics:'Analytics',settings:'Impostazioni',company:state.activeCompany||'Azienda'};
   const el=document.getElementById('topbar-title');
   if(el)el.textContent=titles[state.page]||'';
   const sw=document.getElementById('topbar-search-wrap');

@@ -763,4 +763,18 @@ function renderCessatiPage(){
   return `<div class="section-head"><div class="section-title">Contratti cessati (${list.length})</div></div><div id="cessati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
 }
 
+function renderGestiteePage(){
+  const list=state.companies.filter(c=>c.status==='gestita');
+  if(!list.length)return`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Nessun contratto marcato come Gestita.<br><br><small style="color:var(--text3)">Seleziona "Gestita" su un contratto dalla Dashboard per spostarlo qui.</small></div>`;
+  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
+  return`<div class="section-head"><div><div class="section-title">Contratti Gestiti (${list.length})</div><div class="section-sub">Contratti già gestiti e conclusi con esito positivo.</div></div></div><div id="gestite-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+}
+
+function renderTerminatePage(){
+  const list=state.companies.filter(c=>c.status==='terminato');
+  if(!list.length)return`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Nessun contratto marcato come Terminato.<br><br><small style="color:var(--text3)">Seleziona "Terminato" su un contratto dalla Dashboard per spostarlo qui.</small></div>`;
+  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
+  return`<div class="section-head"><div><div class="section-title">Contratti Terminati (${list.length})</div><div class="section-sub">Contratti terminati e non più attivi.</div></div></div><div id="terminate-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+}
+
 window.addEventListener('load', checkAuth);

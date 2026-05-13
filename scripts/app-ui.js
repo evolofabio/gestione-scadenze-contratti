@@ -623,7 +623,9 @@ function renderContractCard(c){
     const pcls=progCls(d)||'gray';
     const urg=urgClass(d)||'';
     const progressLabel = d<0 ? 'Contratto scaduto' : d<=ALERT_DAYS ? 'Intervento prioritario' : 'Monitoraggio regolare';
-    return `<div class="contract-card ${urg}" data-id="${escAttr(c.id)}">
+    const cStatus=c.status||'da_gestire';
+    const sLbl=cStatus==='gestita'?'Gestita':cStatus==='terminato'?'Terminato':'Da gestire';
+    return `<div class="contract-card ${urg} status-${cStatus}" data-id="${escAttr(c.id)}">
       <div class="card-main">
         <div class="card-top">
           <div class="card-ident">
@@ -635,6 +637,7 @@ function renderContractCard(c){
           <div class="card-badges">
               <div class="badge ${badge.cls}">${esc(badge.txt)}</div>
               <div class="renew-pill ${c.renewable ? 'yes' : 'no'}">${c.renewable ? 'Prorogabile' : 'Non prorogabile'}</div>
+              <div class="status-badge s-${cStatus}">${sLbl}</div>
               ${c.indeterminate?`<div class="badge badge-gray">T.I.</div>`:''}
               ${c.cessato?`<div class="badge badge-gray">Cessato</div>`:''}
               ${c.inProgress?`<div class="badge badge-purple">In lavorazione</div>`:''}
@@ -655,6 +658,7 @@ function renderContractCard(c){
         ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(rawCt=>{const ct=normalizeCantiere(rawCt);const endDate=getCantiereEndDate(ct);return `<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(endDate)<=0?'':'ok'}">${formatDate(endDate)}</div></div>`}).join('')+`</div>`:''}
       </div>
         <div class="card-actions">
+        <div class="status-selector"><span class="status-selector-label">Stato:</span><button class="status-btn s-da_gestire${cStatus==='da_gestire'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'da_gestire')">Da gestire</button><button class="status-btn s-gestita${cStatus==='gestita'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'gestita')">Gestita</button><button class="status-btn s-terminato${cStatus==='terminato'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'terminato')">Terminato</button></div>
         <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
         <button class="act-btn" onclick="openAddCantiere(${escAttr(c.id)})">+ Cantiere</button>
         ${c.renewable?`<button class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button>`:''}
@@ -685,7 +689,8 @@ function renderCompanyContracts(name){
   }).join('');
 
   const filtered = state.filterMonth ? contracts.filter(c=>c.endDate && String(c.endDate).startsWith(state.filterMonth)) : contracts;
-  filtered.sort((a,b)=>daysLeft(a.endDate)-daysLeft(b.endDate));
+  const _sOrd={'da_gestire':0,'gestita':1,'terminato':2};
+  filtered.sort((a,b)=>{const sd=(_sOrd[a.status||'da_gestire']||0)-(_sOrd[b.status||'da_gestire']||0);if(sd!==0)return sd;return daysLeft(a.endDate)-daysLeft(b.endDate);});
   const urgentContracts=contracts.filter(c=>{const d=daysLeft(c.endDate);return d>=0&&d<=30}).length;
   const expiringSoon=contracts.reduce((best,c)=>{
     const d=daysLeft(c.endDate);
@@ -989,7 +994,8 @@ function renderPage(){
         // apply search filter
         const q=(state.searchQuery||'').toLowerCase();
         const list=state.companies.filter(c=>!q||(`${c.name} ${c.employeeName} ${c.contractType}`).toLowerCase().includes(q));
-        list.sort((a,b)=>daysLeft(a.endDate)-daysLeft(b.endDate));
+        const sOrd={'da_gestire':0,'gestita':1,'terminato':2};
+        list.sort((a,b)=>{const sd=(sOrd[a.status||'da_gestire']||0)-(sOrd[b.status||'da_gestire']||0);if(sd!==0)return sd;return daysLeft(a.endDate)-daysLeft(b.endDate);});
         html+=`<div id="contracts-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
         break;
       case 'company':
@@ -1003,6 +1009,12 @@ function renderPage(){
         break;
       case 'cessati':
         html=renderCessatiPage();
+        break;
+      case 'gestite':
+        html=renderGestiteePage();
+        break;
+      case 'terminate':
+        html=renderTerminatePage();
         break;
       case 'analytics':
         html=renderAnalyticsPage();
