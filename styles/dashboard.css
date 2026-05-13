@@ -839,6 +839,13 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
 }
 .email-edit-field textarea{resize:vertical;min-height:180px;line-height:1.65}
 
+/* ═══ WORK NOTES HISTORY ═══ */
+.worknote-history{max-height:200px;overflow-y:auto;margin-bottom:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.worknote-history-item{padding-bottom:8px;border-bottom:1px solid var(--border)}
+.worknote-history-item:last-child{border-bottom:none;padding-bottom:0}
+.worknote-history-date{font-size:11px;color:var(--text3);font-weight:600;margin-bottom:3px}
+.worknote-history-text{font-size:13px;color:var(--text);line-height:1.5;white-space:pre-wrap;word-break:break-word}
+
 /* notification center */
 .notif-center{
   position:absolute;top:calc(100% + 8px);right:0;

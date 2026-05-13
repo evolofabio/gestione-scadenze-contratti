@@ -726,26 +726,57 @@ window.markCessato = function(id){
 }
 
 window.openWorkNoteModal = function(id){
-  const c = state.companies.find(x=>x.id===id); if(!c) return;
-  const lastNote = (c.workNotes && c.workNotes.length) ? c.workNotes[c.workNotes.length-1].text : '';
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Nota lavorazione — ${esc(c.employeeName||c.name)}</h3><div class="form-row single"><div class="form-field"><label>Nota</label><textarea id="work-note-text" class="f-input">${esc(lastNote)}</textarea></div></div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="saveWorkNote(${id})">Salva nota</button></div></div></div>`);
+  const numId = Number(id);
+  const c = state.companies.find(x=>Number(x.id)===numId); if(!c) return;
+  const history = (c.workNotes||[]).slice().reverse().map(n=>
+    `<div class="worknote-history-item"><div class="worknote-history-date">${new Date(n.date).toLocaleString('it-IT')}</div><div class="worknote-history-text">${esc(n.text)}</div></div>`
+  ).join('');
+  const historyBlock = history
+    ? `<div class="worknote-history">${history}</div>`
+    : '';
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()">
+    <h3>Note lavorazione — ${esc(c.employeeName||c.name)}</h3>
+    ${historyBlock}
+    <div class="form-row single"><div class="form-field"><label>Nuova nota</label><textarea id="work-note-text" class="f-input" placeholder="Scrivi una nota di lavorazione…" rows="4"></textarea></div></div>
+    <div class="modal-actions">
+      <button class="m-btn" onclick="hideModal()">Annulla</button>
+      <button class="m-btn primary" onclick="saveWorkNote(${numId})">Salva nota</button>
+    </div>
+  </div></div>`);
+  setTimeout(()=>{const ta=document.getElementById('work-note-text');if(ta)ta.focus();},50);
 }
 
 window.saveWorkNote = function(id){
-  const txt = (document.getElementById('work-note-text')||{}).value?.trim();
-  if(!txt){showToast('Inserisci una nota');return}
-  const idx = state.companies.findIndex(x=>x.id===id); if(idx<0) return;
-  const now = new Date().toISOString();
-  if(!state.companies[idx].workNotes) state.companies[idx].workNotes = [];
-  state.companies[idx].workNotes.push({date:now,text:txt});
-  state.companies[idx].inProgress = true;
-  saveData(); hideModal(); renderPage(); renderSidebarCompanies(); showToast('Nota salvata');
+  try{
+    const numId = Number(id);
+    const ta = document.getElementById('work-note-text');
+    if(!ta){showToast('Errore: campo nota non trovato');return;}
+    const txt = ta.value.trim();
+    if(!txt){showToast('Inserisci una nota prima di salvare');return;}
+    const idx = state.companies.findIndex(x=>Number(x.id)===numId);
+    if(idx<0){showToast('Errore: contratto non trovato');return;}
+    const now = new Date().toISOString();
+    if(!state.companies[idx].workNotes) state.companies[idx].workNotes = [];
+    state.companies[idx].workNotes.push({date:now,text:txt});
+    state.companies[idx].inProgress = true;
+    saveData(); hideModal(); renderPage(); renderSidebarCompanies(); showToast('Nota salvata');
+  }catch(e){console.error('saveWorkNote',e);showToast('Errore durante il salvataggio');}
 }
 
 window.viewWorkNotes = function(id){
-  const c = state.companies.find(x=>x.id===id); if(!c) return;
-  const notes = (c.workNotes||[]).map(n=>`<div style="margin-bottom:8px"><div style="font-size:12px;color:var(--text3)">${new Date(n.date).toLocaleString()}</div><div style="margin-top:4px">${esc(n.text)}</div></div>`).join('')||'<div class="empty-state">Nessuna nota</div>';
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Note lavorazione — ${esc(c.employeeName||c.name)}</h3>${notes}<div class="modal-actions"><button class="m-btn" onclick="hideModal()">Chiudi</button></div></div></div>`);
+  const numId = Number(id);
+  const c = state.companies.find(x=>Number(x.id)===numId); if(!c) return;
+  const notes = (c.workNotes||[]).slice().reverse().map(n=>
+    `<div class="worknote-history-item"><div class="worknote-history-date">${new Date(n.date).toLocaleString('it-IT')}</div><div class="worknote-history-text">${esc(n.text)}</div></div>`
+  ).join('')||'<div class="empty-state" style="padding:16px 0">Nessuna nota registrata.</div>';
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()">
+    <h3>Note lavorazione — ${esc(c.employeeName||c.name)}</h3>
+    <div class="worknote-history">${notes}</div>
+    <div class="modal-actions">
+      <button class="m-btn" onclick="hideModal()">Chiudi</button>
+      <button class="m-btn primary" onclick="hideModal();openWorkNoteModal(${numId})">+ Aggiungi nota</button>
+    </div>
+  </div></div>`);
 }
 
 // Pagine dedicate
