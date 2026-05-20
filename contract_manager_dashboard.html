@@ -152,5 +152,14 @@
 <script src="scripts/app-data.js"></script>
 <script src="scripts/app-push.js"></script>
 <script src="scripts/app-logout.js"></script>
+</script>
+<script>
+// Logout automatico alla chiusura del browser
+window.addEventListener('unload', function() {
+  if (typeof doLogout === 'function') {
+    doLogout();
+  }
+});
+</script>
 </body>
 </html>
