@@ -3,8 +3,8 @@
 // ═══════════════════════════════════════
 function doLogout() {
   authUser = null;
-  if (typeof firebase !== 'undefined' && firebase.auth) {
-    try { firebase.auth().signOut(); } catch(e) {}
+  if (window.supabaseClient && window.supabaseClient.auth) {
+    window.supabaseClient.auth.signOut().catch(() => {});
   }
   var appShell = document.getElementById('app-shell');
   if(appShell) appShell.style.display = 'none';

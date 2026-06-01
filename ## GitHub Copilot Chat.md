@@ -3,7 +3,7 @@
 - Extension: 0.45.1 (prod)
 - VS Code: 1.116.0 (560a9dba96f961efea7b1612916f89e5d5d4d679)
 - OS: darwin 25.3.0 arm64
-- GitHub Account: evolofabio
+- GitHub Account: [redacted]
 
 ## Network
 

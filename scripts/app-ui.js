@@ -341,23 +341,19 @@ function renderSettingsPage(){
   </div>
 
   <div class="settings-card">
-    <h4><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Sincronizzazione Cloud (Firebase)</h4>
+    <h4><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Sincronizzazione (Supabase)</h4>
     <div class="toggle-row">
       <label class="toggle-switch"><input type="checkbox" ${syncConfig.enabled?'checked':''} onchange="toggleCloudSync(this.checked)"><span class="toggle-track"></span></label>
       <span class="toggle-label">Attiva sincronizzazione tra dispositivi</span>
     </div>
-    <div class="sync-grid">
-      <div class="field-group"><label>API Key</label><input class="f-input" type="text" value="${escAttr(syncConfig.apiKey)}" placeholder="AIzaSy…" onchange="saveSyncField('apiKey',this.value)"></div>
-      <div class="field-group"><label>Database URL</label><input class="f-input" type="text" value="${escAttr(syncConfig.databaseURL)}" placeholder="https://…firebaseio.com" onchange="saveSyncField('databaseURL',this.value)"></div>
-      <div class="field-group"><label>Nome stanza</label><input class="f-input" type="text" value="${escAttr(syncConfig.roomName)}" placeholder="la-mia-azienda" onchange="saveSyncField('roomName',this.value)"></div>
-    </div>
+    <p style="font-size:13px;color:var(--text2);margin:8px 0 0">La vecchia configurazione Firebase e stata rimossa. L'accesso e gestito da Supabase.</p>
     <div id="sync-status"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
       <button class="tb-btn" onclick="applySyncConfig()">Applica</button>
       <button class="tb-btn" id="btn-pull" onclick="pullFromCloud()" ${!syncState.connected?'disabled':''}>Scarica dal cloud</button>
       <button class="tb-btn" id="btn-push" onclick="forcePushToCloud()" ${!syncState.connected?'disabled':''}>Carica sul cloud</button>
     </div>
-    <p class="field-hint" style="margin-top:8px">Crea un progetto gratuito su console.firebase.google.com → Realtime Database. Tutti i dispositivi con la stessa stanza vedranno gli stessi dati.</p>
+    <p class="field-hint" style="margin-top:8px">Usa questa sezione per attivare/disattivare la sincronizzazione applicativa lato client.</p>
   </div>
 
   <div class="settings-card">

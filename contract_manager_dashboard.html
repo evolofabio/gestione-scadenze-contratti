@@ -2,6 +2,9 @@
 <!-- rimosso duplicato iniziale; documento principale segue -->
 <html lang="it">
 <head>
+    <!-- Supabase Client e integrazione -->
+    <script src="scripts/supabaseClient.js"></script>
+    <script src="scripts/app-core.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Evolution System - Gestione Scadenze Contratti</title>
@@ -11,16 +14,21 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="icon" href="evolution-system.png" type="image/png">
   <link rel="apple-touch-icon" href="evolution-system.png">
   <link rel="stylesheet" href="styles/dashboard.css">
 </head>
 <body>
-<div id="login-screen" class="login-screen"></div>
+<div id="login-screen" class="login-screen">
+  <form id="login-form" style="max-width:320px;margin:40px auto;padding:24px;background:#fff;border-radius:8px;box-shadow:0 2px 16px #0001;display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin-bottom:8px">Accedi</h2>
+    <input type="email" id="login-email" placeholder="Email" required style="padding:8px;font-size:16px">
+    <input type="password" id="login-password" placeholder="Password" required style="padding:8px;font-size:16px">
+    <button type="submit" style="padding:10px 0;font-size:16px;background:#2d8a4e;color:#fff;border:none;border-radius:4px;cursor:pointer">Login</button>
+    <div id="login-error" style="color:#d63c3c;font-size:14px;display:none"></div>
+  </form>
+</div>
 <div id="app-shell" class="app-shell" style="display:none">
   <nav class="sidebar" id="sidebar">
       <div class="sidebar-logo">
@@ -78,6 +86,75 @@
   </nav>
 
   <div class="main-area">
+                <!-- Gestione profilo utente -->
+                <div id="profile-wrap" style="padding:24px;display:none">
+                  <h2>Profilo utente</h2>
+                  <div id="profile-feedback" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:4px;font-size:15px"></div>
+                  <form id="profile-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:18px;background:#f8f8f8;padding:12px 8px;border-radius:6px">
+                    <input type="email" id="pf-email" placeholder="Email" required style="padding:6px;width:220px">
+                    <input type="password" id="pf-password" placeholder="Nuova password (opzionale)" style="padding:6px;width:180px">
+                    <button type="submit" style="padding:8px 18px;background:#2a5bd7;color:#fff;border:none;border-radius:4px;cursor:pointer">Aggiorna profilo</button>
+                  </form>
+                </div>
+              <button class="tb-btn" onclick="showProfile()" style="margin-bottom:8px;width:100%">Profilo</button>
+            <footer style="background:#f5f5f5;padding:18px 0;text-align:center;font-size:14px;color:#888;margin-top:32px">
+              <span>Evolution System &copy; 2026. Tutti i diritti riservati. | <a href="#" onclick="showPrivacy()">Privacy &amp; Termini</a></span>
+            </footer>
+            <!-- Tabella aziende -->
+            <div id="companies-table-wrap" style="padding:24px;display:none">
+              <h2>Aziende</h2>
+              <div id="company-feedback" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:4px;font-size:15px"></div>
+              <form id="company-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:18px;background:#f8f8f8;padding:12px 8px;border-radius:6px">
+                <input type="text" id="cf-company-name" placeholder="Nome azienda" required style="padding:6px;width:180px">
+                <input type="email" id="cf-company-email" placeholder="Email amministratore" required style="padding:6px;width:200px">
+                <button type="submit" style="padding:8px 18px;background:#2a5bd7;color:#fff;border:none;border-radius:4px;cursor:pointer">Aggiungi azienda</button>
+              </form>
+              <table id="companies-table" style="width:100%;border-collapse:collapse;background:#fff">
+                <thead>
+                  <tr style="background:#f5f5f5">
+                    <th>Nome</th>
+                    <th>Email admin</th>
+                    <th>Data creazione</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+        <!-- Tabella contratti caricati da Supabase -->
+        <div id="contracts-table-wrap" style="padding:24px;display:none">
+                <div id="contract-feedback" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:4px;font-size:15px"></div>
+                <form id="contract-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:18px;background:#f8f8f8;padding:12px 8px;border-radius:6px">
+                  <input type="text" id="cf-employee" placeholder="Dipendente" required style="padding:6px;width:140px">
+                  <input type="text" id="cf-type" placeholder="Tipo Contratto" required style="padding:6px;width:140px">
+                  <input type="date" id="cf-start" required style="padding:6px;width:130px">
+                  <input type="date" id="cf-end" required style="padding:6px;width:130px">
+                  <select id="cf-renewable" style="padding:6px;width:110px">
+                    <option value="true">Prorogabile</option>
+                    <option value="false">Non prorogabile</option>
+                  </select>
+                  <input type="number" id="cf-renew-months" placeholder="Mesi Proroga" min="0" style="padding:6px;width:110px">
+                  <input type="text" id="cf-renew-type" placeholder="Tipo Proroga" style="padding:6px;width:120px">
+                  <input type="number" id="cf-renew-notice" placeholder="Preavviso (gg)" min="0" style="padding:6px;width:110px">
+                  <input type="number" id="cf-renew-count" placeholder="Proroghe fatte" min="0" style="padding:6px;width:110px">
+                  <input type="text" id="cf-notes" placeholder="Note" style="padding:6px;width:180px">
+                  <button type="submit" style="padding:8px 18px;background:#2d8a4e;color:#fff;border:none;border-radius:4px;cursor:pointer">Aggiungi contratto</button>
+                </form>
+          <h2>Contratti aziendali</h2>
+          <table id="contracts-table" style="width:100%;border-collapse:collapse;background:#fff">
+            <thead>
+              <tr style="background:#f5f5f5">
+                <th>Dipendente</th>
+                <th>Tipo Contratto</th>
+                <th>Inizio</th>
+                <th>Scadenza</th>
+                <th>Prorogabile</th>
+                <th>Note</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
     <header class="topbar">
       <button class="icon-btn" onclick="toggleMobileSidebar()" id="mobile-menu-btn">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -154,6 +231,237 @@
 <script src="scripts/app-logout.js"></script>
 </script>
 <script>
+// Mostra/nascondi sezione profilo
+function showProfile() {
+  document.getElementById('profile-wrap').style.display = '';
+  document.getElementById('contracts-table-wrap').style.display = 'none';
+  document.getElementById('companies-table-wrap').style.display = 'none';
+  // Carica dati utente
+  window.supabaseClient.auth.getUser().then(({ data: { user } }) => {
+    document.getElementById('pf-email').value = user?.email || '';
+  });
+}
+
+// Gestione update profilo
+document.getElementById('profile-form').onsubmit = async function(e) {
+  e.preventDefault();
+  const feedback = document.getElementById('profile-feedback');
+  feedback.style.display = 'none';
+  try {
+    const email = document.getElementById('pf-email').value;
+    const password = document.getElementById('pf-password').value;
+    if (email) {
+      await window.supabaseClient.auth.updateUser({ email });
+    }
+    if (password) {
+      await window.supabaseClient.auth.updateUser({ password });
+    }
+    feedback.textContent = 'Profilo aggiornato!';
+    feedback.style.background = '#e6faed';
+    feedback.style.color = '#1a7f37';
+    feedback.style.display = 'block';
+    document.getElementById('profile-form').reset();
+  } catch (err) {
+    feedback.textContent = err.message || 'Errore aggiornamento profilo';
+    feedback.style.background = '#ffeaea';
+    feedback.style.color = '#d63c3c';
+    feedback.style.display = 'block';
+  }
+};
+
+// Mostra privacy
+function showPrivacy() {
+  alert('Informativa privacy: i dati sono trattati secondo la normativa vigente. Nessun dato viene ceduto a terzi. Per dettagli scrivere a info@evolutionsystem.it');
+}
+// Aggiorna un contratto
+async function updateContract(id, fields) {
+  const { error } = await window.supabaseClient.from('contracts').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+// Elimina un contratto
+async function deleteContract(id) {
+  const { error } = await window.supabaseClient.from('contracts').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Mostra modale modifica contratto
+function openEditContractModal(contract) {
+  const modal = document.createElement('div');
+  modal.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0007;z-index:10000;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:#fff;padding:24px 18px;border-radius:8px;min-width:320px;max-width:96vw;box-shadow:0 2px 24px #0002">
+      <h3>Modifica contratto</h3>
+      <form id="edit-contract-form" style="display:flex;flex-direction:column;gap:10px">
+        <input type="text" id="edit-employee" placeholder="Dipendente" value="${contract.employee_name||''}" required>
+        <input type="text" id="edit-type" placeholder="Tipo Contratto" value="${contract.contract_type||''}" required>
+        <input type="date" id="edit-start" value="${contract.start_date||''}" required>
+        <input type="date" id="edit-end" value="${contract.end_date||''}" required>
+        <select id="edit-renewable">
+          <option value="true" ${contract.renewable?'selected':''}>Prorogabile</option>
+          <option value="false" ${!contract.renewable?'selected':''}>Non prorogabile</option>
+        </select>
+        <input type="number" id="edit-renew-months" placeholder="Mesi Proroga" value="${contract.renew_months||''}">
+        <input type="text" id="edit-renew-type" placeholder="Tipo Proroga" value="${contract.renew_type||''}">
+        <input type="number" id="edit-renew-notice" placeholder="Preavviso (gg)" value="${contract.renew_notice||''}">
+        <input type="number" id="edit-renew-count" placeholder="Proroghe fatte" value="${contract.renew_count||0}">
+        <input type="text" id="edit-notes" placeholder="Note" value="${contract.notes||''}">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="submit" style="background:#2d8a4e;color:#fff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer">Salva</button>
+          <button type="button" onclick="this.closest('.modal-edit-contract').remove()" style="background:#eee;padding:8px 16px;border:none;border-radius:4px;cursor:pointer">Annulla</button>
+        </div>
+      </form>
+    </div>
+  `;
+  modal.className = 'modal-edit-contract';
+  document.body.appendChild(modal);
+  document.getElementById('edit-contract-form').onsubmit = async function(e) {
+    e.preventDefault();
+    try {
+      await updateContract(contract.id, {
+        employee_name: document.getElementById('edit-employee').value,
+        contract_type: document.getElementById('edit-type').value,
+        start_date: document.getElementById('edit-start').value,
+        end_date: document.getElementById('edit-end').value,
+        renewable: document.getElementById('edit-renewable').value === 'true',
+        renew_months: parseInt(document.getElementById('edit-renew-months').value) || null,
+        renew_type: document.getElementById('edit-renew-type').value,
+        renew_notice: parseInt(document.getElementById('edit-renew-notice').value) || null,
+        renew_count: parseInt(document.getElementById('edit-renew-count').value) || 0,
+        notes: document.getElementById('edit-notes').value
+      });
+      modal.remove();
+      await renderContracts();
+    } catch (err) {
+      alert('Errore salvataggio: ' + (err.message || err));
+    }
+  };
+}
+
+// Conferma eliminazione contratto
+function confirmDeleteContract(id) {
+  if (confirm('Vuoi davvero eliminare questo contratto?')) {
+    deleteContract(id).then(renderContracts).catch(err => alert('Errore eliminazione: ' + (err.message || err)));
+  }
+}
+// Funzioni CRUD aziende
+async function loadCompanies() {
+  const { data, error } = await window.supabaseClient.from('companies').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+async function insertCompany(company) {
+  const { data, error } = await window.supabaseClient.from('companies').insert([company]).select();
+  if (error) throw error;
+  return data;
+}
+
+// Render aziende
+async function renderCompanies() {
+  try {
+    const companies = await loadCompanies();
+    const wrap = document.getElementById('companies-table-wrap');
+    const tbody = document.querySelector('#companies-table tbody');
+    tbody.innerHTML = '';
+    if (!companies.length) {
+      wrap.style.display = '';
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#888;padding:24px">Nessuna azienda presente</td></tr>';
+      return;
+    }
+    companies.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${c.name || ''}</td>
+        <td>${c.admin_email || ''}</td>
+        <td>${c.created_at ? c.created_at.split('T')[0] : ''}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    wrap.style.display = '';
+  } catch (err) {
+    alert('Errore caricamento aziende: ' + (err.message || err));
+  }
+}
+
+// Gestione form inserimento azienda
+document.getElementById('company-form').onsubmit = async function(e) {
+  e.preventDefault();
+  const feedback = document.getElementById('company-feedback');
+  feedback.style.display = 'none';
+  try {
+    await insertCompany({
+      name: document.getElementById('cf-company-name').value,
+      admin_email: document.getElementById('cf-company-email').value
+    });
+    feedback.textContent = 'Azienda aggiunta con successo!';
+    feedback.style.background = '#e6faed';
+    feedback.style.color = '#1a7f37';
+    feedback.style.display = 'block';
+    document.getElementById('company-form').reset();
+    await renderCompanies();
+  } catch (err) {
+    feedback.textContent = err.message || 'Errore inserimento azienda';
+    feedback.style.background = '#ffeaea';
+    feedback.style.color = '#d63c3c';
+    feedback.style.display = 'block';
+  }
+};
+
+// Mostra tabella aziende all'avvio (solo admin, demo: sempre visibile)
+window.addEventListener('DOMContentLoaded', async () => {
+  await renderCompanies();
+});
+// Controllo sessione utente all'avvio
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    if (user) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app-shell').style.display = '';
+      await renderContracts();
+    }
+  } catch {}
+});
+
+// Logout sicuro
+window.doLogout = async function() {
+  await window.supabaseClient.auth.signOut();
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('login-screen').style.display = '';
+};
+
+// Gestione form inserimento contratto
+document.getElementById('contract-form').onsubmit = async function(e) {
+  e.preventDefault();
+  const feedback = document.getElementById('contract-feedback');
+  feedback.style.display = 'none';
+  try {
+    await insertContract({
+      employee_name: document.getElementById('cf-employee').value,
+      contract_type: document.getElementById('cf-type').value,
+      start_date: document.getElementById('cf-start').value,
+      end_date: document.getElementById('cf-end').value,
+      renewable: document.getElementById('cf-renewable').value === 'true',
+      renew_months: parseInt(document.getElementById('cf-renew-months').value) || null,
+      renew_type: document.getElementById('cf-renew-type').value,
+      renew_notice: parseInt(document.getElementById('cf-renew-notice').value) || null,
+      renew_count: parseInt(document.getElementById('cf-renew-count').value) || 0,
+      notes: document.getElementById('cf-notes').value
+    });
+    feedback.textContent = 'Contratto aggiunto con successo!';
+    feedback.style.background = '#e6faed';
+    feedback.style.color = '#1a7f37';
+    feedback.style.display = 'block';
+    document.getElementById('contract-form').reset();
+    await renderContracts();
+  } catch (err) {
+    feedback.textContent = err.message || 'Errore inserimento contratto';
+    feedback.style.background = '#ffeaea';
+    feedback.style.color = '#d63c3c';
+    feedback.style.display = 'block';
+  }
+};
 // Logout automatico alla chiusura del browser
 window.addEventListener('unload', function() {
   if (typeof doLogout === 'function') {
@@ -162,4 +470,83 @@ window.addEventListener('unload', function() {
 });
 </script>
 </body>
+<script>
+// Gestione login
+document.getElementById('login-form').onsubmit = async function(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('login-error');
+  errBox.style.display = 'none';
+  try {
+    await login(email, password);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-shell').style.display = '';
+    await renderContracts();
+  } catch (err) {
+    errBox.textContent = err.message || 'Errore di autenticazione';
+    errBox.style.display = 'block';
+  }
+};
+
+// Carica e mostra i contratti dopo il login
+async function renderContracts() {
+  try {
+    const contracts = await loadContracts();
+    const wrap = document.getElementById('contracts-table-wrap');
+    const tbody = document.querySelector('#contracts-table tbody');
+    tbody.innerHTML = '';
+    if (!contracts.length) {
+      wrap.style.display = '';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:24px">Nessun contratto presente</td></tr>';
+      return;
+    }
+    contracts.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${c.employee_name || ''}</td>
+        <td>${c.contract_type || ''}</td>
+        <td>${c.start_date || ''}</td>
+        <td>${c.end_date || ''}</td>
+        <td>${c.renewable ? 'Sì' : 'No'}</td>
+        <td>${c.notes || ''}</td>
+        <td>
+          <button onclick='openEditContractModal(${JSON.stringify(c)})' style="background:#2a5bd7;color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:14px;margin-right:4px">Modifica</button>
+          <button onclick='confirmDeleteContract(${c.id})' style="background:#d63c3c;color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:14px">Elimina</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    wrap.style.display = '';
+  } catch (err) {
+    alert('Errore caricamento contratti: ' + (err.message || err));
+  }
+  // Nascondi feedback dopo 3 secondi
+  const feedback = document.getElementById('contract-feedback');
+  if (feedback && feedback.style.display === 'block') {
+    setTimeout(() => { feedback.style.display = 'none'; }, 3000);
+  }
+}
+
+// Esempio: aggiungi contratto (da collegare a un form reale)
+async function addContractDemo() {
+  try {
+    await insertContract({
+      employee_name: 'Mario Rossi',
+      contract_type: 'Tempo determinato',
+      start_date: '2026-06-01',
+      end_date: '2027-06-01',
+      renewable: true,
+      renew_months: 12,
+      renew_type: 'Automatica',
+      renew_notice: 30,
+      renew_count: 0,
+      notes: 'Note demo'
+    });
+    await renderContracts();
+  } catch (err) {
+    alert('Errore inserimento contratto: ' + (err.message || err));
+  }
+}
+</script>
 </html>

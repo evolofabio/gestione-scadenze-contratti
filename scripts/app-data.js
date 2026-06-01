@@ -301,55 +301,14 @@ function encRoom(n){return String(n).replace(/[.#$\[\]\/]/g,'_').substring(0,128
 function fbArrayFromVal(v){if(!v)return null;if(Array.isArray(v))return v;if(typeof v==='object'){const k=Object.keys(v);if(!k.length)return null;return k.map(i=>v[i]).filter(Boolean)}return null}
 
 function initSync(){
-  if(!syncConfig.enabled||!syncConfig.apiKey||!syncConfig.databaseURL||!syncConfig.roomName){disconnectSync();return}
-  try{
-    const ex=firebase.apps.find(a=>a.name==='syncApp');
-    if(ex)ex.delete().then(connectSync).catch(connectSync);
-    else connectSync();
-  }catch(e){syncState.connected=false;updateSyncUI()}
-}
-function connectSync(){
-  try{
-    const app=firebase.initializeApp({apiKey:syncConfig.apiKey,databaseURL:syncConfig.databaseURL},'syncApp');
-    syncState.db=app.database();
-    syncState.db.ref('.info/connected').on('value',s=>{syncState.connected=s.val()===true;updateSyncUI()});
-    const ref=syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data');
-    if(syncState.listener)syncState.listener.off();
-    syncState.listener=ref;
-    ref.on('value',s=>{
-      if(syncState.skipNext){syncState.skipNext=false;return}
-      const rd=fbArrayFromVal(s.val());
-      if(rd&&JSON.stringify(rd)!==JSON.stringify(state.companies)){
-        state.companies=rd;save(SK.data,rd);syncState.lastSync=new Date().toISOString();renderPage();renderSidebarCompanies();
-      }updateSyncUI();
-    });
-  }catch(e){syncState.connected=false;updateSyncUI()}
+  syncState.connected = !!syncConfig.enabled;
+  syncState.lastSync = null;
+  updateSyncUI();
 }
 function syncToCloud(){
-  if(!syncState.db||!syncConfig.enabled||!syncConfig.roomName)return;
-  // Prima di sincronizzare, controlla se ci sono differenze rispetto al cloud
-  syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').once('value').then(snap=>{
-    const cloudData = fbArrayFromVal(snap.val());
-    if(cloudData && JSON.stringify(cloudData)!==JSON.stringify(state.companies)){
-      // Merge intelligente: unisce dati locali e cloud, evitando duplicati
-      const merged = mergeCompanies(cloudData, state.companies);
-      if(JSON.stringify(merged)!==JSON.stringify(state.companies)){
-        // Avvisa l'utente del conflitto
-        showToast('⚠️ Dati cloud diversi: unione automatica effettuata.');
-        state.companies = merged;
-        save(SK.data, merged);
-        renderPage();
-        renderSidebarCompanies();
-      }
-    }
-    // Procedi con la sincronizzazione
-    syncState.skipNext=true;
-    syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').set(JSON.parse(JSON.stringify(state.companies))).then(()=>{syncState.lastSync=new Date().toISOString();updateSyncUI()}).catch(()=>{syncState.skipNext=false});
-  }).catch(()=>{
-    // In caso di errore, fallback sync classico
-    syncState.skipNext=true;
-    syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').set(JSON.parse(JSON.stringify(state.companies))).then(()=>{syncState.lastSync=new Date().toISOString();updateSyncUI()}).catch(()=>{syncState.skipNext=false});
-  });
+  if(!syncConfig.enabled)return;
+  syncState.lastSync = new Date().toISOString();
+  updateSyncUI();
 }
 
 // Merge intelligente tra dati cloud e locali
@@ -371,11 +330,7 @@ function mergeCompanies(cloud, local){
 }
 // Gestione della sincronizzazione: metodi utili mancanti
 function disconnectSync(){
-  try{
-    if(syncState.listener){ try{ syncState.listener.off(); }catch(e){} syncState.listener=null; }
-    if(syncState.db){ try{ if(typeof syncState.db.goOffline==='function') syncState.db.goOffline(); }catch(e){} syncState.db=null; }
-    if(typeof firebase!=='undefined' && firebase.apps){ const ex = firebase.apps.find(a=>a.name==='syncApp'); if(ex) try{ ex.delete(); }catch(e){} }
-  }catch(e){}
+  try{}catch(e){}
   syncState.connected=false; syncState.lastSync=null; syncState.skipNext=false; updateSyncUI();
 }
 
@@ -395,33 +350,23 @@ function applySyncConfig(){
 }
 
 function pullFromCloud(){
-  if(!syncState.db || !syncState.connected){ showToast('Non connesso al cloud'); return; }
-  syncState.db.ref('rooms/'+encRoom(syncConfig.roomName)+'/data').once('value').then(snap=>{
-    const cloudData = fbArrayFromVal(snap.val());
-    if(!cloudData){ showToast('Nessun dato nel cloud'); return; }
-    const merged = mergeCompanies(cloudData, state.companies);
-    if(JSON.stringify(merged)!==JSON.stringify(state.companies)){
-      state.companies = merged; save(SK.data, merged); renderPage(); renderSidebarCompanies(); showToast('Dati importati dal cloud');
-    } else showToast('Dati cloud identici a quelli locali');
-  }).catch(e=>{ showToast('Errore download: '+(e.message||e)); });
+  showToast('Sincronizzazione Firebase rimossa in modalita Supabase.');
 }
 
 function forcePushToCloud(){
-  if(!syncState.db || !syncState.connected){ showToast('Non connesso al cloud'); return; }
   syncToCloud();
-  showToast('Invio dati al cloud...');
+  showToast('Configurazione sincronizzazione salvata.');
 }
 
 function updateSyncUI(){
   const el = document.getElementById('sync-status');
   if(!el) return;
   let html = '';
-  if(!syncConfig.enabled) html = '<div style="font-size:13px;color:var(--text3)">Sincronizzazione disattivata</div>';
-  else if(syncState.connected) html = `<div style="font-size:13px;color:var(--text3)"><span class="status-pill ok"><span class="status-dot ok"></span>Connesso</span>${syncState.lastSync? ' Ultima sincronizzazione: '+new Date(syncState.lastSync).toLocaleString() : ''}</div>`;
-  else html = '<div style="font-size:13px;color:var(--text3)"><span class="status-pill warn"><span class="status-dot warn"></span>Non connesso</span></div>';
+  if(!syncConfig.enabled) html = '<div style="font-size:13px;color:var(--text3)">Sincronizzazione cloud disattivata</div>';
+  else html = `<div style="font-size:13px;color:var(--text3)"><span class="status-pill ok"><span class="status-dot ok"></span>Modalita Supabase</span>${syncState.lastSync? ' Ultima applicazione: '+new Date(syncState.lastSync).toLocaleString() : ''}</div>`;
   el.innerHTML = html;
   const btnPull = document.getElementById('btn-pull'); const btnPush = document.getElementById('btn-push');
-  if(btnPull) btnPull.disabled = !syncState.connected; if(btnPush) btnPush.disabled = !syncState.connected;
+  if(btnPull) btnPull.disabled = true; if(btnPush) btnPush.disabled = false;
 }
 // If no explicit login flow is active, show the app and render initial UI
 // === LOGIN SCREEN & AUTH ===
@@ -462,6 +407,52 @@ function renderRegisterScreen(msg) {
 window.showLogin = function() { renderLoginScreen(); };
 window.showRegister = function() { renderRegisterScreen(); };
 
+function currentAuthId() {
+  return authUser?.id || authUser?.uid || null;
+}
+
+async function loadProfileById(uid) {
+  if (!uid) return null;
+  const { data, error } = await window.supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', uid)
+    .maybeSingle();
+  if (error) {
+    console.error('loadProfileById', error);
+    return null;
+  }
+  return data;
+}
+
+async function saveProfilePatch(uid, patch) {
+  if (!uid) return false;
+  const payload = Object.assign({ id: uid }, patch || {});
+  const { error } = await window.supabaseClient
+    .from('profiles')
+    .upsert(payload, { onConflict: 'id' });
+  if (error) {
+    console.error('saveProfilePatch', error);
+    return false;
+  }
+  return true;
+}
+
+async function ensureProfileForUser(user) {
+  if (!user || !user.id) return null;
+  let profile = await loadProfileById(user.id);
+  if (profile) return profile;
+  const isAdminUser = String(user.email || '').toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
+  await saveProfilePatch(user.id, {
+    email: user.email || '',
+    role: isAdminUser ? 'admin' : 'user',
+    status: isAdminUser ? 'approved' : 'pending',
+    created_at: new Date().toISOString()
+  });
+  profile = await loadProfileById(user.id);
+  return profile;
+}
+
 function renderPendingScreen() {
   const loginEl = document.getElementById('login-screen');
   if (!loginEl) return;
@@ -496,81 +487,104 @@ function renderRejectedScreen() {
 }
 
 
-window.doLogin = function() {
-  ensureFirebaseApp();
+window.doLogin = async function() {
+  if (!window.supabaseClient || !window.supabaseClient.auth) {
+    renderLoginScreen('Supabase non inizializzato correttamente');
+    return;
+  }
   const email = (document.getElementById('login-email')||{}).value?.trim();
   const password = (document.getElementById('login-password')||{}).value;
   if (!email || !password) { renderLoginScreen('Inserisci email e password'); return; }
-  firebase.auth().signInWithEmailAndPassword(email, password)
-    .then(user => { authUser = user.user; afterLogin(); })
-    .catch(e => {
-      let msg = 'Errore: ' + (e.code || e.message || 'sconosciuto');
-      if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') msg = 'Email o password non corretti';
-      else if (e.code === 'auth/invalid-email') msg = 'Email non valida';
-      else if (e.code === 'auth/too-many-requests') msg = 'Troppi tentativi, riprova più tardi';
-      renderLoginScreen(msg);
-    });
+  try {
+    const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    authUser = data?.user ? { ...data.user, uid: data.user.id } : null;
+    await afterLogin();
+  } catch (e) {
+    let msg = 'Email o password non corretti';
+    const msgRaw = String(e?.message || e || '');
+    if (/invalid email/i.test(msgRaw)) msg = 'Email non valida';
+    if (/too many requests/i.test(msgRaw)) msg = 'Troppi tentativi, riprova piu tardi';
+    renderLoginScreen(msg);
+  }
 };
 
 
-window.doRegister = function() {
-  ensureFirebaseApp();
+window.doRegister = async function() {
+  if (!window.supabaseClient || !window.supabaseClient.auth) {
+    renderRegisterScreen('Supabase non inizializzato correttamente');
+    return;
+  }
   const email = (document.getElementById('register-email')||{}).value?.trim();
   const password = (document.getElementById('register-password')||{}).value;
   if (!email || !password) { renderRegisterScreen('Inserisci email e password'); return; }
-  firebase.auth().createUserWithEmailAndPassword(email, password)
-    .then(user => {
-      authUser = user.user;
-      // L'admin si registra normalmente
-      if (email === ADMIN_EMAIL) { afterLogin(); return; }
-      // Nuovo utente: salva come pending e disconnetti in attesa di approvazione
-      firebase.database().ref('pendingUsers/' + user.user.uid).set({
-        email: email,
-        status: 'pending',
-        createdAt: Date.now()
-      }).then(() => {
-        firebase.auth().signOut();
-        authUser = null;
-        renderPendingScreen();
-      }).catch(() => {
-        firebase.auth().signOut();
-        authUser = null;
-        renderPendingScreen();
-      });
-    })
-    .catch(e => { renderRegisterScreen('Errore: '+(e.message||'Impossibile registrare')); });
+  try {
+    const { data, error } = await window.supabaseClient.auth.signUp({ email, password });
+    if (error) throw error;
+    const user = data?.user || null;
+    if (!user) {
+      renderRegisterScreen('Registrazione avviata. Controlla la tua email per confermare l\'account.');
+      return;
+    }
+
+    const isAdminUser = String(email).toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
+    await saveProfilePatch(user.id, {
+      email,
+      role: isAdminUser ? 'admin' : 'user',
+      status: isAdminUser ? 'approved' : 'pending',
+      created_at: new Date().toISOString()
+    });
+
+    if (!isAdminUser) {
+      await window.supabaseClient.auth.signOut();
+      authUser = null;
+      renderPendingScreen();
+      return;
+    }
+    authUser = { ...user, uid: user.id };
+    await afterLogin();
+  } catch (e) {
+    renderRegisterScreen('Errore: ' + (e.message || 'Impossibile registrare'));
+  }
 };
 
-function afterLogin() {
+async function afterLogin() {
   if (!authUser) return;
-  // Admin accede direttamente senza controllo approvazione
-  if (authUser.email === ADMIN_EMAIL) { proceedAfterLogin(); return; }
-  // Verifica lo stato di approvazione dell'utente nel DB
   try {
-    firebase.database().ref('pendingUsers/' + authUser.uid).once('value').then(snap => {
-      const data = snap.val();
-      if (data && data.status === 'pending') {
-        firebase.auth().signOut();
-        authUser = null;
-        renderPendingScreen();
-      } else if (data && data.status === 'rejected') {
-        firebase.auth().signOut();
-        authUser = null;
-        renderRejectedScreen();
-      } else {
-        proceedAfterLogin();
-      }
-    }).catch(() => { proceedAfterLogin(); });
-  } catch(e) { proceedAfterLogin(); }
+    const profile = await ensureProfileForUser(authUser);
+    const status = String(profile?.status || 'approved').toLowerCase();
+    const isAdminUser = String(authUser.email || '').toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
+    if (!isAdminUser && status === 'pending') {
+      await window.supabaseClient.auth.signOut();
+      authUser = null;
+      renderPendingScreen();
+      return;
+    }
+    if (!isAdminUser && status === 'rejected') {
+      await window.supabaseClient.auth.signOut();
+      authUser = null;
+      renderRejectedScreen();
+      return;
+    }
+    await proceedAfterLogin(profile);
+  } catch(e) {
+    console.error('afterLogin', e);
+    await proceedAfterLogin(null);
+  }
 }
 
-function proceedAfterLogin() {
-  // Verifica accettazione licenza per questo utente
-  const licKey = 'cm2_license_v1_' + (authUser?.uid || 'guest');
-  if (!localStorage.getItem(licKey)) {
+async function proceedAfterLogin(profile) {
+  const licKey = 'cm2_license_v1_' + (currentAuthId() || 'guest');
+  const acceptedLocal = !!localStorage.getItem(licKey);
+  const acceptedRemote = !!profile?.license_accepted_at;
+  if (!acceptedLocal && !acceptedRemote) {
     renderLicenseScreen(licKey);
     return;
   }
+  if (acceptedRemote && !acceptedLocal) {
+    try { localStorage.setItem(licKey, String(profile.license_accepted_at)); } catch(_) {}
+  }
+  await loadUserConfig(profile);
   _doEnterApp();
 }
 
@@ -583,7 +597,7 @@ function renderLicenseScreen(licKey) {
       <div class="license-version">Versione 1.0 — Maggio 2026</div>
       <div class="license-body" id="license-body">
         <h4>Contratto di licenza d'uso del software</h4>
-        <p>Il presente Contratto di Licenza d'Uso ("Contratto") disciplina l'accesso e l'utilizzo della piattaforma <strong>Evolution System – Gestione Scadenze Contratti</strong> (il "Software"), sviluppata e di proprietà esclusiva di <strong>Evolution System di Evolo Fabio</strong> (il "Fornitore").</p>
+        <p>Il presente Contratto di Licenza d'Uso ("Contratto") disciplina l'accesso e l'utilizzo della piattaforma <strong>Evolution System – Gestione Scadenze Contratti</strong> (il "Software"), sviluppata e di proprietà esclusiva di <strong>Evolution System</strong> (il "Fornitore").</p>
 
         <h4>1. Concessione di licenza</h4>
         <p>Il Fornitore concede all'Utente una licenza personale, non esclusiva, non trasferibile e revocabile per l'utilizzo del Software esclusivamente per le finalità di gestione interna dei contratti di lavoro e dei cantieri. È vietato cedere, sublicenziare, distribuire o rivendere il Software o qualsiasi parte di esso.</p>
@@ -592,7 +606,7 @@ function renderLicenseScreen(licKey) {
         <p>Il Software, inclusi codice sorgente, interfaccia grafica, logiche applicative, marchi e documentazione, è di proprietà esclusiva del Fornitore ed è protetto dalla normativa italiana ed europea sul diritto d'autore (L. 633/1941 e D.Lgs. 518/1992). L'Utente non acquista alcun diritto di proprietà sul Software.</p>
 
         <h4>3. Trattamento dei dati personali</h4>
-        <p>I dati inseriti nel Software (inclusi dati di dipendenti e contratti) sono trattati nel rispetto del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003. I dati sono sincronizzati su infrastruttura Firebase (Google LLC) con sede all'interno dell'UE. L'Utente è responsabile della correttezza e liceità dei dati immessi.</p>
+        <p>I dati inseriti nel Software (inclusi dati di dipendenti e contratti) sono trattati nel rispetto del Regolamento UE 2016/679 (GDPR) e del D.Lgs. 196/2003. I dati applicativi sono gestiti su infrastruttura Supabase (UE). L'Utente e responsabile della correttezza e liceita dei dati immessi.</p>
 
         <h4>4. Limitazione di responsabilità</h4>
         <p>Il Software viene fornito "così com'è". Il Fornitore non garantisce che il Software sia privo di errori, interruzioni o incompatibilità. In nessun caso il Fornitore sarà responsabile per perdite di dati, mancati rinnovi contrattuali, sanzioni o danni diretti/indiretti derivanti dall'utilizzo o dalla non disponibilità del Software. L'Utente è l'unico responsabile delle decisioni aziendali basate sui dati gestiti.</p>
@@ -607,7 +621,7 @@ function renderLicenseScreen(licKey) {
         <p>Il Fornitore si riserva il diritto di sospendere o revocare l'accesso al Software in caso di violazione del presente Contratto, senza obbligo di preavviso e senza alcun obbligo di rimborso.</p>
 
         <h4>8. Contatti</h4>
-        <p>Per qualsiasi richiesta relativa alla licenza o al trattamento dei dati: <strong>evolo434@gmail.com</strong></p>
+        <p>Per qualsiasi richiesta relativa alla licenza o al trattamento dei dati: <strong>support@evolution-system.com</strong></p>
       </div>
       <div class="license-scroll-hint" id="license-hint">↓ Scorri per leggere prima di accettare</div>
       <div class="license-accept-row">
@@ -617,7 +631,7 @@ function renderLicenseScreen(licKey) {
         </label>
       </div>
       <div class="modal-actions" style="margin-top:14px">
-        <button class="m-btn" onclick="firebase.auth().signOut();showLogin()">Annulla</button>
+        <button class="m-btn" onclick="doLogout()">Annulla</button>
         <button class="m-btn primary" id="license-accept-btn" disabled onclick="acceptLicense('${licKey}')">Accetta e continua</button>
       </div>
     </div>
@@ -641,19 +655,14 @@ window.onLicenseCbChange = function() {
   if (btn) btn.disabled = !(cb && cb.checked);
 };
 
-window.acceptLicense = function(licKey) {
+window.acceptLicense = async function(licKey) {
   const cb = document.getElementById('license-accept-cb');
   if (!cb || !cb.checked) return;
   const acceptedAt = new Date().toISOString();
   try { localStorage.setItem(licKey, acceptedAt); } catch(_) {}
-  // Salva anche su Firebase per tracciabilità
   if (authUser) {
     try {
-      firebase.database().ref('licenseAcceptance/' + authUser.uid).set({
-        acceptedAt: acceptedAt,
-        email: authUser.email,
-        version: 'v1'
-      });
+      await saveProfilePatch(currentAuthId(), { license_accepted_at: acceptedAt, license_version: 'v1', email: authUser.email || '' });
     } catch(_) {}
   }
   _doEnterApp();
@@ -671,26 +680,24 @@ function _doEnterApp() {
   // Registra Service Worker e abilita notifiche push di sistema
   if (typeof initPushNotifications === 'function') initPushNotifications();
 }
-// Salva la configurazione utente su Firebase DB
-function saveUserConfig() {
-  if (!authUser) return;
-  const uid = authUser.uid;
+// Salva la configurazione utente su profilo Supabase
+async function saveUserConfig() {
+  const uid = currentAuthId();
+  if (!uid) return;
   const userConfig = {
     settings: emailSettings,
     sync: syncConfig
   };
   try {
-    firebase.database().ref('userConfig/' + uid).set(userConfig);
+    await saveProfilePatch(uid, { settings: userConfig.settings, sync: userConfig.sync, updated_at: new Date().toISOString() });
   } catch(e) { console.error('saveUserConfig', e); }
 }
 
-// Carica la configurazione utente da Firebase DB
-function loadUserConfig() {
+// Carica la configurazione utente da profilo Supabase
+function loadUserConfig(profile) {
   return new Promise((resolve) => {
     if (!authUser) return resolve();
-    const uid = authUser.uid;
-    firebase.database().ref('userConfig/' + uid).once('value').then(snap => {
-      const val = snap.val();
+    const applyConfig = (val) => {
       if (val && val.settings) {
         emailSettings = val.settings;
         save(SK.settings, emailSettings);
@@ -700,7 +707,16 @@ function loadUserConfig() {
         save(SK.sync, syncConfig);
       }
       resolve();
-    }).catch(()=>resolve());
+    };
+
+    if (profile) {
+      applyConfig(profile);
+      return;
+    }
+
+    const uid = currentAuthId();
+    if (!uid) return resolve();
+    loadProfileById(uid).then(p => applyConfig(p || {})).catch(() => resolve());
   });
 }
 window.setSendMethod = v => { emailSettings.sendMethod = v; save(SK.settings, emailSettings); saveUserConfig(); renderPage(); };
@@ -735,34 +751,33 @@ window.loadAdminUsers = function() {
   const container = document.getElementById('admin-users-list');
   if (!container) return;
   container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Caricamento…</div>';
-  ensureFirebaseApp();
-  firebase.database().ref('pendingUsers').once('value').then(snap => {
-    const val = snap.val();
-    if (!val) { container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Nessun utente registrato.</div>'; return; }
-    const users = Object.entries(val).map(([uid, data]) => ({uid, ...data}));
-    users.sort((a, b) => (b.createdAt||0) - (a.createdAt||0));
+  window.supabaseClient.from('profiles').select('id,email,status,created_at').order('created_at',{ascending:false}).then(({data,error}) => {
+    if (error) throw error;
+    const users = (data || []).filter(u => String(u.email || '').toLowerCase() !== String(ADMIN_EMAIL || '').toLowerCase());
+    if (!users.length) { container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Nessun utente registrato.</div>'; return; }
     const statusLabel = { pending: '⏳ In attesa', approved: '✅ Approvato', rejected: '❌ Rifiutato' };
     container.innerHTML = users.map(u => `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:500">${esc(u.email)}</div>
-          <div style="font-size:11px;color:var(--text3)">${statusLabel[u.status]||u.status} · ${u.createdAt ? new Date(u.createdAt).toLocaleString('it-IT') : '—'}</div>
+          <div style="font-size:13px;font-weight:500">${esc(u.email||'')}</div>
+          <div style="font-size:11px;color:var(--text3)">${statusLabel[u.status]||u.status} · ${u.created_at ? new Date(u.created_at).toLocaleString('it-IT') : '—'}</div>
         </div>
         ${u.status === 'pending' ? `
-          <button class="tb-btn primary" onclick="approveUser('${esc(u.uid)}')">Approva</button>
-          <button class="tb-btn" style="color:var(--danger)" onclick="rejectUser('${esc(u.uid)}')">Rifiuta</button>
+          <button class="tb-btn primary" onclick="approveUser('${esc(u.id)}')">Approva</button>
+          <button class="tb-btn" style="color:var(--danger)" onclick="rejectUser('${esc(u.id)}')">Rifiuta</button>
         ` : u.status === 'approved' ? `
-          <button class="tb-btn" style="color:var(--danger)" onclick="rejectUser('${esc(u.uid)}')">Revoca</button>
+          <button class="tb-btn" style="color:var(--danger)" onclick="rejectUser('${esc(u.id)}')">Revoca</button>
         ` : `
-          <button class="tb-btn primary" onclick="approveUser('${esc(u.uid)}')">Riattiva</button>
+          <button class="tb-btn primary" onclick="approveUser('${esc(u.id)}')">Riattiva</button>
         `}
       </div>`).join('');
-  }).catch(e => { if(container) container.innerHTML = '<div style="font-size:13px;color:var(--danger)">Errore caricamento utenti.</div>'; });
+  }).catch(() => { if(container) container.innerHTML = '<div style="font-size:13px;color:var(--danger)">Errore caricamento utenti.</div>'; });
 };
 
 window.approveUser = function(uid) {
   if (!isAdmin()) return;
-  firebase.database().ref('pendingUsers/' + uid).update({ status: 'approved' }).then(() => {
+  saveProfilePatch(uid, { status: 'approved', approved_by: currentAuthId(), updated_at: new Date().toISOString() }).then(ok => {
+    if (!ok) throw new Error('update failed');
     showToast('Utente approvato');
     loadAdminUsers();
   }).catch(() => showToast('Errore durante l\'approvazione'));
@@ -770,31 +785,41 @@ window.approveUser = function(uid) {
 
 window.rejectUser = function(uid) {
   if (!isAdmin()) return;
-  firebase.database().ref('pendingUsers/' + uid).update({ status: 'rejected' }).then(() => {
+  saveProfilePatch(uid, { status: 'rejected', approved_by: currentAuthId(), updated_at: new Date().toISOString() }).then(ok => {
+    if (!ok) throw new Error('update failed');
     showToast('Utente rifiutato');
     loadAdminUsers();
   }).catch(() => showToast('Errore durante il rifiuto'));
 };
 
-function checkAuth() {
-  if (!ensureFirebaseApp()) {
-    // Firebase non inizializzato: mostra schermata di login/configurazione
+async function checkAuth() {
+  if (!window.supabaseClient || !window.supabaseClient.auth) {
     const appShell = document.getElementById('app-shell');
     if (appShell) appShell.style.display = 'none';
-    renderLoginScreen();
+    renderLoginScreen('Impossibile inizializzare l\'autenticazione Supabase');
     return;
   }
-  if (!firebase || !firebase.auth) {
-    const appShell = document.getElementById('app-shell');
-    if (appShell) appShell.style.display = 'none';
-    renderLoginScreen('Impossibile inizializzare l\'autenticazione Firebase');
-    return;
-  }
-  firebase.auth().onAuthStateChanged(function(user) {
-    if (user) {
-      authUser = user;
-      afterLogin();
+
+  try {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (session && session.user) {
+      authUser = { ...session.user, uid: session.user.id };
+      await afterLogin();
     } else {
+      authUser = null;
+      const appShell = document.getElementById('app-shell');
+      if (appShell) appShell.style.display = 'none';
+      renderLoginScreen();
+    }
+  } catch (_) {
+    renderLoginScreen();
+  }
+
+  window.supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    if (session && session.user) {
+      authUser = { ...session.user, uid: session.user.id };
+      await afterLogin();
+    } else if (document.getElementById('app-shell')?.style.display !== 'none') {
       authUser = null;
       const appShell = document.getElementById('app-shell');
       if (appShell) appShell.style.display = 'none';

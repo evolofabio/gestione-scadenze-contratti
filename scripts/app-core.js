@@ -1,3 +1,70 @@
+// --- SUPABASE INTEGRAZIONE BASE ---
+// Assicurati che supabaseClient.js sia incluso PRIMA di questo file
+
+// Login utente
+async function login(email, password) {
+  const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+// Carica tutti i contratti della propria azienda
+async function loadContracts() {
+  const user = (await window.supabaseClient.auth.getUser()).data.user;
+  if (!user) throw new Error('Utente non autenticato');
+  // Recupera il profilo per ottenere company_id
+  const { data: profile, error: errProfile } = await window.supabaseClient
+    .from('profiles')
+    .select('company_id')
+    .eq('id', user.id)
+    .single();
+  if (errProfile) throw errProfile;
+  const company_id = profile.company_id;
+  // Carica i contratti
+  const { data: contracts, error: errContracts } = await window.supabaseClient
+    .from('contracts')
+    .select('*')
+    .eq('company_id', company_id);
+  if (errContracts) throw errContracts;
+  return contracts;
+}
+
+// Inserisci un nuovo contratto
+async function insertContract(contract) {
+  const user = (await window.supabaseClient.auth.getUser()).data.user;
+  if (!user) throw new Error('Utente non autenticato');
+  const { data: profile } = await window.supabaseClient
+    .from('profiles')
+    .select('company_id')
+    .eq('id', user.id)
+    .single();
+  contract.company_id = profile.company_id;
+  const { data, error } = await window.supabaseClient
+    .from('contracts')
+    .insert([contract])
+    .select();
+  if (error) throw error;
+  return data;
+}
+
+// Esempio di utilizzo:
+// await login('email@azienda.com', 'password');
+// const contratti = await loadContracts();
+// await insertContract({ employee_name: 'Mario Rossi', ... });
+// Multi-tenant: gestione tenant attivo
+let activeTenantId = null;
+
+function setActiveTenant(tenantId) {
+  activeTenantId = tenantId;
+  // Aggiorna la vista filtrando le aziende
+  if (window.renderSidebarCompanies) window.renderSidebarCompanies();
+  if (window.renderDashboard) window.renderDashboard();
+}
+
+function getCompaniesByTenant() {
+  if (!activeTenantId) return state.companies;
+  return state.companies.filter(c => c.tenantId === activeTenantId);
+}
 'use strict';
 // ═══════════════════════════════════════
 // CONSTANTS & STORAGE
@@ -15,22 +82,16 @@ function escJsArg(s){return JSON.stringify(String(s??'')).replace(/&/g,'&amp;').
 function mkDate(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOString().split('T')[0]}
 
 function defaultData(){return[
-  {id:1,name:'Acme S.r.l.',employeeName:'Marco Bianchi',contractType:'Fornitura servizi IT',startDate:'2023-04-15',endDate:mkDate(4),renewable:true,renewMonths:12,renewType:'Senza causale',renewNotice:30,renewCount:2,adminEmail:'admin@example.com',companyEmail:'contratti@acme.it',notes:'Rinnovo automatico salvo disdetta. Verificare aggiornamento prezzi.',cantieri:[{nome:'Cantiere Milano',scadenza:mkDate(10),note:'Verifica sicurezza'},{nome:'Cantiere Roma',scadenza:mkDate(30),note:''}]},
-  {id:4,name:'Acme S.r.l.',employeeName:'Laura Verdi',contractType:'Supporto tecnico',startDate:'2024-01-10',endDate:mkDate(45),renewable:true,renewMonths:6,renewType:'Automatica',renewNotice:15,renewCount:0,adminEmail:'admin@example.com',companyEmail:'contratti@acme.it',notes:'Contratto supporto tecnico on-site.',cantieri:[]},
-  {id:2,name:'Beta Solutions S.p.A.',employeeName:'Giuseppe Neri',contractType:'Contratto di appalto',startDate:'2022-01-10',endDate:mkDate(18),renewable:true,renewMonths:6,renewType:'Con causale',renewNotice:60,renewCount:1,adminEmail:'admin@example.com',companyEmail:'legal@beta.it',notes:'Proroga subordinata a valutazione performance.',cantieri:[{nome:'Cantiere Napoli',scadenza:mkDate(60),note:'Controllo documenti'}]},
-  {id:3,name:'Gamma Trade S.r.l.',employeeName:'Anna Russo',contractType:'Accordo commerciale',startDate:'2024-06-01',endDate:mkDate(90),renewable:false,renewMonths:0,renewType:'',renewNotice:0,renewCount:0,adminEmail:'admin@example.com',companyEmail:'info@gamma.it',notes:'Contratto a termine fisso, non prorogabile.',cantieri:[]}
+  {id:1,tenantId:'tenant1',name:'Acme S.r.l.',employeeName:'Marco Bianchi',contractType:'Fornitura servizi IT',startDate:'2023-04-15',endDate:mkDate(4),renewable:true,renewMonths:12,renewType:'Senza causale',renewNotice:30,renewCount:2,adminEmail:'admin@example.com',companyEmail:'contratti@acme.it',notes:'Rinnovo automatico salvo disdetta. Verificare aggiornamento prezzi.',cantieri:[{nome:'Cantiere Milano',scadenza:mkDate(10),note:'Verifica sicurezza'},{nome:'Cantiere Roma',scadenza:mkDate(30),note:''}]},
+  {id:4,tenantId:'tenant1',name:'Acme S.r.l.',employeeName:'Laura Verdi',contractType:'Supporto tecnico',startDate:'2024-01-10',endDate:mkDate(45),renewable:true,renewMonths:6,renewType:'Automatica',renewNotice:15,renewCount:0,adminEmail:'admin@example.com',companyEmail:'contratti@acme.it',notes:'Contratto supporto tecnico on-site.',cantieri:[]},
+  {id:2,tenantId:'tenant2',name:'Beta Solutions S.p.A.',employeeName:'Giuseppe Neri',contractType:'Contratto di appalto',startDate:'2022-01-10',endDate:mkDate(18),renewable:true,renewMonths:6,renewType:'Con causale',renewNotice:60,renewCount:1,adminEmail:'admin@example.com',companyEmail:'legal@beta.it',notes:'Proroga subordinata a valutazione performance.',cantieri:[{nome:'Cantiere Napoli',scadenza:mkDate(60),note:'Controllo documenti'}]},
+  {id:3,tenantId:'tenant3',name:'Gamma Trade S.r.l.',employeeName:'Anna Russo',contractType:'Accordo commerciale',startDate:'2024-06-01',endDate:mkDate(90),renewable:false,renewMonths:0,renewType:'',renewNotice:0,renewCount:0,adminEmail:'admin@example.com',companyEmail:'info@gamma.it',notes:'Contratto a termine fisso, non prorogabile.',cantieri:[]}
 ]} 
 
 function defaultSettings(){return{sendMethod:'mailto',emailjs:{serviceId:'',templateId:'',publicKey:''},autoSend:{enabled:false,daysBeforeExpiry:[30,15,7,3,1],checkIntervalMinutes:60}}}
-const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyArXvyeZzRZSQFMKpv1Bz6w4fAxcBRu_3U',
-  authDomain: 'gestione-scadenze-d2eed.firebaseapp.com',
-  databaseURL: 'https://gestione-scadenze-d2eed-default-rtdb.europe-west1.firebasedatabase.app/'
-};
-const ADMIN_EMAIL = 'evolo434@gmail.com';
+const ADMIN_EMAIL = 'admin@evolution-system.test';
 function isAdmin(){ return !!(authUser && authUser.email === ADMIN_EMAIL); }
-function defaultSync(){return{enabled:true,apiKey:FIREBASE_CONFIG.apiKey,databaseURL:FIREBASE_CONFIG.databaseURL,roomName:'gestione-scadenze'}}
-function defaultAuth(){return{apiKey:FIREBASE_CONFIG.apiKey,authDomain:FIREBASE_CONFIG.authDomain,databaseURL:FIREBASE_CONFIG.databaseURL}}
+function defaultSync(){return{enabled:false,provider:'supabase'}}
 
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){} }
 function load(key,def){try{const r=localStorage.getItem(key);if(r!==null)return JSON.parse(r)}catch(e){}return typeof def==='function'?def():def}
@@ -38,11 +99,10 @@ function load(key,def){try{const r=localStorage.getItem(key);if(r!==null)return 
 // Salva lo stato delle aziende su localStorage e, se attivo, prova a sincronizzare col cloud
 function saveData(){
   try{
-    save(SK.data, state.companies);
+      save(SK.data, getCompaniesByTenant());
   }catch(e){ console.error('saveData', e); }
   try{
-    if(syncConfig && syncConfig.enabled && syncState && syncState.db){
-      // Non forzare merge in ogni salvataggio, ma tenta upload se connesso
+    if(syncConfig && syncConfig.enabled){
       syncToCloud();
     }
   }catch(e){ console.error('saveData sync', e); }
@@ -111,74 +171,9 @@ let emailSettings=load(SK.settings,defaultSettings);
 let emailLog=load(SK.log,[]);
 let sentTracker=load(SK.sent,{});
 let syncConfig=load(SK.sync,defaultSync);
-// Forza sempre la sincronizzazione attiva (multi-utente ufficio)
-syncConfig.enabled=true;
-let syncState={connected:false,lastSync:null,listener:null,db:null,skipNext:false};
-let authUser=null,authFirebaseApp=null;
+let syncState={connected:false,lastSync:null,skipNext:false};
+let authUser=null;
 let autoSendInterval=null;
-
-
-// Inizializza Firebase App principale se non già presente
-function ensureFirebaseApp() {
-  // If Firebase script hasn't loaded yet, signal failure
-  if (typeof window.firebase === 'undefined') return false;
-  // If an app is already initialized, we're good
-  if (firebase.apps && firebase.apps.length > 0) return true;
-
-  // Configurazione: usa localStorage se presente, altrimenti usa il config hardcoded
-  var config = null;
-  if (typeof defaultAuth === 'function') {
-    config = load(SK.auth, defaultAuth);
-  } else {
-    config = load(SK.sync, defaultSync);
-  }
-  // Fallback al config hardcoded se mancano campi essenziali
-  if (!config || !config.apiKey || !config.authDomain || !config.databaseURL) {
-    config = Object.assign({}, FIREBASE_CONFIG, config || {});
-  }
-  if (config && config.apiKey && config.authDomain && config.databaseURL) {
-    try {
-      firebase.initializeApp({
-        apiKey: config.apiKey,
-        authDomain: config.authDomain,
-        databaseURL: config.databaseURL
-      });
-      return true;
-    } catch (e) {
-      console.error('firebase.initializeApp error', e);
-      return false;
-    }
-  } else {
-    // Mostra form per inserire le chiavi Firebase
-    var el = document.getElementById('login-screen') || document.body;
-    if (el) {
-      el.innerHTML = `<div class="login-card">
-        <h3>Configurazione Firebase mancante</h3>
-        <p>Inserisci qui le chiavi di accesso del tuo progetto Firebase:</p>
-        <div class="form-field"><label>API Key</label><input id="firebase-api-key" class="f-input" type="text" placeholder="API Key"></div>
-        <div class="form-field"><label>Auth Domain</label><input id="firebase-auth-domain" class="f-input" type="text" placeholder="Auth Domain"></div>
-        <div class="form-field"><label>Database URL</label><input id="firebase-db-url" class="f-input" type="text" placeholder="Database URL"></div>
-        <button class="tb-btn primary" style="margin-top:16px" onclick="window.saveFirebaseConfig()">Salva e ricarica</button>
-      </div>`;
-      window.saveFirebaseConfig = function() {
-        var apiKey = (document.getElementById('firebase-api-key')||{}).value?.trim();
-        var authDomain = (document.getElementById('firebase-auth-domain')||{}).value?.trim();
-        var databaseURL = (document.getElementById('firebase-db-url')||{}).value?.trim();
-        if (!apiKey || !authDomain || !databaseURL) {
-          showToast('Compila tutti i campi!');
-          return;
-        }
-        var cfg = { apiKey, authDomain, databaseURL };
-        try { localStorage.setItem(SK.auth, JSON.stringify(cfg)); } catch(e) {}
-        location.reload();
-      }
-    }
-    var appShell = document.getElementById('app-shell');
-    if (appShell) appShell.style.display = 'none';
-    return false;
-  }
-}
-ensureFirebaseApp();
 applyTheme(state.theme);
 
 // Normalize cantieri so they are stored per azienda (first contract entry) and deduplicated
@@ -219,7 +214,7 @@ function getCantiereKey(ct){
 function normalizeCompanyCantieri(){
   try{
     const map={};
-    state.companies.forEach(c=>{
+      getCompaniesByTenant().forEach(c=>{
       const name=c.name||'';
       if(!map[name])map[name]={seen:new Set(),cantieri:[]};
       if(Array.isArray(c.cantieri)){
@@ -307,7 +302,8 @@ function renderSidebarCompanies(){
     el.parentNode.insertBefore(searchBox, el);
   }
   let search = (document.getElementById('company-search-input')?.value||'').toLowerCase();
-  let names=[...new Set(state.companies.map(c=>c.name))];
+  let tenantCompanies = typeof getCompaniesByTenant === 'function' ? getCompaniesByTenant() : state.companies;
+  let names=[...new Set(tenantCompanies.map(c=>c.name))];
   names = names.filter(n=>!search||n.toLowerCase().includes(search)).sort((a,b)=>a.localeCompare(b,'it'));
   el.innerHTML=names.map(n=>{
     const active=state.page==='company'&&state.activeCompany===n;
@@ -369,7 +365,7 @@ function onSearch(val){
 
 function getUrgentNotifications(){
   const threshold = ALERT_DAYS * 5;
-  const urgentContracts = state.companies.filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate)<=threshold);
+    const urgentContracts = getCompaniesByTenant().filter(c=>typeof c.endDate!=='undefined' && daysLeft(c.endDate)<=threshold);
   const seenCompany={};
   const urgentCantieri=[];
   state.companies.forEach(c=>{

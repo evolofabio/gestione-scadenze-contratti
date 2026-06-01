@@ -2,7 +2,7 @@
 
 Dashboard web per la gestione e il monitoraggio delle scadenze contrattuali aziendali. Applicazione single-page senza dipendenze server — basta aprire il file HTML in un browser.
 
-**[Demo Live su GitHub Pages](https://evolofabio.github.io/gestione-scadenze-contratti/)**
+**Demo Live:** configurabile in fase di deploy aziendale
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
