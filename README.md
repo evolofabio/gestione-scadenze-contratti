@@ -123,6 +123,7 @@ Per accelerare il passaggio a piattaforma SaaS pronta alla vendita sono stati ag
 - `docs/dpa-template.md` (template Data Processing Agreement)
 - `docs/support-sla-playbook.md` (operativita supporto e SLA)
 - `docs/go-to-market-funnel.md` (funnel commerciale demo -> trial -> paid)
+- `docs/commercial-ops/README.md` (kit operativo vendita e onboarding 0-30)
 
 Ordine consigliato:
 
