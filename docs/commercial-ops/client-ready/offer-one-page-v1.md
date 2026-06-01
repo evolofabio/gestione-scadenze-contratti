@@ -2,16 +2,16 @@
 
 ## Fornitore
 
-1. Ragione sociale: DA COMPLETARE
-2. Sede legale: DA COMPLETARE
-3. P.IVA: DA COMPLETARE
-4. Referente commerciale: DA COMPLETARE
+1. Ragione sociale: Evolution System
+2. Sede legale: Italia (dettaglio sede da inserire in fase di firma)
+3. P.IVA: da inserire in fase di firma
+4. Referente commerciale: Team Evolution System
 
 ## Cliente
 
-1. Azienda: DA COMPLETARE
-2. Referente: DA COMPLETARE
-3. Email: DA COMPLETARE
+1. Azienda: [Nome Cliente]
+2. Referente: [Nome e Cognome]
+3. Email: [email@cliente.it]
 
 ## Obiettivo progetto
 

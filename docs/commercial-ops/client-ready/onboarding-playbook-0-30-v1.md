@@ -2,8 +2,8 @@
 
 ## Owner
 
-1. Owner fornitore: DA COMPLETARE
-2. Owner cliente: DA COMPLETARE
+1. Owner fornitore: Customer Success Team - Evolution System
+2. Owner cliente: [Project Owner Cliente]
 
 ## Giorno 0 - Kickoff
 

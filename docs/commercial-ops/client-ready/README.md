@@ -12,6 +12,6 @@ Pacchetto pronto per invio cliente con valori economici e processo operativo gia
 
 ## Note di utilizzo
 
-1. Aggiornare solo i campi societari indicati come "DA COMPLETARE".
+1. Aggiornare solo i campi cliente variabili (azienda, referente, email cliente).
 2. Mantenere invariati i prezzi v1 salvo decisione commerciale esplicita.
 3. Allegare sempre ToS, Privacy e DPA nella fase contrattuale.

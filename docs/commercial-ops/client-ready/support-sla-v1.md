@@ -39,9 +39,9 @@
 
 ## Canali
 
-1. Email supporto: DA COMPLETARE
-2. Ticket portal: DA COMPLETARE
-3. Escalation P1: DA COMPLETARE
+1. Email supporto: support@evolution-system.com
+2. Ticket portal: gestione via email con ID ticket in oggetto
+3. Escalation P1: support@evolution-system.com con prefisso oggetto [P1]
 
 ## Reportistica supporto mensile
 
