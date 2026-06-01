@@ -58,7 +58,9 @@ Eseguire con utente autenticato nel SQL Editor impersonando i diversi ruoli.
 Per una sessione completa usare anche:
 
 1. `supabase_staging_validation_queries.sql`
-2. `docs/staging-validation-report-template.md`
+2. `supabase_staging_seed_template.sql`
+3. `docs/staging-validation-execution-guide.md`
+4. `docs/staging-validation-report-template.md`
 
 ```sql
 select auth.uid();
