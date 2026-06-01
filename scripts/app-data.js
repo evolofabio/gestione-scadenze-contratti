@@ -442,11 +442,10 @@ async function ensureProfileForUser(user) {
   if (!user || !user.id) return null;
   let profile = await loadProfileById(user.id);
   if (profile) return profile;
-  const isAdminUser = String(user.email || '').toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
   await saveProfilePatch(user.id, {
     email: user.email || '',
-    role: isAdminUser ? 'admin' : 'viewer',
-    status: isAdminUser ? 'approved' : 'pending',
+    role: 'viewer',
+    status: 'pending',
     created_at: new Date().toISOString()
   });
   profile = await loadProfileById(user.id);
@@ -527,22 +526,17 @@ window.doRegister = async function() {
       return;
     }
 
-    const isAdminUser = String(email).toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
     await saveProfilePatch(user.id, {
       email,
-      role: isAdminUser ? 'admin' : 'viewer',
-      status: isAdminUser ? 'approved' : 'pending',
+      role: 'viewer',
+      status: 'pending',
       created_at: new Date().toISOString()
     });
 
-    if (!isAdminUser) {
-      await window.supabaseClient.auth.signOut();
-      authUser = null;
-      renderPendingScreen();
-      return;
-    }
-    authUser = { ...user, uid: user.id };
-    await afterLogin();
+    await window.supabaseClient.auth.signOut();
+    authUser = null;
+    renderPendingScreen();
+    return;
   } catch (e) {
     renderRegisterScreen('Errore: ' + (e.message || 'Impossibile registrare'));
   }
@@ -557,7 +551,7 @@ async function afterLogin() {
     }
     const status = String(profile?.status || 'approved').toLowerCase();
     const role = String(profile?.role || '').toLowerCase();
-    const isAdminUser = role === 'owner' || role === 'admin' || String(authUser.email || '').toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
+    const isAdminUser = role === 'owner' || role === 'admin';
     if (!isAdminUser && status === 'pending') {
       await window.supabaseClient.auth.signOut();
       authUser = null;
@@ -761,22 +755,26 @@ window.loadAdminUsers = function() {
   const container = document.getElementById('admin-users-list');
   if (!container) return;
   container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Caricamento…</div>';
-  window.supabaseClient.from('profiles').select('id,email,status,created_at').order('created_at',{ascending:false}).then(({data,error}) => {
+  window.supabaseClient.from('profiles').select('id,email,role,status,created_at').order('created_at',{ascending:false}).then(({data,error}) => {
     if (error) throw error;
-    const users = (data || []).filter(u => String(u.email || '').toLowerCase() !== String(ADMIN_EMAIL || '').toLowerCase());
+    const me = String(currentAuthId() || '');
+    const users = (data || []).filter(u => String(u.id || '') !== me);
     if (!users.length) { container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Nessun utente registrato.</div>'; return; }
-    const statusLabel = { pending: '⏳ In attesa', approved: '✅ Approvato', rejected: '❌ Rifiutato' };
+    const statusLabel = { pending: '⏳ In attesa', approved: '✅ Approvato', rejected: '❌ Rifiutato', suspended: '⛔ Sospeso' };
+    const roleLabel = { owner: 'Owner', admin: 'Admin', manager: 'Manager', viewer: 'Viewer' };
     container.innerHTML = users.map(u => `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:500">${esc(u.email||'')}</div>
-          <div style="font-size:11px;color:var(--text3)">${statusLabel[u.status]||u.status} · ${u.created_at ? new Date(u.created_at).toLocaleString('it-IT') : '—'}</div>
+          <div style="font-size:11px;color:var(--text3)">${roleLabel[u.role]||u.role||'—'} · ${statusLabel[u.status]||u.status} · ${u.created_at ? new Date(u.created_at).toLocaleString('it-IT') : '—'}</div>
         </div>
-        ${u.status === 'pending' ? `
+        ${u.role === 'owner' ? `
+          <span style="font-size:11px;color:var(--text3);font-weight:600">Protetto</span>
+        ` : u.status === 'pending' ? `
           <button class="tb-btn primary" onclick="approveUser('${esc(u.id)}')">Approva</button>
           <button class="tb-btn" style="color:var(--danger)" onclick="rejectUser('${esc(u.id)}')">Rifiuta</button>
         ` : u.status === 'approved' ? `
-          <button class="tb-btn" style="color:var(--danger)" onclick="rejectUser('${esc(u.id)}')">Revoca</button>
+          <button class="tb-btn" style="color:var(--danger)" onclick="suspendUser('${esc(u.id)}')">Sospendi</button>
         ` : `
           <button class="tb-btn primary" onclick="approveUser('${esc(u.id)}')">Riattiva</button>
         `}
@@ -800,6 +798,15 @@ window.rejectUser = function(uid) {
     showToast('Utente rifiutato');
     loadAdminUsers();
   }).catch(() => showToast('Errore durante il rifiuto'));
+};
+
+window.suspendUser = function(uid) {
+  if (!isAdmin()) return;
+  saveProfilePatch(uid, { status: 'suspended', approved_by: currentAuthId(), updated_at: new Date().toISOString() }).then(ok => {
+    if (!ok) throw new Error('update failed');
+    showToast('Utente sospeso');
+    loadAdminUsers();
+  }).catch(() => showToast('Errore durante la sospensione'));
 };
 
 async function checkAuth() {

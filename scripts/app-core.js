@@ -89,7 +89,6 @@ function mkDate(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOStr
 function defaultData(){return[]} 
 
 function defaultSettings(){return{sendMethod:'mailto',emailjs:{serviceId:'',templateId:'',publicKey:''},autoSend:{enabled:false,daysBeforeExpiry:[30,15,7,3,1],checkIntervalMinutes:60}}}
-const ADMIN_EMAIL = 'admin.demo@example.com';
 let currentUserRole = 'viewer';
 function setCurrentUserRole(role){
   const normalized = String(role || '').toLowerCase();
@@ -103,8 +102,7 @@ window.setCurrentUserRole = setCurrentUserRole;
 window.getCurrentUserRole = getCurrentUserRole;
 function isAdmin(){
   const role = getCurrentUserRole();
-  if (role === 'owner' || role === 'admin') return true;
-  return !!(authUser && String(authUser.email || '').toLowerCase() === String(ADMIN_EMAIL).toLowerCase());
+  return role === 'owner' || role === 'admin';
 }
 function defaultSync(){return{enabled:false,provider:'supabase'}}
 
