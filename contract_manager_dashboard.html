@@ -409,11 +409,13 @@ document.getElementById('company-form').onsubmit = async function(e) {
 
 // Mostra tabella aziende all'avvio (solo admin, demo: sempre visibile)
 window.addEventListener('DOMContentLoaded', async () => {
+  if (window.supabaseClientReady) await window.supabaseClientReady;
   await renderCompanies();
 });
 // Controllo sessione utente all'avvio
 window.addEventListener('DOMContentLoaded', async () => {
   try {
+    if (window.supabaseClientReady) await window.supabaseClientReady;
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (user) {
       document.getElementById('login-screen').style.display = 'none';
