@@ -90,7 +90,22 @@ function defaultData(){return[]}
 
 function defaultSettings(){return{sendMethod:'mailto',emailjs:{serviceId:'',templateId:'',publicKey:''},autoSend:{enabled:false,daysBeforeExpiry:[30,15,7,3,1],checkIntervalMinutes:60}}}
 const ADMIN_EMAIL = 'admin.demo@example.com';
-function isAdmin(){ return !!(authUser && authUser.email === ADMIN_EMAIL); }
+let currentUserRole = 'viewer';
+function setCurrentUserRole(role){
+  const normalized = String(role || '').toLowerCase();
+  const allowed = ['owner', 'admin', 'manager', 'viewer'];
+  currentUserRole = allowed.includes(normalized) ? normalized : 'viewer';
+}
+function getCurrentUserRole(){
+  return currentUserRole;
+}
+window.setCurrentUserRole = setCurrentUserRole;
+window.getCurrentUserRole = getCurrentUserRole;
+function isAdmin(){
+  const role = getCurrentUserRole();
+  if (role === 'owner' || role === 'admin') return true;
+  return !!(authUser && String(authUser.email || '').toLowerCase() === String(ADMIN_EMAIL).toLowerCase());
+}
 function defaultSync(){return{enabled:false,provider:'supabase'}}
 
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){} }

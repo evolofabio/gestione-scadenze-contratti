@@ -445,7 +445,7 @@ async function ensureProfileForUser(user) {
   const isAdminUser = String(user.email || '').toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
   await saveProfilePatch(user.id, {
     email: user.email || '',
-    role: isAdminUser ? 'admin' : 'user',
+    role: isAdminUser ? 'admin' : 'viewer',
     status: isAdminUser ? 'approved' : 'pending',
     created_at: new Date().toISOString()
   });
@@ -530,7 +530,7 @@ window.doRegister = async function() {
     const isAdminUser = String(email).toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
     await saveProfilePatch(user.id, {
       email,
-      role: isAdminUser ? 'admin' : 'user',
+      role: isAdminUser ? 'admin' : 'viewer',
       status: isAdminUser ? 'approved' : 'pending',
       created_at: new Date().toISOString()
     });
@@ -552,8 +552,12 @@ async function afterLogin() {
   if (!authUser) return;
   try {
     const profile = await ensureProfileForUser(authUser);
+    if (typeof window.setCurrentUserRole === 'function') {
+      window.setCurrentUserRole(profile?.role || 'viewer');
+    }
     const status = String(profile?.status || 'approved').toLowerCase();
-    const isAdminUser = String(authUser.email || '').toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
+    const role = String(profile?.role || '').toLowerCase();
+    const isAdminUser = role === 'owner' || role === 'admin' || String(authUser.email || '').toLowerCase() === String(ADMIN_EMAIL || '').toLowerCase();
     if (!isAdminUser && status === 'pending') {
       await window.supabaseClient.auth.signOut();
       authUser = null;
@@ -561,6 +565,12 @@ async function afterLogin() {
       return;
     }
     if (!isAdminUser && status === 'rejected') {
+      await window.supabaseClient.auth.signOut();
+      authUser = null;
+      renderRejectedScreen();
+      return;
+    }
+    if (status === 'suspended') {
       await window.supabaseClient.auth.signOut();
       authUser = null;
       renderRejectedScreen();

@@ -106,6 +106,24 @@ Per condividere il progetto con una panoramica completa (overview, architettura 
 
 - `project_presentation.html`
 
+## SaaS readiness (fase definitiva)
+
+Per accelerare il passaggio a piattaforma SaaS pronta alla vendita sono stati aggiunti:
+
+- `docs/saas-go-live-plan.md` (roadmap 90 giorni + backlog Must/Should/Could + definition of done)
+- `supabase_migration_saas_phase1.sql` (Sprint 1: ruoli avanzati, audit log, RLS hardening)
+- `supabase_migration_saas_phase2.sql` (Sprint 2: piani, subscription, usage metrics, webhook idempotency)
+- `docs/rls-staging-checklist.md` (test plan RLS/ruoli per validazione pre-produzione)
+
+Ordine consigliato:
+
+1. Eseguire `supabase_migration_saas_phase1.sql` su ambiente staging.
+2. Eseguire `supabase_migration_saas_phase2.sql` su staging.
+3. Validare i ruoli (`owner`, `admin`, `manager`, `viewer`) con test reali di accesso.
+4. Eseguire la checklist `docs/rls-staging-checklist.md`.
+5. Verificare i trigger audit su `contracts`.
+6. Promuovere in produzione solo dopo test di regressione CRUD e policy RLS.
+
 ## Licenza
 
 [MIT](LICENSE)
