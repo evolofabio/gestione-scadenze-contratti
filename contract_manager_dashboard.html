@@ -178,7 +178,7 @@
         <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Cambia tema">
           <svg id="theme-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>
-        <button class="icon-btn" onclick="doLogout()" title="Esci">
+        <button class="icon-btn" id="logout-btn" onclick="doLogout()" title="Esci">
           <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
       </div>
@@ -202,6 +202,25 @@
 // Mostra privacy
 function showPrivacy() {
   alert('Informativa privacy: i dati sono trattati secondo la normativa vigente. Nessun dato viene ceduto a terzi. Per dettagli scrivere a info@evolutionsystem.it');
+}
+
+function isDemoMode() {
+  try {
+    return window.location.hostname === 'evolofabio.github.io';
+  } catch (_) {
+    return false;
+  }
+}
+
+const DEMO_MODE = isDemoMode();
+
+if (DEMO_MODE) {
+  const loginScreen = document.getElementById('login-screen');
+  const appShell = document.getElementById('app-shell');
+  const logoutBtn = document.getElementById('logout-btn');
+  if (loginScreen) loginScreen.style.display = 'none';
+  if (appShell) appShell.style.display = '';
+  if (logoutBtn) logoutBtn.style.display = 'none';
 }
 // Aggiorna un contratto
 async function updateContract(id, fields) {
@@ -277,6 +296,11 @@ function confirmDeleteContract(id) {
 // Controllo sessione utente all'avvio
 window.addEventListener('DOMContentLoaded', async () => {
   try {
+    if (DEMO_MODE) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app-shell').style.display = '';
+      return;
+    }
     if (window.supabaseClientReady) await window.supabaseClientReady;
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (user) {
@@ -289,6 +313,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 // Logout sicuro
 window.doLogout = async function() {
+  if (DEMO_MODE) return;
   await window.supabaseClient.auth.signOut();
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('login-screen').style.display = '';
@@ -337,6 +362,11 @@ window.addEventListener('unload', function() {
 // Gestione login
 document.getElementById('login-form').onsubmit = async function(e) {
   e.preventDefault();
+  if (DEMO_MODE) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-shell').style.display = '';
+    return;
+  }
   const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   const errBox = document.getElementById('login-error');
