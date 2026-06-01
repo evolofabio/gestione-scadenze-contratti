@@ -55,6 +55,11 @@ Validare l'isolamento tenant e i permessi ruolo per il passaggio a produzione.
 
 Eseguire con utente autenticato nel SQL Editor impersonando i diversi ruoli.
 
+Per una sessione completa usare anche:
+
+1. `supabase_staging_validation_queries.sql`
+2. `docs/staging-validation-report-template.md`
+
 ```sql
 select auth.uid();
 select public.current_company_id();
