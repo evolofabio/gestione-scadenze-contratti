@@ -100,6 +100,12 @@ Apri il file nel browser per vedere la dashboard in azione. L'app include:
 - **Modale email** con anteprima e modifica
 - **Pannello impostazioni** con configurazione email e invio automatico
 
+## Pagina di presentazione
+
+Per condividere il progetto con una panoramica completa (overview, architettura e flusso operativo), apri:
+
+- `project_presentation.html`
+
 ## Licenza
 
 [MIT](LICENSE)
