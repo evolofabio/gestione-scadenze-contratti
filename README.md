@@ -114,6 +114,10 @@ Per accelerare il passaggio a piattaforma SaaS pronta alla vendita sono stati ag
 - `supabase_migration_saas_phase1.sql` (Sprint 1: ruoli avanzati, audit log, RLS hardening)
 - `supabase_migration_saas_phase2.sql` (Sprint 2: piani, subscription, usage metrics, webhook idempotency)
 - `docs/rls-staging-checklist.md` (test plan RLS/ruoli per validazione pre-produzione)
+- `docs/monitoring-alerting-baseline.md` (Sprint 3: baseline monitoring e alerting)
+- `docs/incident-response-runbook.md` (Sprint 3: runbook operativo incidenti)
+- `docs/backup-restore-drill.md` (Sprint 3: procedura periodica backup/restore)
+- `docs/release-readiness-checklist.md` (gate go/no-go prima del rilascio)
 
 Ordine consigliato:
 
@@ -122,7 +126,10 @@ Ordine consigliato:
 3. Validare i ruoli (`owner`, `admin`, `manager`, `viewer`) con test reali di accesso.
 4. Eseguire la checklist `docs/rls-staging-checklist.md`.
 5. Verificare i trigger audit su `contracts`.
-6. Promuovere in produzione solo dopo test di regressione CRUD e policy RLS.
+6. Configurare monitoring+alerting seguendo `docs/monitoring-alerting-baseline.md`.
+7. Validare runbook e drill operativo con `docs/incident-response-runbook.md` e `docs/backup-restore-drill.md`.
+8. Completare `docs/release-readiness-checklist.md`.
+9. Promuovere in produzione solo dopo test di regressione CRUD e policy RLS.
 
 ## Licenza
 
