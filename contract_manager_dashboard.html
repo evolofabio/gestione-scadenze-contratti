@@ -85,63 +85,32 @@
   </nav>
 
   <div class="main-area">
-                <!-- Gestione profilo utente -->
-                <div id="profile-wrap" style="padding:24px;display:none">
-                  <h2>Profilo utente</h2>
-                  <div id="profile-feedback" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:4px;font-size:15px"></div>
-                  <form id="profile-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:18px;background:#f8f8f8;padding:12px 8px;border-radius:6px">
-                    <input type="email" id="pf-email" placeholder="Email" required style="padding:6px;width:220px">
-                    <input type="password" id="pf-password" placeholder="Nuova password (opzionale)" style="padding:6px;width:180px">
-                    <button type="submit" style="padding:8px 18px;background:#2a5bd7;color:#fff;border:none;border-radius:4px;cursor:pointer">Aggiorna profilo</button>
-                  </form>
-                </div>
-              <button class="tb-btn" onclick="showProfile()" style="margin-bottom:8px;width:100%">Profilo</button>
-            <footer style="background:#f5f5f5;padding:18px 0;text-align:center;font-size:14px;color:#888;margin-top:32px">
+            <footer id="app-footer">
               <span>Evolution System &copy; 2026. Tutti i diritti riservati. | <a href="#" onclick="showPrivacy()">Privacy &amp; Termini</a></span>
             </footer>
-            <!-- Tabella aziende -->
-            <div id="companies-table-wrap" style="padding:24px;display:none">
-              <h2>Aziende</h2>
-              <div id="company-feedback" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:4px;font-size:15px"></div>
-              <form id="company-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:18px;background:#f8f8f8;padding:12px 8px;border-radius:6px">
-                <input type="text" id="cf-company-name" placeholder="Nome azienda" required style="padding:6px;width:180px">
-                <input type="email" id="cf-company-email" placeholder="Email amministratore" required style="padding:6px;width:200px">
-                <button type="submit" style="padding:8px 18px;background:#2a5bd7;color:#fff;border:none;border-radius:4px;cursor:pointer">Aggiungi azienda</button>
-              </form>
-              <table id="companies-table" style="width:100%;border-collapse:collapse;background:#fff">
-                <thead>
-                  <tr style="background:#f5f5f5">
-                    <th>Nome</th>
-                    <th>Email admin</th>
-                    <th>Data creazione</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
         <!-- Tabella contratti caricati da Supabase -->
-        <div id="contracts-table-wrap" style="padding:24px;display:none">
-                <div id="contract-feedback" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:4px;font-size:15px"></div>
-                <form id="contract-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:18px;background:#f8f8f8;padding:12px 8px;border-radius:6px">
-                  <input type="text" id="cf-employee" placeholder="Dipendente" required style="padding:6px;width:140px">
-                  <input type="text" id="cf-type" placeholder="Tipo Contratto" required style="padding:6px;width:140px">
-                  <input type="date" id="cf-start" required style="padding:6px;width:130px">
-                  <input type="date" id="cf-end" required style="padding:6px;width:130px">
-                  <select id="cf-renewable" style="padding:6px;width:110px">
+        <div id="contracts-table-wrap" class="legacy-panel" style="display:none">
+                <div id="contract-feedback" class="legacy-feedback" style="display:none"></div>
+                <form id="contract-form" class="legacy-form">
+                  <input type="text" id="cf-employee" class="f-input" placeholder="Dipendente" required>
+                  <input type="text" id="cf-type" class="f-input" placeholder="Tipo Contratto" required>
+                  <input type="date" id="cf-start" class="f-input" required>
+                  <input type="date" id="cf-end" class="f-input" required>
+                  <select id="cf-renewable" class="f-input">
                     <option value="true">Prorogabile</option>
                     <option value="false">Non prorogabile</option>
                   </select>
-                  <input type="number" id="cf-renew-months" placeholder="Mesi Proroga" min="0" style="padding:6px;width:110px">
-                  <input type="text" id="cf-renew-type" placeholder="Tipo Proroga" style="padding:6px;width:120px">
-                  <input type="number" id="cf-renew-notice" placeholder="Preavviso (gg)" min="0" style="padding:6px;width:110px">
-                  <input type="number" id="cf-renew-count" placeholder="Proroghe fatte" min="0" style="padding:6px;width:110px">
-                  <input type="text" id="cf-notes" placeholder="Note" style="padding:6px;width:180px">
-                  <button type="submit" style="padding:8px 18px;background:#2d8a4e;color:#fff;border:none;border-radius:4px;cursor:pointer">Aggiungi contratto</button>
+                  <input type="number" id="cf-renew-months" class="f-input" placeholder="Mesi Proroga" min="0">
+                  <input type="text" id="cf-renew-type" class="f-input" placeholder="Tipo Proroga">
+                  <input type="number" id="cf-renew-notice" class="f-input" placeholder="Preavviso (gg)" min="0">
+                  <input type="number" id="cf-renew-count" class="f-input" placeholder="Proroghe fatte" min="0">
+                  <input type="text" id="cf-notes" class="f-input" placeholder="Note">
+                  <button type="submit" class="tb-btn primary">Aggiungi contratto</button>
                 </form>
           <h2>Contratti aziendali</h2>
-          <table id="contracts-table" style="width:100%;border-collapse:collapse;background:#fff">
+          <table id="contracts-table" class="legacy-table">
             <thead>
-              <tr style="background:#f5f5f5">
+              <tr>
                 <th>Dipendente</th>
                 <th>Tipo Contratto</th>
                 <th>Inizio</th>
@@ -230,44 +199,6 @@
 <script src="scripts/app-logout.js"></script>
 </script>
 <script>
-// Mostra/nascondi sezione profilo
-function showProfile() {
-  document.getElementById('profile-wrap').style.display = '';
-  document.getElementById('contracts-table-wrap').style.display = 'none';
-  document.getElementById('companies-table-wrap').style.display = 'none';
-  // Carica dati utente
-  window.supabaseClient.auth.getUser().then(({ data: { user } }) => {
-    document.getElementById('pf-email').value = user?.email || '';
-  });
-}
-
-// Gestione update profilo
-document.getElementById('profile-form').onsubmit = async function(e) {
-  e.preventDefault();
-  const feedback = document.getElementById('profile-feedback');
-  feedback.style.display = 'none';
-  try {
-    const email = document.getElementById('pf-email').value;
-    const password = document.getElementById('pf-password').value;
-    if (email) {
-      await window.supabaseClient.auth.updateUser({ email });
-    }
-    if (password) {
-      await window.supabaseClient.auth.updateUser({ password });
-    }
-    feedback.textContent = 'Profilo aggiornato!';
-    feedback.style.background = '#e6faed';
-    feedback.style.color = '#1a7f37';
-    feedback.style.display = 'block';
-    document.getElementById('profile-form').reset();
-  } catch (err) {
-    feedback.textContent = err.message || 'Errore aggiornamento profilo';
-    feedback.style.background = '#ffeaea';
-    feedback.style.color = '#d63c3c';
-    feedback.style.display = 'block';
-  }
-};
-
 // Mostra privacy
 function showPrivacy() {
   alert('Informativa privacy: i dati sono trattati secondo la normativa vigente. Nessun dato viene ceduto a terzi. Per dettagli scrivere a info@evolutionsystem.it');
@@ -343,75 +274,6 @@ function confirmDeleteContract(id) {
     deleteContract(id).then(renderContracts).catch(err => alert('Errore eliminazione: ' + (err.message || err)));
   }
 }
-// Funzioni CRUD aziende
-async function loadCompanies() {
-  const { data, error } = await window.supabaseClient.from('companies').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
-  return data;
-}
-
-async function insertCompany(company) {
-  const { data, error } = await window.supabaseClient.from('companies').insert([company]).select();
-  if (error) throw error;
-  return data;
-}
-
-// Render aziende
-async function renderCompanies() {
-  try {
-    const companies = await loadCompanies();
-    const wrap = document.getElementById('companies-table-wrap');
-    const tbody = document.querySelector('#companies-table tbody');
-    tbody.innerHTML = '';
-    if (!companies.length) {
-      wrap.style.display = '';
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#888;padding:24px">Nessuna azienda presente</td></tr>';
-      return;
-    }
-    companies.forEach(c => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${c.name || ''}</td>
-        <td>${c.admin_email || ''}</td>
-        <td>${c.created_at ? c.created_at.split('T')[0] : ''}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-    wrap.style.display = '';
-  } catch (err) {
-    alert('Errore caricamento aziende: ' + (err.message || err));
-  }
-}
-
-// Gestione form inserimento azienda
-document.getElementById('company-form').onsubmit = async function(e) {
-  e.preventDefault();
-  const feedback = document.getElementById('company-feedback');
-  feedback.style.display = 'none';
-  try {
-    await insertCompany({
-      name: document.getElementById('cf-company-name').value,
-      admin_email: document.getElementById('cf-company-email').value
-    });
-    feedback.textContent = 'Azienda aggiunta con successo!';
-    feedback.style.background = '#e6faed';
-    feedback.style.color = '#1a7f37';
-    feedback.style.display = 'block';
-    document.getElementById('company-form').reset();
-    await renderCompanies();
-  } catch (err) {
-    feedback.textContent = err.message || 'Errore inserimento azienda';
-    feedback.style.background = '#ffeaea';
-    feedback.style.color = '#d63c3c';
-    feedback.style.display = 'block';
-  }
-};
-
-// Mostra tabella aziende all'avvio (solo admin, demo: sempre visibile)
-window.addEventListener('DOMContentLoaded', async () => {
-  if (window.supabaseClientReady) await window.supabaseClientReady;
-  await renderCompanies();
-});
 // Controllo sessione utente all'avvio
 window.addEventListener('DOMContentLoaded', async () => {
   try {

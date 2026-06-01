@@ -5,7 +5,7 @@ BEGIN;
 
 -- 1) Azienda demo
 INSERT INTO companies (name, admin_email)
-VALUES ('Azienda Demo Evolution', 'admin.demo@evolution-system.test')
+VALUES ('Azienda Demo Evolution', 'admin.demo@example.com')
 ON CONFLICT DO NOTHING;
 
 -- 2) Contratti demo collegati all'azienda demo
@@ -88,17 +88,17 @@ COMMIT;
 
 -- 3) Promozione utenti demo a profili applicativi
 -- PREREQUISITO: registrare prima questi utenti in Supabase Auth:
--- - admin.demo@evolution-system.test
--- - user.demo@evolution-system.test
+-- - admin.demo@example.com
+-- - user.demo@example.com
 
 WITH demo_company AS (
   SELECT id FROM companies WHERE name = 'Azienda Demo Evolution' LIMIT 1
 ),
 admin_user AS (
-  SELECT id, email FROM auth.users WHERE email = 'admin.demo@evolution-system.test' LIMIT 1
+  SELECT id, email FROM auth.users WHERE email = 'admin.demo@example.com' LIMIT 1
 ),
 normal_user AS (
-  SELECT id, email FROM auth.users WHERE email = 'user.demo@evolution-system.test' LIMIT 1
+  SELECT id, email FROM auth.users WHERE email = 'user.demo@example.com' LIMIT 1
 )
 INSERT INTO profiles (
   id,
@@ -139,5 +139,5 @@ SELECT
   p.status
 FROM profiles p
 LEFT JOIN companies c ON c.id = p.company_id
-WHERE p.email IN ('admin.demo@evolution-system.test', 'user.demo@evolution-system.test')
+WHERE p.email IN ('admin.demo@example.com', 'user.demo@example.com')
 ORDER BY p.role DESC, p.email;

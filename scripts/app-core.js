@@ -8,18 +8,29 @@ async function login(email, password) {
   return data;
 }
 
-// Carica tutti i contratti della propria azienda
-async function loadContracts() {
-  const user = (await window.supabaseClient.auth.getUser()).data.user;
+async function getCurrentUserCompanyId() {
+  const { data: authData, error: authErr } = await window.supabaseClient.auth.getUser();
+  if (authErr) throw authErr;
+  const user = authData?.user;
   if (!user) throw new Error('Utente non autenticato');
-  // Recupera il profilo per ottenere company_id
-  const { data: profile, error: errProfile } = await window.supabaseClient
+
+  const { data: profile, error: profileErr } = await window.supabaseClient
     .from('profiles')
     .select('company_id')
     .eq('id', user.id)
-    .single();
-  if (errProfile) throw errProfile;
-  const company_id = profile.company_id;
+    .maybeSingle();
+
+  if (profileErr) throw profileErr;
+  if (!profile?.company_id) {
+    throw new Error('Profilo non associato ad alcuna azienda. Completa la registrazione o contatta un amministratore.');
+  }
+
+  return profile.company_id;
+}
+
+// Carica tutti i contratti della propria azienda
+async function loadContracts() {
+  const company_id = await getCurrentUserCompanyId();
   // Carica i contratti
   const { data: contracts, error: errContracts } = await window.supabaseClient
     .from('contracts')
@@ -31,14 +42,8 @@ async function loadContracts() {
 
 // Inserisci un nuovo contratto
 async function insertContract(contract) {
-  const user = (await window.supabaseClient.auth.getUser()).data.user;
-  if (!user) throw new Error('Utente non autenticato');
-  const { data: profile } = await window.supabaseClient
-    .from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .single();
-  contract.company_id = profile.company_id;
+  const company_id = await getCurrentUserCompanyId();
+  contract.company_id = company_id;
   const { data, error } = await window.supabaseClient
     .from('contracts')
     .insert([contract])
@@ -81,15 +86,10 @@ function escJsArg(s){return JSON.stringify(String(s??'')).replace(/&/g,'&amp;').
 // ═══════════════════════════════════════
 function mkDate(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOString().split('T')[0]}
 
-function defaultData(){return[
-  {id:1,tenantId:'tenant1',name:'Acme S.r.l.',employeeName:'Marco Bianchi',contractType:'Fornitura servizi IT',startDate:'2023-04-15',endDate:mkDate(4),renewable:true,renewMonths:12,renewType:'Senza causale',renewNotice:30,renewCount:2,adminEmail:'admin@example.com',companyEmail:'contratti@acme.it',notes:'Rinnovo automatico salvo disdetta. Verificare aggiornamento prezzi.',cantieri:[{nome:'Cantiere Milano',scadenza:mkDate(10),note:'Verifica sicurezza'},{nome:'Cantiere Roma',scadenza:mkDate(30),note:''}]},
-  {id:4,tenantId:'tenant1',name:'Acme S.r.l.',employeeName:'Laura Verdi',contractType:'Supporto tecnico',startDate:'2024-01-10',endDate:mkDate(45),renewable:true,renewMonths:6,renewType:'Automatica',renewNotice:15,renewCount:0,adminEmail:'admin@example.com',companyEmail:'contratti@acme.it',notes:'Contratto supporto tecnico on-site.',cantieri:[]},
-  {id:2,tenantId:'tenant2',name:'Beta Solutions S.p.A.',employeeName:'Giuseppe Neri',contractType:'Contratto di appalto',startDate:'2022-01-10',endDate:mkDate(18),renewable:true,renewMonths:6,renewType:'Con causale',renewNotice:60,renewCount:1,adminEmail:'admin@example.com',companyEmail:'legal@beta.it',notes:'Proroga subordinata a valutazione performance.',cantieri:[{nome:'Cantiere Napoli',scadenza:mkDate(60),note:'Controllo documenti'}]},
-  {id:3,tenantId:'tenant3',name:'Gamma Trade S.r.l.',employeeName:'Anna Russo',contractType:'Accordo commerciale',startDate:'2024-06-01',endDate:mkDate(90),renewable:false,renewMonths:0,renewType:'',renewNotice:0,renewCount:0,adminEmail:'admin@example.com',companyEmail:'info@gamma.it',notes:'Contratto a termine fisso, non prorogabile.',cantieri:[]}
-]} 
+function defaultData(){return[]} 
 
 function defaultSettings(){return{sendMethod:'mailto',emailjs:{serviceId:'',templateId:'',publicKey:''},autoSend:{enabled:false,daysBeforeExpiry:[30,15,7,3,1],checkIntervalMinutes:60}}}
-const ADMIN_EMAIL = 'admin@evolution-system.test';
+const ADMIN_EMAIL = 'admin.demo@example.com';
 function isAdmin(){ return !!(authUser && authUser.email === ADMIN_EMAIL); }
 function defaultSync(){return{enabled:false,provider:'supabase'}}
 

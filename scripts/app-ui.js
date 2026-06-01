@@ -291,8 +291,76 @@ function renderSettingsPage(){
   const ejsOk=isEmailJSConfigured();
 
   return`<div class="settings-card">
+    <h4><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>Account utente</h4>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Aggiorna email di accesso e password del tuo account.</p>
+    <div id="settings-profile-feedback" class="legacy-feedback" style="display:none"></div>
+    <div class="settings-row">
+      <div class="field-group">
+        <label>Email</label>
+        <input class="f-input" type="email" id="settings-profile-email" placeholder="nome@azienda.it" autocomplete="username">
+      </div>
+      <div class="field-group">
+        <label>Nuova password (opzionale)</label>
+        <input class="f-input" type="password" id="settings-profile-password" placeholder="Minimo 6 caratteri" autocomplete="new-password">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+      <button class="tb-btn primary" onclick="updateProfileSettings()">Salva account</button>
+    </div>
+  </div>
+
+  <div class="settings-card">
     <h4><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Metodo invio email</h4>
     <div class="send-method">
+
+      window.loadProfileSettings = async function(){
+        try{
+          if(window.supabaseClientReady) await window.supabaseClientReady;
+          const emailInput=document.getElementById('settings-profile-email');
+          if(!emailInput)return;
+          const result=await window.supabaseClient.auth.getUser();
+          const user=result?.data?.user;
+          emailInput.value=user?.email||'';
+          const pwdInput=document.getElementById('settings-profile-password');
+          if(pwdInput)pwdInput.value='';
+        }catch(e){
+          console.error('loadProfileSettings',e);
+        }
+      };
+
+      window.updateProfileSettings = async function(){
+        const feedback=document.getElementById('settings-profile-feedback');
+        const emailInput=document.getElementById('settings-profile-email');
+        const pwdInput=document.getElementById('settings-profile-password');
+        if(!feedback||!emailInput||!pwdInput)return;
+
+        feedback.style.display='none';
+        try{
+          if(window.supabaseClientReady) await window.supabaseClientReady;
+          const email=(emailInput.value||'').trim();
+          const password=(pwdInput.value||'').trim();
+          if(email){
+            const { error: emailErr } = await window.supabaseClient.auth.updateUser({ email });
+            if(emailErr) throw emailErr;
+          }
+          if(password){
+            const { error: passErr } = await window.supabaseClient.auth.updateUser({ password });
+            if(passErr) throw passErr;
+          }
+          feedback.textContent='Account aggiornato con successo.';
+          feedback.style.background='var(--green-bg)';
+          feedback.style.color='var(--green)';
+          feedback.style.border='1px solid var(--green-border)';
+          feedback.style.display='block';
+          pwdInput.value='';
+        }catch(err){
+          feedback.textContent=err?.message||'Errore aggiornamento account';
+          feedback.style.background='var(--red-bg)';
+          feedback.style.color='var(--red)';
+          feedback.style.border='1px solid var(--red-border)';
+          feedback.style.display='block';
+        }
+      };
       <label class="method-option${s.sendMethod==='mailto'?' active':''}">
         <input type="radio" name="sm" value="mailto" ${s.sendMethod==='mailto'?'checked':''} onchange="setSendMethod('mailto')">
         <div><div class="method-title">Mailto — apre client email</div><div class="method-desc">Outlook, Gmail, Apple Mail. Nessuna configurazione richiesta.</div></div>
@@ -1027,6 +1095,7 @@ function renderPage(){
     }
     el.innerHTML=html;
     if(state.page==='analytics') setTimeout(initCharts,50);
+    if(state.page==='settings') setTimeout(()=>{ if(typeof loadProfileSettings==='function') loadProfileSettings(); },10);
   }catch(e){console.error('renderPage error',e);el.innerHTML='<div class="empty-state">Errore durante il rendering</div>'}
 }
 
