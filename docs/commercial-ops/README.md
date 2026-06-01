@@ -19,6 +19,9 @@ Piano operativo onboarding cliente nei primi 30 giorni.
 5. `pilot-agreement-checklist.md`
 Checklist per chiudere pilota e convertire a contratto annuale.
 
+6. `client-ready/`
+Pacchetto v1 pronto invio cliente con pricing, offerta, SLA e onboarding compilati.
+
 ## Come usarlo
 
 1. Eseguire la discovery call usando lo script.
