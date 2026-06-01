@@ -118,6 +118,11 @@ Per accelerare il passaggio a piattaforma SaaS pronta alla vendita sono stati ag
 - `docs/incident-response-runbook.md` (Sprint 3: runbook operativo incidenti)
 - `docs/backup-restore-drill.md` (Sprint 3: procedura periodica backup/restore)
 - `docs/release-readiness-checklist.md` (gate go/no-go prima del rilascio)
+- `docs/terms-of-service-template.md` (template Termini di Servizio)
+- `docs/privacy-policy-template.md` (template Privacy Policy)
+- `docs/dpa-template.md` (template Data Processing Agreement)
+- `docs/support-sla-playbook.md` (operativita supporto e SLA)
+- `docs/go-to-market-funnel.md` (funnel commerciale demo -> trial -> paid)
 
 Ordine consigliato:
 
@@ -129,7 +134,9 @@ Ordine consigliato:
 6. Configurare monitoring+alerting seguendo `docs/monitoring-alerting-baseline.md`.
 7. Validare runbook e drill operativo con `docs/incident-response-runbook.md` e `docs/backup-restore-drill.md`.
 8. Completare `docs/release-readiness-checklist.md`.
-9. Promuovere in produzione solo dopo test di regressione CRUD e policy RLS.
+9. Completare pacchetto legale usando `docs/terms-of-service-template.md`, `docs/privacy-policy-template.md`, `docs/dpa-template.md`.
+10. Attivare processo supporto e funnel con `docs/support-sla-playbook.md` e `docs/go-to-market-funnel.md`.
+11. Promuovere in produzione solo dopo test di regressione CRUD e policy RLS.
 
 ## Licenza
 
