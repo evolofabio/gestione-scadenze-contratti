@@ -3,7 +3,7 @@
 ## 1. Parti
 
 1. Titolare: Cliente.
-2. Responsabile: Fornitore Evolution System.
+2. Responsabile: Fornitore ProrogaPro.
 
 ## 2. Oggetto
 

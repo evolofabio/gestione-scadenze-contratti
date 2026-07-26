@@ -10,8 +10,9 @@
   --text3: #989285;
   --border: rgba(34,30,20,0.08);
   --border2: rgba(34,30,20,0.15);
-  --accent: #2758cf;
-  --accent-bg: #edf2ff;
+  --accent: #2563eb;
+  --accent-cyan: #0891b2;
+  --accent-bg: #eff6ff;
   --red: #d63c3c;
   --red-bg: #fdf0f0;
   --red-border: #f5c5c5;
@@ -211,6 +212,7 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .sidebar-logo .logo-mark img{height:34px;width:auto}
 .login-logo .logo-mark img{height:48px;width:auto}
 .logo-text{font-size:13px;font-weight:700;letter-spacing:.01em;color:var(--text);white-space:nowrap;overflow:hidden}
+.logo-text .logo-pro{color:#007BFF;font-weight:800}
 .sidebar-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:3px}
 .sidebar-section-label{
   font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
@@ -1050,8 +1052,18 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
 .login-logo{
   display:flex;align-items:center;gap:10px;margin-bottom:20px;
 }
+.login-logo--full{
+  flex-direction:column;align-items:center;text-align:center;gap:0;margin-bottom:24px;
+}
+.login-logo--full .login-logo-img{
+  width:min(280px,100%);height:auto;display:block;
+}
+.login-logo-extra{
+  margin-top:10px;font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.01em;
+}
 .login-logo .logo-mark{width:36px;height:36px;border-radius:10px}
-.login-logo-text{font-size:16px;font-weight:600;color:var(--text)}
+.sidebar-logo .logo-mark img{height:40px;width:auto}
+.login-logo .logo-mark img{height:48px;width:auto}
 .login-subtitle{font-size:13px;color:var(--text2);margin-bottom:22px}
 .login-err{
   background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);
@@ -1223,3 +1235,26 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .modal{width:94vw;max-width:640px}
   .sidebar-logo .logo-mark img{height:28px}
 }
+
+/* ── Billing status bar ──────────────────────────────────────────────────── */
+.billing-status-bar{
+  order:1;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:7px 20px;font-size:12px;font-weight:500;
+  border-bottom:1px solid var(--border);
+}
+.billing-status-bar .billing-manage-btn{
+  margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);
+  color:inherit;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;
+}
+.billing-status-bar .billing-manage-btn:hover{background:rgba(255,255,255,.25)}
+body.role-readonly .requires-write{display:none!important}
+.billing-sep{opacity:.35;margin:0 2px}
+.billing-bar--trial{background:#eef6ff;color:#1a5aac}
+.billing-bar--ok{background:#edfcf2;color:#1a6e37}
+.billing-bar--warn{background:#fff7e0;color:#8a5a00}
+.billing-bar--err{background:#fff0f0;color:#c0392b}
+[data-theme=dark] .billing-bar--trial{background:#0d2040;color:#7ab8f5}
+[data-theme=dark] .billing-bar--ok{background:#0d2a18;color:#6fcf97}
+[data-theme=dark] .billing-bar--warn{background:#2a1e00;color:#f0c040}
+[data-theme=dark] .billing-bar--err{background:#2a0000;color:#f07070}

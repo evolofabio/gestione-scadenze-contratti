@@ -4,7 +4,7 @@
 
 1. Capire contesto cliente e urgenza.
 2. Misurare impatto economico del problema.
-3. Validare fit con Evolution System.
+3. Validare fit con ProrogaPro.
 4. Concordare next step con data certa.
 
 ## Agenda

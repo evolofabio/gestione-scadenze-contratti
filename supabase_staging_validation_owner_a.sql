@@ -1,15 +1,19 @@
--- ProrogaPro - Staging Validation Queries
--- Eseguire in Supabase SQL Editor impersonando, a turno, i diversi utenti test.
+-- ProrogaPro - Staging Validation Quickstart
+-- Scenario: primo test impersonando owner.a@example.com
 -- Prerequisiti:
 -- 1) supabase_schema.sql applicato
 -- 2) supabase_migration_saas_phase1.sql applicato
 -- 3) supabase_migration_saas_phase2.sql applicato
--- 4) due tenant di test: company_a, company_b
--- 5) utenti test: owner/admin/manager/viewer su entrambe le aziende
+-- 4) supabase_staging_seed_template.sql eseguito con successo
+-- 5) nel SQL Editor di Supabase stai impersonando owner.a@example.com
 
 -- =====================================================
--- BLOCCO A - SANITY CHECK IDENTITA'
--- Expected: 1 riga, company_id valorizzato, role coerente con utente impersonato
+-- STEP 1 - IDENTITA'
+-- Atteso:
+-- - auth_user_id valorizzato
+-- - company_id valorizzato
+-- - app_role = owner
+-- - subscription_status valorizzato, tipicamente active
 -- =====================================================
 select auth.uid() as auth_user_id;
 select public.current_company_id() as company_id;
@@ -17,8 +21,10 @@ select public.current_user_role() as app_role;
 select public.current_company_subscription_status() as subscription_status;
 
 -- =====================================================
--- BLOCCO B - READ ISOLATION
--- Expected: solo dati del tenant dell'utente impersonato
+-- STEP 2 - LETTURA DATI DEL PROPRIO TENANT
+-- Atteso:
+-- - vedi solo record della company A
+-- - non vedi record della company B
 -- =====================================================
 select id, company_id, employee_name
 from public.contracts
@@ -50,11 +56,12 @@ from public.plans
 order by id asc;
 
 -- =====================================================
--- BLOCCO C - WRITE TEST CONTRACTS
--- Eseguire solo se ruolo = owner/admin/manager
--- Expected:
--- owner/admin/manager => insert/update/delete consentiti nel proprio tenant
--- viewer => errore RLS su insert/update/delete
+-- STEP 3 - TEST SCRITTURA CONTRATTI
+-- Atteso per owner:
+-- - insert consentito
+-- - update consentito
+-- - delete consentito
+-- - rollback finale, quindi nessun dato resta nel DB
 -- =====================================================
 begin;
 
@@ -112,9 +119,11 @@ returning id, company_id;
 rollback;
 
 -- =====================================================
--- BLOCCO D - CROSS TENANT WRITE TEST
--- Sostituire 999999 con un company_id appartenente all'altro tenant.
--- Expected: errore RLS per tutti i ruoli applicativi.
+-- STEP 4 - TEST CROSS TENANT
+-- Atteso:
+-- - deve fallire per RLS
+-- Nota:
+-- - sostituisci 999999 con il company_id reale della company B se vuoi un test ancora piu' preciso
 -- =====================================================
 begin;
 
@@ -136,10 +145,10 @@ values (
 rollback;
 
 -- =====================================================
--- BLOCCO E - PROFILE MANAGEMENT
--- Expected:
--- owner/admin => update consentito nel proprio tenant
--- manager/viewer => update negato
+-- STEP 5 - TEST GESTIONE PROFILI
+-- Atteso per owner:
+-- - update consentito sui profili del proprio tenant
+-- - rollback finale, quindi nessuna modifica persistente
 -- =====================================================
 begin;
 
@@ -153,12 +162,9 @@ returning id, company_id, role, full_name;
 rollback;
 
 -- =====================================================
--- BLOCCO F - AUDIT CHECK
--- Eseguire dopo un insert/update/delete riuscito nel blocco C senza rollback, se si vuole verifica persistente.
--- In alternativa usare un database separato di test.
--- Expected:
--- owner/admin leggono audit_logs del proprio tenant
--- manager/viewer non vedono audit_logs
+-- STEP 6 - AUDIT LOGS
+-- Atteso per owner:
+-- - lettura consentita dei log del proprio tenant
 -- =====================================================
 select id, company_id, action, entity, entity_id, created_at
 from public.audit_logs
@@ -167,11 +173,12 @@ order by created_at desc
 limit 10;
 
 -- =====================================================
--- BLOCCO G - BILLING TABLES WRITE TEST
--- Expected:
--- owner/admin => update consentito su subscriptions e usage_metrics del proprio tenant
--- manager/viewer => update negato
--- authenticated standard => nessuna lettura su billing_webhook_events
+-- STEP 7 - TEST SCRITTURA BILLING
+-- Atteso per owner:
+-- - update consentito su subscriptions
+-- - update consentito su usage_metrics
+-- - rollback finale, quindi nessuna modifica persistente
+-- - billing_webhook_events non leggibile da utente applicativo standard
 -- =====================================================
 begin;
 

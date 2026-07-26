@@ -1,85 +1,112 @@
-// --- SUPABASE INTEGRAZIONE BASE ---
-// Assicurati che supabaseClient.js sia incluso PRIMA di questo file
-
-// Login utente
-async function login(email, password) {
-  const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data;
-}
-
-async function getCurrentUserCompanyId() {
-  const { data: authData, error: authErr } = await window.supabaseClient.auth.getUser();
-  if (authErr) throw authErr;
-  const user = authData?.user;
-  if (!user) throw new Error('Utente non autenticato');
-
-  const { data: profile, error: profileErr } = await window.supabaseClient
-    .from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profileErr) throw profileErr;
-  if (!profile?.company_id) {
-    throw new Error('Profilo non associato ad alcuna azienda. Completa la registrazione o contatta un amministratore.');
-  }
-
-  return profile.company_id;
-}
-
-// Carica tutti i contratti della propria azienda
-async function loadContracts() {
-  const company_id = await getCurrentUserCompanyId();
-  // Carica i contratti
-  const { data: contracts, error: errContracts } = await window.supabaseClient
-    .from('contracts')
-    .select('*')
-    .eq('company_id', company_id);
-  if (errContracts) throw errContracts;
-  return contracts;
-}
-
-// Inserisci un nuovo contratto
-async function insertContract(contract) {
-  const company_id = await getCurrentUserCompanyId();
-  contract.company_id = company_id;
-  const { data, error } = await window.supabaseClient
-    .from('contracts')
-    .insert([contract])
-    .select();
-  if (error) throw error;
-  return data;
-}
-
-// Esempio di utilizzo:
-// await login('email@azienda.com', 'password');
-// const contratti = await loadContracts();
-// await insertContract({ employee_name: 'Mario Rossi', ... });
-// Multi-tenant: gestione tenant attivo
-let activeTenantId = null;
-
-function setActiveTenant(tenantId) {
-  activeTenantId = tenantId;
-  // Aggiorna la vista filtrando le aziende
-  if (window.renderSidebarCompanies) window.renderSidebarCompanies();
-  if (window.renderDashboard) window.renderDashboard();
-}
-
-function getCompaniesByTenant() {
-  if (!activeTenantId) return state.companies;
-  return state.companies.filter(c => c.tenantId === activeTenantId);
-}
 'use strict';
 // ═══════════════════════════════════════
 // CONSTANTS & STORAGE
 // ═══════════════════════════════════════
 const ALERT_DAYS = 6;
 const SK = { data:'cm2_data', settings:'cm2_settings', log:'cm2_log', sent:'cm2_sent', sync:'cm2_sync', auth:'cm2_auth', theme:'cm2_theme' };
+const APP_NAME = 'ProrogaPro';
+const APP_TAGLINE = 'Scadenze e proroghe contrattuali';
+const APP_LOGO = 'assets/prorogapro-mark.png';
+const APP_LOGO_FULL = 'assets/prorogapro-logo.png';
+function renderLoginLogo(extra=''){
+  const extraHtml=extra?`<div class="login-logo-extra">${esc(extra)}</div>`:'';
+  return `<div class="login-logo login-logo--full"><img src="${APP_LOGO_FULL}" alt="${APP_NAME}" class="login-logo-img">${extraHtml}</div>`;
+}
 
 function esc(s){if(!s)return'';const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"};return String(s).replace(/[&<>"']/g,c=>m[c])}
 function escAttr(s){return esc(s)}
 function escJsArg(s){return JSON.stringify(String(s??'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// Multi-tenant filter legacy (tenantId su entry contratto)
+let activeTenantId = null;
+function setActiveTenant(tenantId) {
+  activeTenantId = tenantId;
+  if (window.renderSidebarCompanies) window.renderSidebarCompanies();
+}
+function getCompaniesByTenant() {
+  if (!activeTenantId) return state.companies;
+  return state.companies.filter(c => c.tenantId === activeTenantId);
+}
+
+// ═══════════════════════════════════════
+// RBAC & BILLING GUARDS
+// ═══════════════════════════════════════
+let currentUserRole = 'viewer';
+function setCurrentUserRole(role){
+  const normalized = String(role || '').toLowerCase();
+  const allowed = ['owner', 'admin', 'manager', 'viewer'];
+  currentUserRole = allowed.includes(normalized) ? normalized : 'viewer';
+  applyWriteRoleUI();
+}
+function getCurrentUserRole(){ return currentUserRole; }
+function isAdmin(){
+  const role = getCurrentUserRole();
+  return role === 'owner' || role === 'admin';
+}
+function canManageData(){
+  const role = getCurrentUserRole();
+  return role === 'owner' || role === 'admin' || role === 'manager';
+}
+function isViewer(){ return getCurrentUserRole() === 'viewer'; }
+
+function isWriteBlockedByBilling(){
+  const s = window._billingSummary;
+  if (!s) return false;
+  const st = String(s.subscription_status || '').toLowerCase();
+  return st === 'canceled' || st === 'unpaid';
+}
+
+function canAddContract(extraCount){
+  if (isWriteBlockedByBilling()) return false;
+  const s = window._billingSummary;
+  if (!s || s.max_contracts == null) return true;
+  const used = Number(s.contracts_used) || state.companies.length;
+  const max = Number(s.max_contracts);
+  const add = Number(extraCount) || 1;
+  return used + add <= max;
+}
+
+function requireWriteAccess(actionLabel){
+  if (!canManageData()) {
+    showToast('Permesso negato: ruolo in sola lettura');
+    return false;
+  }
+  if (isWriteBlockedByBilling()) {
+    showToast('Abbonamento non attivo — rinnova per ' + (actionLabel || 'modificare i dati'));
+    return false;
+  }
+  return true;
+}
+
+function applyWriteRoleUI(){
+  const canWrite = canManageData() && !isWriteBlockedByBilling();
+  document.querySelectorAll('.requires-write').forEach(el => {
+    el.disabled = !canWrite;
+    el.style.opacity = canWrite ? '' : '0.45';
+    el.style.pointerEvents = canWrite ? '' : 'none';
+  });
+  document.body.classList.toggle('role-viewer', isViewer());
+  document.body.classList.toggle('role-readonly', !canWrite);
+}
+
+window.setCurrentUserRole = setCurrentUserRole;
+window.getCurrentUserRole = getCurrentUserRole;
+window.isAdmin = isAdmin;
+window.canManageData = canManageData;
+window.isViewer = isViewer;
+window.requireWriteAccess = requireWriteAccess;
+window.canAddContract = canAddContract;
+window.applyWriteRoleUI = applyWriteRoleUI;
+window.APP_LOGO = APP_LOGO;
+window.APP_LOGO_FULL = APP_LOGO_FULL;
+window.renderLoginLogo = renderLoginLogo;
+window.APP_NAME = APP_NAME;
+window.APP_TAGLINE = APP_TAGLINE;
+
+function scopedKey(base){
+  const uid = authUser?.id || authUser?.uid;
+  return uid ? `${base}_${uid}` : base;
+}
 
 // ═══════════════════════════════════════
 // DEFAULT DATA
@@ -89,37 +116,18 @@ function mkDate(d){const x=new Date();x.setDate(x.getDate()+d);return x.toISOStr
 function defaultData(){return[]} 
 
 function defaultSettings(){return{sendMethod:'mailto',emailjs:{serviceId:'',templateId:'',publicKey:''},autoSend:{enabled:false,daysBeforeExpiry:[30,15,7,3,1],checkIntervalMinutes:60}}}
-let currentUserRole = 'viewer';
-function setCurrentUserRole(role){
-  const normalized = String(role || '').toLowerCase();
-  const allowed = ['owner', 'admin', 'manager', 'viewer'];
-  currentUserRole = allowed.includes(normalized) ? normalized : 'viewer';
-}
-function getCurrentUserRole(){
-  return currentUserRole;
-}
-window.setCurrentUserRole = setCurrentUserRole;
-window.getCurrentUserRole = getCurrentUserRole;
-function isAdmin(){
-  const role = getCurrentUserRole();
-  return role === 'owner' || role === 'admin';
-}
-function defaultSync(){return{enabled:false,provider:'supabase'}}
+function defaultSync(){return{enabled:true,provider:'supabase'}}
 
 function save(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){} }
 function load(key,def){try{const r=localStorage.getItem(key);if(r!==null)return JSON.parse(r)}catch(e){}return typeof def==='function'?def():def}
 
-// Salva lo stato delle aziende su localStorage e, se attivo, prova a sincronizzare col cloud
+// Salva lo stato delle aziende su localStorage e sincronizza con Supabase
 function saveData(){
+  if (!requireWriteAccess('salvare')) return;
   try{
-      save(SK.data, getCompaniesByTenant());
+      save(scopedKey(SK.data), state.companies);
   }catch(e){ console.error('saveData', e); }
-  try{
-    if(syncConfig && syncConfig.enabled){
-      syncToCloud();
-    }
-  }catch(e){ console.error('saveData sync', e); }
-  // Aggiorna i contratti nell'IDB del Service Worker (per notifiche push offline)
+  try{ if(typeof window.scheduleSyncToSupabase==='function') window.scheduleSyncToSupabase(); }catch(_){}
   try{ if(typeof mirrorContractsToIDB==='function') mirrorContractsToIDB(state.companies); }catch(_){}
 }
 
@@ -165,7 +173,7 @@ function showToast(msg, opts){
 // ═══════════════════════════════════════
 let state={
   page:'dashboard',
-  companies:load(SK.data,defaultData),
+  companies:[],
   searchQuery:'',
   sortBy:'urgency',
   filterMonth:'',

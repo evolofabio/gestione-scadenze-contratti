@@ -284,6 +284,26 @@ function initCharts(){
 // ═══════════════════════════════════════
 // SETTINGS PAGE
 // ═══════════════════════════════════════
+function renderBillingSettingsCard(){
+  const s = window._billingSummary;
+  if (!s) {
+    return '<p style="font-size:13px;color:var(--text3)">Informazioni piano non disponibili.</p>';
+  }
+  const plan = s.plan_name || 'Starter';
+  const status = s.subscription_status || 'trialing';
+  const trial = s.trial_days_left != null ? ` · Trial: ${s.trial_days_left} gg` : '';
+  const contracts = s.max_contracts != null
+    ? `<p style="font-size:13px;color:var(--text2);margin-top:6px">Contratti: ${Number(s.contracts_used)||0}/${s.max_contracts}</p>`
+    : '';
+  const adminBtns = isAdmin() ? `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="tb-btn primary" onclick="openStripeCheckout('starter')">Passa a Starter</button>
+      <button class="tb-btn" onclick="openStripeCheckout('growth')">Growth</button>
+      <button class="tb-btn" onclick="openBillingPortal()">Portale fatturazione</button>
+    </div>` : '<p style="font-size:12px;color:var(--text3);margin-top:8px">Solo owner/admin possono gestire l\'abbonamento.</p>';
+  return `<p style="font-size:14px"><strong>${esc(plan)}</strong> — ${esc(status)}${trial}</p>${contracts}${adminBtns}`;
+}
+
 function renderSettingsPage(){
   const s=emailSettings;
   const allDays=[60,30,15,7,3,1];
@@ -312,55 +332,6 @@ function renderSettingsPage(){
   <div class="settings-card">
     <h4><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Metodo invio email</h4>
     <div class="send-method">
-
-      window.loadProfileSettings = async function(){
-        try{
-          if(window.supabaseClientReady) await window.supabaseClientReady;
-          const emailInput=document.getElementById('settings-profile-email');
-          if(!emailInput)return;
-          const result=await window.supabaseClient.auth.getUser();
-          const user=result?.data?.user;
-          emailInput.value=user?.email||'';
-          const pwdInput=document.getElementById('settings-profile-password');
-          if(pwdInput)pwdInput.value='';
-        }catch(e){
-          console.error('loadProfileSettings',e);
-        }
-      };
-
-      window.updateProfileSettings = async function(){
-        const feedback=document.getElementById('settings-profile-feedback');
-        const emailInput=document.getElementById('settings-profile-email');
-        const pwdInput=document.getElementById('settings-profile-password');
-        if(!feedback||!emailInput||!pwdInput)return;
-
-        feedback.style.display='none';
-        try{
-          if(window.supabaseClientReady) await window.supabaseClientReady;
-          const email=(emailInput.value||'').trim();
-          const password=(pwdInput.value||'').trim();
-          if(email){
-            const { error: emailErr } = await window.supabaseClient.auth.updateUser({ email });
-            if(emailErr) throw emailErr;
-          }
-          if(password){
-            const { error: passErr } = await window.supabaseClient.auth.updateUser({ password });
-            if(passErr) throw passErr;
-          }
-          feedback.textContent='Account aggiornato con successo.';
-          feedback.style.background='var(--green-bg)';
-          feedback.style.color='var(--green)';
-          feedback.style.border='1px solid var(--green-border)';
-          feedback.style.display='block';
-          pwdInput.value='';
-        }catch(err){
-          feedback.textContent=err?.message||'Errore aggiornamento account';
-          feedback.style.background='var(--red-bg)';
-          feedback.style.color='var(--red)';
-          feedback.style.border='1px solid var(--red-border)';
-          feedback.style.display='block';
-        }
-      };
       <label class="method-option${s.sendMethod==='mailto'?' active':''}">
         <input type="radio" name="sm" value="mailto" ${s.sendMethod==='mailto'?'checked':''} onchange="setSendMethod('mailto')">
         <div><div class="method-title">Mailto — apre client email</div><div class="method-desc">Outlook, Gmail, Apple Mail. Nessuna configurazione richiesta.</div></div>
@@ -409,19 +380,18 @@ function renderSettingsPage(){
   </div>
 
   <div class="settings-card">
-    <h4><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Sincronizzazione (Supabase)</h4>
-    <div class="toggle-row">
-      <label class="toggle-switch"><input type="checkbox" ${syncConfig.enabled?'checked':''} onchange="toggleCloudSync(this.checked)"><span class="toggle-track"></span></label>
-      <span class="toggle-label">Attiva sincronizzazione tra dispositivi</span>
-    </div>
-    <p style="font-size:13px;color:var(--text2);margin:8px 0 0">La vecchia configurazione Firebase e stata rimossa. L'accesso e gestito da Supabase.</p>
+    <h4><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Abbonamento</h4>
+    ${renderBillingSettingsCard()}
+  </div>
+
+  <div class="settings-card">
+    <h4><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Sincronizzazione Supabase</h4>
+    <p style="font-size:13px;color:var(--text2);margin:8px 0">I contratti sono salvati automaticamente su Supabase dopo ogni modifica. Usa i pulsanti per forzare sync o ricaricare dal cloud.</p>
     <div id="sync-status"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-      <button class="tb-btn" onclick="applySyncConfig()">Applica</button>
-      <button class="tb-btn" id="btn-pull" onclick="pullFromCloud()" ${!syncState.connected?'disabled':''}>Scarica dal cloud</button>
-      <button class="tb-btn" id="btn-push" onclick="forcePushToCloud()" ${!syncState.connected?'disabled':''}>Carica sul cloud</button>
+      <button class="tb-btn" onclick="pullFromCloud()">Ricarica da cloud</button>
+      <button class="tb-btn requires-write" onclick="forcePushToCloud()">Sincronizza ora</button>
     </div>
-    <p class="field-hint" style="margin-top:8px">Usa questa sezione per attivare/disattivare la sincronizzazione applicativa lato client.</p>
   </div>
 
   <div class="settings-card">
@@ -463,10 +433,12 @@ function hideModal(){document.getElementById('modal-layer').innerHTML=''}
 
 // Add / Edit contract
 window.openAddModal=function(){
+  if (!requireWriteAccess('aggiungere contratti')) return;
   showModal(renderContractModal(null,null));
   setTimeout(attachModalListeners,10);
 }
 window.openAddContractModal=function(name){
+  if (!requireWriteAccess('aggiungere contratti')) return;
   const existing=state.companies.find(c=>c.name===name);
   const base={name,adminEmail:existing?.adminEmail||'',companyEmail:existing?.companyEmail||''};
   showModal(renderContractModal(null,base));
@@ -722,15 +694,16 @@ function renderContractCard(c){
         ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(rawCt=>{const ct=normalizeCantiere(rawCt);const endDate=getCantiereEndDate(ct);return `<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(endDate)<=0?'':'ok'}">${formatDate(endDate)}</div></div>`}).join('')+`</div>`:''}
       </div>
         <div class="card-actions">
-        <div class="status-selector"><span class="status-selector-label">Stato:</span><button class="status-btn s-da_gestire${cStatus==='da_gestire'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'da_gestire')">Da gestire</button><button class="status-btn s-gestita${cStatus==='gestita'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'gestita')">Gestita</button><button class="status-btn s-terminato${cStatus==='terminato'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'terminato')">Terminato</button></div>
+        ${canManageData()?`<div class="status-selector"><span class="status-selector-label">Stato:</span><button class="status-btn s-da_gestire${cStatus==='da_gestire'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'da_gestire')">Da gestire</button><button class="status-btn s-gestita${cStatus==='gestita'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'gestita')">Gestita</button><button class="status-btn s-terminato${cStatus==='terminato'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'terminato')">Terminato</button></div>
         <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
         <button class="act-btn" onclick="openAddCantiere(${escAttr(c.id)})">+ Cantiere</button>
         ${c.renewable?`<button class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button>`:''}
         <button class="act-btn" onclick="openWorkNoteModal(${escAttr(c.id)})">Nota</button>
         ${!c.indeterminate?`<button class="act-btn" onclick="markIndeterminate(${escAttr(c.id)})">Converti T.I.</button>`:'<button class="act-btn" disabled>Convertito</button>'}
         ${!c.cessato?`<button class="act-btn" onclick="markCessato(${escAttr(c.id)})">Segna cessato</button>`:'<button class="act-btn" disabled>Cessato</button>'}
+        <button class="act-btn danger" onclick="confirmDelete(${escAttr(c.id)})">Elimina</button>`:`
+        <button class="act-btn" onclick="openWorkNoteModal(${escAttr(c.id)})">Note</button>`}
         <button class="act-btn primary" onclick="openEmailModal(${escAttr(c.id)})">Email</button>
-        <button class="act-btn danger" onclick="confirmDelete(${escAttr(c.id)})">Elimina</button>
       </div>
     </div>`;
   }catch(e){console.error('renderContractCard',e);return ''}
@@ -1095,7 +1068,10 @@ function renderPage(){
     }
     el.innerHTML=html;
     if(state.page==='analytics') setTimeout(initCharts,50);
-    if(state.page==='settings') setTimeout(()=>{ if(typeof loadProfileSettings==='function') loadProfileSettings(); },10);
+    if(state.page==='settings') setTimeout(()=>{
+      if(typeof loadProfileSettings==='function') loadProfileSettings();
+      if(typeof updateSyncUI==='function') updateSyncUI();
+    },10);
   }catch(e){console.error('renderPage error',e);el.innerHTML='<div class="empty-state">Errore durante il rendering</div>'}
 }
 
@@ -1211,7 +1187,24 @@ function attachModalListeners(){
   updateCausaleLive();
 }
 
+window.setContractStatus=function(id, status){
+  if (!requireWriteAccess('modificare lo stato')) return;
+  const idx = state.companies.findIndex(c => String(c.id) === String(id));
+  if (idx < 0) return;
+  state.companies[idx].status = status;
+  saveData();
+  renderPage();
+  renderSidebarCompanies();
+  showToast('Stato aggiornato');
+};
+
 window.saveContract=function(editId){
+  if (!requireWriteAccess('salvare contratti')) return;
+  const isNew = editId === null || editId === undefined;
+  if (isNew && !canAddContract(1)) {
+    showToast('Limite contratti del piano raggiunto — aggiorna l\'abbonamento');
+    return;
+  }
   const name=(document.getElementById('f-name')||{}).value?.trim();
   const emp=(document.getElementById('f-emp')||{}).value?.trim();
   const type=(document.getElementById('f-type')||{}).value?.trim()||'Non specificato';
@@ -1251,6 +1244,7 @@ window.saveContract=function(editId){
 
 // Delete
 window.confirmDelete=function(id){
+  if (!requireWriteAccess('eliminare')) return;
   const c=state.companies.find(x=>x.id===id);
   if(!c)return;
   showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()" style="max-width:400px">

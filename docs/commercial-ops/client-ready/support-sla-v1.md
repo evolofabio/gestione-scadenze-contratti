@@ -39,9 +39,9 @@
 
 ## Canali
 
-1. Email supporto: support@evolution-system.com
+1. Email supporto: support@evolo434@gmail.com
 2. Ticket portal: gestione via email con ID ticket in oggetto
-3. Escalation P1: support@evolution-system.com con prefisso oggetto [P1]
+3. Escalation P1: support@evolo434@gmail.com con prefisso oggetto [P1]
 
 ## Reportistica supporto mensile
 

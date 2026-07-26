@@ -1,4 +1,4 @@
--- Seed demo neutro per Evolution System
+-- Seed demo neutro per ProrogaPro
 -- Eseguire DOPO supabase_schema.sql
 
 BEGIN;

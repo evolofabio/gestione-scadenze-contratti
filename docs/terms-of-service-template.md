@@ -2,11 +2,11 @@
 
 ## 1. Parti E Oggetto
 
-Il presente documento disciplina l'accesso e l'uso della piattaforma Evolution System da parte del Cliente.
+Il presente documento disciplina l'accesso e l'uso della piattaforma ProrogaPro da parte del Cliente.
 
 ## 2. Definizioni
 
-1. Piattaforma: applicazione SaaS Evolution System.
+1. Piattaforma: applicazione SaaS ProrogaPro.
 2. Cliente: soggetto giuridico che acquista un piano.
 3. Utente autorizzato: persona autorizzata dal Cliente.
 4. Dati cliente: dati inseriti o generati dal Cliente.

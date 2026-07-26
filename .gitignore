@@ -12,7 +12,6 @@ console_logs.json
 .DS_Store
 /.vscode
 .env
-package-lock.json
 playwright-report/
 # OS files
 .DS_Store
@@ -28,3 +27,7 @@ Thumbs.db
 # Backup files
 *.bak
 *.backup
+
+# Repo demo annidato (progetto separato su GitHub)
+Evolution System Gestione Scadenza Contratti DEMO/
+supabase/.temp/

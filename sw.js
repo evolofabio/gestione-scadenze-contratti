@@ -1,6 +1,6 @@
 'use strict';
 // ═══════════════════════════════════════════════════════════════════════════
-//  Evolution System — Service Worker v1
+//  ProrogaPro — Service Worker v1
 //  Gestisce: push events, periodic background sync, notification click
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -19,11 +19,11 @@ self.addEventListener('push', e => {
   let data = {};
   try { data = e.data ? e.data.json() : {}; } catch (_) { data = { body: e.data ? e.data.text() : '' }; }
 
-  const title   = data.title || '⚠️ Evolution System';
+  const title   = data.title || '⚠️ ProrogaPro';
   const options = {
     body            : data.body || '',
-    icon            : '/evolution-system.png',
-    badge           : '/evolution-system.png',
+    icon            : '/assets/prorogapro-mark.png',
+    badge           : '/assets/prorogapro-mark.png',
     tag             : data.tag || 'es-alert',
     renotify        : true,
     requireInteraction: true,
@@ -103,8 +103,8 @@ async function checkAndNotify() {
 
   await self.registration.showNotification(title, {
     body,
-    icon             : '/evolution-system.png',
-    badge            : '/evolution-system.png',
+    icon             : '/apple-touch-icon.png',
+    badge            : '/apple-touch-icon.png',
     tag              : 'es-urgent',
     renotify         : true,
     requireInteraction: true,
@@ -119,7 +119,7 @@ async function checkAndNotify() {
 // ── IndexedDB helpers (Service Worker context) ────────────────────────────────
 function openIDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('evolution-system-sw', 1);
+    const req = indexedDB.open('prorogapro-sw', 1);
     req.onupgradeneeded = e => { e.target.result.createObjectStore('kv'); };
     req.onsuccess = e => resolve(e.target.result);
     req.onerror   = e => reject(e.target.error);

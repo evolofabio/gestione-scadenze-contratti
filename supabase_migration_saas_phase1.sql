@@ -1,4 +1,4 @@
--- Evolution System - SaaS Phase 1 Migration
+-- ProrogaPro - SaaS Phase 1 Migration
 -- Obiettivo: hardening multi-tenant, ruoli avanzati, audit trail
 
 BEGIN;

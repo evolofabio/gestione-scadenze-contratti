@@ -1,4 +1,4 @@
--- Evolution System - Staging Seed Template
+-- ProrogaPro - Staging Seed Template
 -- Uso:
 -- 1) creare prima gli utenti in Supabase Auth con queste email placeholder
 -- 2) sostituire le email se necessario
@@ -127,15 +127,25 @@ select
 from public.companies c
 join public.plans p on p.code = 'growth'
 where c.slug in ('validation-company-a', 'validation-company-b')
-on conflict (provider_subscription_id) do update
+  and not exists (
+    select 1
+    from public.subscriptions s
+    where s.provider_subscription_id = 'sub_' || c.slug
+  );
+
+update public.subscriptions s
 set
-  plan_id = excluded.plan_id,
-  status = excluded.status,
-  billing_cycle = excluded.billing_cycle,
-  current_period_start = excluded.current_period_start,
-  current_period_end = excluded.current_period_end,
-  metadata = excluded.metadata,
-  updated_at = now();
+  plan_id = p.id,
+  status = 'active',
+  billing_cycle = 'monthly',
+  current_period_start = now() - interval '7 day',
+  current_period_end = now() + interval '23 day',
+  metadata = jsonb_build_object('seed', 'staging-template'),
+  updated_at = now()
+from public.companies c
+join public.plans p on p.code = 'growth'
+where c.slug in ('validation-company-a', 'validation-company-b')
+  and s.provider_subscription_id = 'sub_' || c.slug;
 
 -- =====================================================
 -- BLOCCO D - USAGE METRICS DI TEST

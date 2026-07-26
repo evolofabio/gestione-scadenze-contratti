@@ -1,4 +1,4 @@
--- Schema multi-tenant per Evolution System Gestione Scadenza Contratti
+-- Schema multi-tenant per ProrogaPro Gestione Scadenza Contratti
 -- Da eseguire su Supabase (PostgreSQL)
 
 -- Tabella aziende

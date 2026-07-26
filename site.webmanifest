@@ -1,8 +1,16 @@
 {
-  "name": "Evolution System - Gestione Scadenze Contratti",
-  "short_name": "Evolution System",
+  "name": "ProrogaPro — Scadenze e proroghe contrattuali",
+  "short_name": "ProrogaPro",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb"
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "assets/prorogapro-mark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }

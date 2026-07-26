@@ -1,12 +1,12 @@
 {
-  "name": "evolution-system-gestione-scadenze-contratti",
+  "name": "prorogapro",
   "version": "1.0.0",
-  "description": "Evolution System - Gestione Scadenze Contratti: dashboard web per la gestione e il monitoraggio delle scadenze contrattuali aziendali.",
+  "description": "ProrogaPro — Scadenze e proroghe contrattuali: piattaforma SaaS per PMI italiane.",
   "main": "index.html",
   "scripts": {
     "test": "node scripts/capture_console.js --strict"
   },
-  "keywords": [],
+  "keywords": ["proroghe", "scadenze", "contratti", "saas", "hr"],
   "author": "",
   "license": "MIT",
   "devDependencies": {

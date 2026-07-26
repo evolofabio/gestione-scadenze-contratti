@@ -1,10 +1,10 @@
 'use strict';
 // ═══════════════════════════════════════════════════════════════════════════
-//  Evolution System — Push Notifications Module
+//  ProrogaPro — Push Notifications Module
 //  Gestisce: registrazione SW, permessi, mirror IDB, card impostazioni
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PUSH_IDB_NAME    = 'evolution-system-sw';
+const PUSH_IDB_NAME    = 'prorogapro-sw';
 const PUSH_IDB_VERSION = 1;
 
 // ── IndexedDB helpers (main thread) ──────────────────────────────────────────
@@ -42,6 +42,7 @@ let _swReg = null;
 // ── Registrazione Service Worker + Periodic Background Sync ──────────────────
 async function initPushNotifications() {
   if (!('serviceWorker' in navigator)) return;
+  if (location.protocol === 'file:') return;
   try {
     // Usa percorso relativo per compatibilità con GitHub Pages in sottocartella
     const swUrl = new URL('sw.js', document.baseURI).href;
@@ -83,10 +84,10 @@ window.requestPushPermission = async function () {
     if (!_swReg) await initPushNotifications();
     // Notifica di conferma
     if (_swReg) {
-      await _swReg.showNotification('✅ Evolution System', {
+      await _swReg.showNotification('✅ ProrogaPro', {
         body  : 'Notifiche push attivate. Riceverai avvisi anche con questa tab chiusa.',
-        icon  : '/evolution-system.png',
-        badge : '/evolution-system.png',
+        icon  : '/assets/prorogapro-mark.png',
+        badge : '/assets/prorogapro-mark.png',
         tag   : 'es-welcome'
       });
     }
@@ -119,7 +120,7 @@ window.testPushNotification = async function () {
 
   const title = urgent.length
     ? `⚠️ ${urgent.length} contratt${urgent.length === 1 ? 'o' : 'i'} in scadenza`
-    : '✅ Test notifica — Evolution System';
+    : '✅ Test notifica — ProrogaPro';
 
   const body = urgent.length
     ? urgent.map(c => {
@@ -133,8 +134,8 @@ window.testPushNotification = async function () {
 
   await _swReg.showNotification(title, {
     body,
-    icon             : '/evolution-system.png',
-    badge            : '/evolution-system.png',
+    icon             : '/assets/prorogapro-mark.png',
+    badge            : '/assets/prorogapro-mark.png',
     tag              : 'es-test',
     requireInteraction: false,
     data             : { url: '/contract_manager_dashboard.html' },

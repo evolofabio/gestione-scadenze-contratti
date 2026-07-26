@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Privacy Policy – ProrogaPro</title>
+  <link rel="icon" href="../assets/prorogapro-favicon.png" type="image/png">
+  <style>
+    :root{--brand:#2563eb;--brand-dark:#1e3a8a;--accent:#0891b2;--bg:#f8fafc;--card:#fff;--text:#0f172a;--text2:#475569;--border:#e2e8f0}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;padding:0 16px 60px}
+    header{background:linear-gradient(135deg,var(--brand-dark),var(--brand));color:#fff;padding:20px 24px;display:flex;align-items:center;gap:12px;margin:0 -16px 40px}
+    header img{height:36px;border-radius:8px}
+    header h1{font-size:18px;font-weight:600}
+    .container{max-width:780px;margin:0 auto;background:var(--card);border-radius:12px;padding:32px 36px;box-shadow:0 2px 16px #0001}
+    h2{font-size:22px;font-weight:700;margin-bottom:8px}
+    .version{font-size:13px;color:var(--text2);margin-bottom:28px}
+    h3{font-size:15px;font-weight:600;margin:24px 0 6px;color:var(--brand)}
+    p,li{font-size:14px;color:var(--text2);margin-bottom:10px}
+    ul{padding-left:20px}
+    a{color:var(--brand)}
+    footer{text-align:center;margin-top:32px;font-size:13px;color:var(--text2)}
+    @media(max-width:600px){.container{padding:20px 16px}}
+  </style>
+</head>
+<body>
+<header>
+  <img src="../assets/prorogapro-mark.png" alt="ProrogaPro">
+  <h1>ProrogaPro — Scadenze e proroghe contrattuali</h1>
+</header>
+<div class="container">
+  <h2>Informativa sulla Privacy</h2>
+  <div class="version">Versione 1.0 – Luglio 2026 | Titolare: ProrogaPro</div>
+
+  <h3>1. Titolare del Trattamento</h3>
+  <p>ProrogaPro (di seguito "Titolare"). Contatto: <a href="mailto:evolo434@gmail.com">evolo434@gmail.com</a></p>
+
+  <h3>2. Dati Raccolti</h3>
+  <p>Raccogliamo le seguenti categorie di dati:</p>
+  <ul>
+    <li><strong>Dati di account:</strong> nome, indirizzo email, hash della password (gestito da Supabase Auth).</li>
+    <li><strong>Dati aziendali:</strong> nome azienda, dati di contratti di lavoro (dipendente, tipo, date, note).</li>
+    <li><strong>Dati di utilizzo:</strong> log accessi, metriche aggregate di utilizzo del servizio.</li>
+    <li><strong>Dati di fatturazione:</strong> identificativi Stripe (nessuna carta di credito è memorizzata sui nostri server).</li>
+  </ul>
+
+  <h3>3. Finalità e Basi Giuridiche</h3>
+  <ul>
+    <li><strong>Esecuzione del contratto (Art. 6 c.1 lett. b GDPR):</strong> fornitura del servizio SaaS.</li>
+    <li><strong>Obbligo legale (Art. 6 c.1 lett. c):</strong> conservazione di dati fiscali e contabili.</li>
+    <li><strong>Legittimo interesse (Art. 6 c.1 lett. f):</strong> sicurezza, prevenzione frodi, miglioramento del servizio.</li>
+  </ul>
+
+  <h3>4. Conservazione dei Dati</h3>
+  <p>I dati contrattuali vengono conservati per tutta la durata dell'abbonamento attivo e per ulteriori 12 mesi dopo la cancellazione, salvo obblighi di legge più stringenti. I dati di audit log sono conservati per 24 mesi.</p>
+
+  <h3>5. Condivisione con Terzi</h3>
+  <p>I dati non vengono ceduti a terzi per finalità di marketing. Usiamo i seguenti sub-processor:</p>
+  <ul>
+    <li><strong>Supabase Inc.</strong> (database, autenticazione) – server in UE.</li>
+    <li><strong>Stripe Inc.</strong> (pagamenti) – conformità PCI-DSS.</li>
+    <li><strong>EmailJS</strong> (invio notifiche email, opzionale) – configurato dal cliente.</li>
+  </ul>
+
+  <h3>6. Diritti dell'Interessato</h3>
+  <p>Hai il diritto di: accesso, rettifica, cancellazione ("diritto all'oblio"), limitazione, portabilità e opposizione al trattamento. Per esercitare i tuoi diritti scrivi a <a href="mailto:evolo434@gmail.com">evolo434@gmail.com</a>.</p>
+
+  <h3>7. Trasferimenti Internazionali</h3>
+  <p>I dati sono processati all'interno dello Spazio Economico Europeo. Eventuali trasferimenti verso paesi terzi avvengono sulla base di clausole contrattuali standard approvate dalla Commissione UE.</p>
+
+  <h3>8. Sicurezza</h3>
+  <p>Adottiamo misure tecniche e organizzative adeguate: crittografia TLS in transito, Row Level Security su PostgreSQL, hashing password, accessi limitati per ruolo e audit log.</p>
+
+  <h3>9. Cookie e Tracciamento</h3>
+  <p>L'applicazione non utilizza cookie di profilazione o tracciamento pubblicitario. Vengono utilizzati solo cookie tecnici essenziali per la sessione di autenticazione.</p>
+
+  <h3>10. Modifiche all'Informativa</h3>
+  <p>Eventuali aggiornamenti sostanziali saranno comunicati via email con almeno 14 giorni di preavviso. L'uso continuato del servizio costituisce accettazione delle modifiche.</p>
+
+  <h3>11. Reclami</h3>
+  <p>Hai il diritto di proporre reclamo all'Autorità Garante per la Protezione dei Dati Personali (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">www.garanteprivacy.it</a>).</p>
+</div>
+<footer>ProrogaPro &copy; 2026 &nbsp;·&nbsp; <a href="terms.html">Termini di Servizio</a> &nbsp;·&nbsp; <a href="../contract_manager_dashboard.html">← Torna all'app</a></footer>
+</body>
+</html>

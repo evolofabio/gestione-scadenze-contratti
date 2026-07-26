@@ -9,7 +9,7 @@
       <stop offset="100%" stop-color="#0891b2"/>
     </linearGradient>
   </defs>
-  <g>
+  <g transform="translate(0,0)">
     <rect width="64" height="64" rx="16" fill="url(#pp-bg)"/>
     <rect x="17" y="13" width="30" height="38" rx="4" fill="#fff" opacity=".97"/>
     <rect x="17" y="13" width="30" height="9" rx="4" fill="#dbeafe"/>

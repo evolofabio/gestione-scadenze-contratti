@@ -2,10 +2,10 @@
 
 ## Fornitore
 
-1. Ragione sociale: Evolution System
+1. Ragione sociale: ProrogaPro
 2. Sede legale: Italia (dettaglio sede da inserire in fase di firma)
 3. P.IVA: da inserire in fase di firma
-4. Referente commerciale: Team Evolution System
+4. Referente commerciale: Team ProrogaPro
 
 ## Cliente
 

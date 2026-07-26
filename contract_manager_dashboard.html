@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<!-- rimosso duplicato iniziale; documento principale segue -->
 <html lang="it">
 <head>
-    <!-- Supabase Client e integrazione -->
-    <script src="scripts/supabaseClient.js"></script>
+  <script src="scripts/config.js"></script>
+  <script src="scripts/supabaseClient.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Evolution System - Gestione Scadenze Contratti</title>
+  <title>ProrogaPro — Scadenze e proroghe contrattuali</title>
+  <meta name="description" content="ProrogaPro: piattaforma SaaS per monitorare scadenze contrattuali, proroghe, cantieri e alert. Trial gratuito 14 giorni.">
+  <link rel="manifest" href="site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -14,27 +15,19 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="icon" href="evolution-system.png" type="image/png">
-  <link rel="apple-touch-icon" href="evolution-system.png">
+  <link rel="icon" href="assets/prorogapro-favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/prorogapro-apple-touch.png">
   <link rel="stylesheet" href="styles/dashboard.css">
 </head>
 <body>
-<div id="login-screen" class="login-screen">
-  <form id="login-form" style="max-width:320px;margin:40px auto;padding:24px;background:#fff;border-radius:8px;box-shadow:0 2px 16px #0001;display:flex;flex-direction:column;gap:16px">
-    <h2 style="margin-bottom:8px">Accedi</h2>
-    <input type="email" id="login-email" placeholder="Email" required style="padding:8px;font-size:16px">
-    <input type="password" id="login-password" placeholder="Password" required style="padding:8px;font-size:16px">
-    <button type="submit" style="padding:10px 0;font-size:16px;background:#2d8a4e;color:#fff;border:none;border-radius:4px;cursor:pointer">Login</button>
-    <div id="login-error" style="color:#d63c3c;font-size:14px;display:none"></div>
-  </form>
-</div>
+<div id="login-screen" class="login-screen"></div>
 <div id="app-shell" class="app-shell" style="display:none">
   <nav class="sidebar" id="sidebar">
-      <div class="sidebar-logo">
+    <div class="sidebar-logo">
       <div class="logo-mark">
-        <img src="evolution-system.png" alt="Evolution System">
+        <img src="assets/prorogapro-mark.png" alt="ProrogaPro">
       </div>
-      <span class="logo-text">Evolution System</span>
+      <span class="logo-text">Proroga<span class="logo-pro">Pro</span></span>
     </div>
     <div class="sidebar-nav" id="sidebar-main-nav">
       <span class="sidebar-section-label">Navigazione</span>
@@ -58,14 +51,16 @@
       <button class="nav-item" id="nav-cessati" onclick="setPage('cessati')">
         <svg viewBox="0 0 24 24"><path d="M3 6h18M9 6v12M15 6v12"/></svg>
         <span>Cessati</span>
-      </button>      <button class="nav-item" id="nav-gestite" onclick="setPage('gestite')">
+      </button>
+      <button class="nav-item" id="nav-gestite" onclick="setPage('gestite')">
         <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
         <span>Gestite</span>
       </button>
       <button class="nav-item" id="nav-terminate" onclick="setPage('terminate')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
         <span>Terminate</span>
-      </button>      <button class="nav-item" id="nav-analytics" onclick="setPage('analytics')">
+      </button>
+      <button class="nav-item" id="nav-analytics" onclick="setPage('analytics')">
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span>Analytics</span>
       </button>
@@ -85,44 +80,10 @@
   </nav>
 
   <div class="main-area">
-            <footer id="app-footer">
-              <span>Evolution System &copy; 2026. Tutti i diritti riservati. | <a href="#" onclick="showPrivacy()">Privacy &amp; Termini</a></span>
-            </footer>
-        <!-- Tabella contratti caricati da Supabase -->
-        <div id="contracts-table-wrap" class="legacy-panel" style="display:none">
-                <div id="contract-feedback" class="legacy-feedback" style="display:none"></div>
-                <form id="contract-form" class="legacy-form">
-                  <input type="text" id="cf-employee" class="f-input" placeholder="Dipendente" required>
-                  <input type="text" id="cf-type" class="f-input" placeholder="Tipo Contratto" required>
-                  <input type="date" id="cf-start" class="f-input" required>
-                  <input type="date" id="cf-end" class="f-input" required>
-                  <select id="cf-renewable" class="f-input">
-                    <option value="true">Prorogabile</option>
-                    <option value="false">Non prorogabile</option>
-                  </select>
-                  <input type="number" id="cf-renew-months" class="f-input" placeholder="Mesi Proroga" min="0">
-                  <input type="text" id="cf-renew-type" class="f-input" placeholder="Tipo Proroga">
-                  <input type="number" id="cf-renew-notice" class="f-input" placeholder="Preavviso (gg)" min="0">
-                  <input type="number" id="cf-renew-count" class="f-input" placeholder="Proroghe fatte" min="0">
-                  <input type="text" id="cf-notes" class="f-input" placeholder="Note">
-                  <button type="submit" class="tb-btn primary">Aggiungi contratto</button>
-                </form>
-          <h2>Contratti aziendali</h2>
-          <table id="contracts-table" class="legacy-table">
-            <thead>
-              <tr>
-                <th>Dipendente</th>
-                <th>Tipo Contratto</th>
-                <th>Inizio</th>
-                <th>Scadenza</th>
-                <th>Prorogabile</th>
-                <th>Note</th>
-                <th>Azioni</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+    <footer id="app-footer">
+      <span>ProrogaPro &copy; 2026 · <a href="pages/privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="pages/terms.html" target="_blank" rel="noopener">Termini</a></span>
+    </footer>
+    <div id="billing-status-bar" class="billing-status-bar" style="display:none"></div>
     <header class="topbar">
       <button class="icon-btn" onclick="toggleMobileSidebar()" id="mobile-menu-btn">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -152,18 +113,18 @@
               CSV (.csv)
             </button>
             <hr>
-            <button onclick="triggerImportExcel();closeExportMenu()">
+            <button class="requires-write" onclick="triggerImportExcel();closeExportMenu()">
               <svg viewBox="0 0 24 24" stroke="#6d3fcf"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Importa Excel
             </button>
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="tb-btn primary" onclick="openAddCompanyModal()">
+          <button class="tb-btn primary requires-write" onclick="openAddCompanyModal()">
             <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
             <span class="btn-label">Aggiungi azienda</span>
           </button>
-          <button class="tb-btn" onclick="openAddEmployeeModal()">
+          <button class="tb-btn requires-write" onclick="openAddEmployeeModal()">
             <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span class="btn-label">Aggiungi dipendente</span>
           </button>
@@ -184,8 +145,7 @@
       </div>
     </header>
 
-    <main class="page-content" id="page-content">
-    </main>
+    <main class="page-content" id="page-content"></main>
   </div>
 </div>
 
@@ -197,220 +157,7 @@
 <script src="scripts/app-data.js"></script>
 <script src="scripts/app-push.js"></script>
 <script src="scripts/app-logout.js"></script>
-</script>
-<script>
-// Mostra privacy
-function showPrivacy() {
-  alert('Informativa privacy: i dati sono trattati secondo la normativa vigente. Nessun dato viene ceduto a terzi. Per dettagli scrivere a info@evolutionsystem.it');
-}
-
-// Aggiorna un contratto
-async function updateContract(id, fields) {
-  const { error } = await window.supabaseClient.from('contracts').update(fields).eq('id', id);
-  if (error) throw error;
-}
-
-// Elimina un contratto
-async function deleteContract(id) {
-  const { error } = await window.supabaseClient.from('contracts').delete().eq('id', id);
-  if (error) throw error;
-}
-
-// Mostra modale modifica contratto
-function openEditContractModal(contract) {
-  const modal = document.createElement('div');
-  modal.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0007;z-index:10000;display:flex;align-items:center;justify-content:center';
-  modal.innerHTML = `
-    <div style="background:#fff;padding:24px 18px;border-radius:8px;min-width:320px;max-width:96vw;box-shadow:0 2px 24px #0002">
-      <h3>Modifica contratto</h3>
-      <form id="edit-contract-form" style="display:flex;flex-direction:column;gap:10px">
-        <input type="text" id="edit-employee" placeholder="Dipendente" value="${contract.employee_name||''}" required>
-        <input type="text" id="edit-type" placeholder="Tipo Contratto" value="${contract.contract_type||''}" required>
-        <input type="date" id="edit-start" value="${contract.start_date||''}" required>
-        <input type="date" id="edit-end" value="${contract.end_date||''}" required>
-        <select id="edit-renewable">
-          <option value="true" ${contract.renewable?'selected':''}>Prorogabile</option>
-          <option value="false" ${!contract.renewable?'selected':''}>Non prorogabile</option>
-        </select>
-        <input type="number" id="edit-renew-months" placeholder="Mesi Proroga" value="${contract.renew_months||''}">
-        <input type="text" id="edit-renew-type" placeholder="Tipo Proroga" value="${contract.renew_type||''}">
-        <input type="number" id="edit-renew-notice" placeholder="Preavviso (gg)" value="${contract.renew_notice||''}">
-        <input type="number" id="edit-renew-count" placeholder="Proroghe fatte" value="${contract.renew_count||0}">
-        <input type="text" id="edit-notes" placeholder="Note" value="${contract.notes||''}">
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button type="submit" style="background:#2d8a4e;color:#fff;padding:8px 16px;border:none;border-radius:4px;cursor:pointer">Salva</button>
-          <button type="button" onclick="this.closest('.modal-edit-contract').remove()" style="background:#eee;padding:8px 16px;border:none;border-radius:4px;cursor:pointer">Annulla</button>
-        </div>
-      </form>
-    </div>
-  `;
-  modal.className = 'modal-edit-contract';
-  document.body.appendChild(modal);
-  document.getElementById('edit-contract-form').onsubmit = async function(e) {
-    e.preventDefault();
-    try {
-      await updateContract(contract.id, {
-        employee_name: document.getElementById('edit-employee').value,
-        contract_type: document.getElementById('edit-type').value,
-        start_date: document.getElementById('edit-start').value,
-        end_date: document.getElementById('edit-end').value,
-        renewable: document.getElementById('edit-renewable').value === 'true',
-        renew_months: parseInt(document.getElementById('edit-renew-months').value) || null,
-        renew_type: document.getElementById('edit-renew-type').value,
-        renew_notice: parseInt(document.getElementById('edit-renew-notice').value) || null,
-        renew_count: parseInt(document.getElementById('edit-renew-count').value) || 0,
-        notes: document.getElementById('edit-notes').value
-      });
-      modal.remove();
-      await renderContracts();
-    } catch (err) {
-      alert('Errore salvataggio: ' + (err.message || err));
-    }
-  };
-}
-
-// Conferma eliminazione contratto
-function confirmDeleteContract(id) {
-  if (confirm('Vuoi davvero eliminare questo contratto?')) {
-    deleteContract(id).then(renderContracts).catch(err => alert('Errore eliminazione: ' + (err.message || err)));
-  }
-}
-// Controllo sessione utente all'avvio
-window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    if (window.supabaseClientReady) await window.supabaseClientReady;
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (user) {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app-shell').style.display = '';
-      await renderContracts();
-    }
-  } catch {}
-});
-
-// Logout sicuro
-window.doLogout = async function() {
-  await window.supabaseClient.auth.signOut();
-  document.getElementById('app-shell').style.display = 'none';
-  document.getElementById('login-screen').style.display = '';
-};
-
-// Gestione form inserimento contratto
-document.getElementById('contract-form').onsubmit = async function(e) {
-  e.preventDefault();
-  const feedback = document.getElementById('contract-feedback');
-  feedback.style.display = 'none';
-  try {
-    await insertContract({
-      employee_name: document.getElementById('cf-employee').value,
-      contract_type: document.getElementById('cf-type').value,
-      start_date: document.getElementById('cf-start').value,
-      end_date: document.getElementById('cf-end').value,
-      renewable: document.getElementById('cf-renewable').value === 'true',
-      renew_months: parseInt(document.getElementById('cf-renew-months').value) || null,
-      renew_type: document.getElementById('cf-renew-type').value,
-      renew_notice: parseInt(document.getElementById('cf-renew-notice').value) || null,
-      renew_count: parseInt(document.getElementById('cf-renew-count').value) || 0,
-      notes: document.getElementById('cf-notes').value
-    });
-    feedback.textContent = 'Contratto aggiunto con successo!';
-    feedback.style.background = '#e6faed';
-    feedback.style.color = '#1a7f37';
-    feedback.style.display = 'block';
-    document.getElementById('contract-form').reset();
-    await renderContracts();
-  } catch (err) {
-    feedback.textContent = err.message || 'Errore inserimento contratto';
-    feedback.style.background = '#ffeaea';
-    feedback.style.color = '#d63c3c';
-    feedback.style.display = 'block';
-  }
-};
-// Logout automatico alla chiusura del browser
-window.addEventListener('unload', function() {
-  if (typeof doLogout === 'function') {
-    doLogout();
-  }
-});
-</script>
+<script src="scripts/supabase-sync.js"></script>
+<script src="scripts/app-billing.js"></script>
 </body>
-<script>
-// Gestione login
-document.getElementById('login-form').onsubmit = async function(e) {
-  e.preventDefault();
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  const errBox = document.getElementById('login-error');
-  errBox.style.display = 'none';
-  try {
-    await login(email, password);
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app-shell').style.display = '';
-    await renderContracts();
-  } catch (err) {
-    errBox.textContent = err.message || 'Errore di autenticazione';
-    errBox.style.display = 'block';
-  }
-};
-
-// Carica e mostra i contratti dopo il login
-async function renderContracts() {
-  try {
-    const contracts = await loadContracts();
-    const wrap = document.getElementById('contracts-table-wrap');
-    const tbody = document.querySelector('#contracts-table tbody');
-    tbody.innerHTML = '';
-    if (!contracts.length) {
-      wrap.style.display = '';
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;padding:24px">Nessun contratto presente</td></tr>';
-      return;
-    }
-    contracts.forEach(c => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${c.employee_name || ''}</td>
-        <td>${c.contract_type || ''}</td>
-        <td>${c.start_date || ''}</td>
-        <td>${c.end_date || ''}</td>
-        <td>${c.renewable ? 'Sì' : 'No'}</td>
-        <td>${c.notes || ''}</td>
-        <td>
-          <button onclick='openEditContractModal(${JSON.stringify(c)})' style="background:#2a5bd7;color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:14px;margin-right:4px">Modifica</button>
-          <button onclick='confirmDeleteContract(${c.id})' style="background:#d63c3c;color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:14px">Elimina</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-    wrap.style.display = '';
-  } catch (err) {
-    alert('Errore caricamento contratti: ' + (err.message || err));
-  }
-  // Nascondi feedback dopo 3 secondi
-  const feedback = document.getElementById('contract-feedback');
-  if (feedback && feedback.style.display === 'block') {
-    setTimeout(() => { feedback.style.display = 'none'; }, 3000);
-  }
-}
-
-// Esempio: aggiungi contratto (da collegare a un form reale)
-async function addContractDemo() {
-  try {
-    await insertContract({
-      employee_name: 'Mario Rossi',
-      contract_type: 'Tempo determinato',
-      start_date: '2026-06-01',
-      end_date: '2027-06-01',
-      renewable: true,
-      renew_months: 12,
-      renew_type: 'Automatica',
-      renew_notice: 30,
-      renew_count: 0,
-      notes: 'Note demo'
-    });
-    await renderContracts();
-  } catch (err) {
-    alert('Errore inserimento contratto: ' + (err.message || err));
-  }
-}
-</script>
 </html>

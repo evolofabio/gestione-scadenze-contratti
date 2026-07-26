@@ -2,7 +2,7 @@
 
 ## Owner
 
-1. Owner fornitore: Customer Success Team - Evolution System
+1. Owner fornitore: Customer Success Team - ProrogaPro
 2. Owner cliente: [Project Owner Cliente]
 
 ## Giorno 0 - Kickoff

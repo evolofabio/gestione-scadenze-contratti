@@ -1,4 +1,4 @@
--- Evolution System - SaaS Phase 2 Migration
+-- ProrogaPro - SaaS Phase 2 Migration
 -- Obiettivo: monetizzazione (plans, subscriptions, usage metrics)
 
 BEGIN;

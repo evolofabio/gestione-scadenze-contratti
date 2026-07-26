@@ -102,29 +102,29 @@ function getHeaders(){return['Nome Azienda','Dipendente','Tipo Contratto','Data 
 function getRows(companies){
   return(companies||state.companies).map(c=>{const d=daysLeft(c.endDate);const s=d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'Regolare';return[c.name,c.employeeName||'',c.contractType,formatDate(c.startDate),formatDate(c.endDate),d,s,c.renewable?'Sì':'No',c.renewMonths||'',c.renewType||'',c.renewNotice||'',c.renewCount||0,c.adminEmail||'',c.companyEmail||'',c.notes||'']});
 }
-window.exportCSV=()=>{const h=getHeaders();const r=getRows();const csv=[h,...r].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(u);showToast('CSV esportato')}
-window.exportExcel=()=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows()]);ws['!cols']=[22,20,22,12,12,8,12,10,10,14,10,8,24,24,40].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Contratti');XLSX.writeFile(wb,`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel esportato')}
-window.exportExcelCompany=name=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows(state.companies.filter(c=>c.name===name))]);XLSX.utils.book_append_sheet(wb,ws,name.substring(0,30));XLSX.writeFile(wb,`evolution_system_gestione_scadenze_${name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel azienda esportato')}
+window.exportCSV=()=>{const h=getHeaders();const r=getRows();const csv=[h,...r].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`prorogapro_export_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(u);showToast('CSV esportato')}
+window.exportExcel=()=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows()]);ws['!cols']=[22,20,22,12,12,8,12,10,10,14,10,8,24,24,40].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Contratti');XLSX.writeFile(wb,`prorogapro_export_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel esportato')}
+window.exportExcelCompany=name=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows(state.companies.filter(c=>c.name===name))]);XLSX.utils.book_append_sheet(wb,ws,name.substring(0,30));XLSX.writeFile(wb,`prorogapro_export_${name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel azienda esportato')}
 window.exportPDFCompany=name=>{
   const list=state.companies.filter(c=>c.name===name);
   if(!list.length){showToast('Nessun contratto per questa azienda');return}
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   const safeName=String(name||'azienda').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_-]/g,'');
-  doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text(`Evolution System - ${name}`,14,14);
+  doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text(`ProrogaPro - ${name}`,14,14);
   doc.setFontSize(9);doc.setFont(undefined,'normal');doc.setTextColor(100);doc.text(`Esportato il ${new Date().toLocaleDateString('it-IT')} - ${list.length} contratti`,14,20);doc.setTextColor(0);
   doc.autoTable({
     head:[['Azienda','Dipendente','Tipo Contratto','Inizio','Scadenza','Gg','Stato','Pror.']],
     body:list.map(c=>{const d=daysLeft(c.endDate);return[c.name,c.employeeName||'—',c.contractType||'',formatDate(c.startDate),formatDate(c.endDate),String(d),d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'OK',c.renewable?'Sì':'No']}),
     startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}
   });
-  doc.save(`evolution_system_gestione_scadenze_${safeName}_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF azienda esportato');
+  doc.save(`prorogapro_export_${safeName}_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF azienda esportato');
 }
 window.exportPDF=()=>{
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text('Evolution System - Gestione Scadenze Contratti',14,14);
+  doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text('ProrogaPro — Scadenze e proroghe contrattuali',14,14);
   doc.setFontSize(9);doc.setFont(undefined,'normal');doc.setTextColor(100);doc.text(`Esportato il ${new Date().toLocaleDateString('it-IT')} — ${state.companies.length} contratti`,14,20);doc.setTextColor(0);
   doc.autoTable({head:[['Azienda','Dipendente','Tipo Contratto','Inizio','Scadenza','Gg','Stato','Pror.']],body:state.companies.map(c=>{const d=daysLeft(c.endDate);return[c.name,c.employeeName||'—',c.contractType,formatDate(c.startDate),formatDate(c.endDate),String(d),d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'OK',c.renewable?'Sì':'No',c.renewMonths||'',c.renewType||'',c.renewNotice||'',c.renewCount||0,c.adminEmail||'',c.companyEmail||'',c.notes||'']}).slice(0,100),startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}});
-  doc.save(`evolution_system_gestione_scadenze_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF esportato');
+  doc.save(`prorogapro_export_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF esportato');
 }
 window.triggerImportExcel=()=>{
   const inp=document.createElement('input');inp.type='file';inp.accept='.xlsx,.xls,.csv';
@@ -145,7 +145,7 @@ let pendingBackupImport=null;
 window.exportBackupJSON=()=>{
   try{
     const payload={
-      format:'evolution-backup',
+      format:'prorogapro-backup',
       version:1,
       exportedAt:new Date().toISOString(),
       data:{
@@ -161,7 +161,7 @@ window.exportBackupJSON=()=>{
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;
-    a.download=`evolution_system_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download=`prorogapro_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('Backup JSON esportato');
@@ -350,38 +350,52 @@ function applySyncConfig(){
 }
 
 function pullFromCloud(){
-  showToast('Sincronizzazione Firebase rimossa in modalita Supabase.');
+  if (typeof window.initSupabaseSync === 'function') {
+    window.initSupabaseSync().then(() => showToast('Dati ricaricati da Supabase'));
+  } else {
+    showToast('Sync Supabase non disponibile');
+  }
 }
 
 function forcePushToCloud(){
-  syncToCloud();
-  showToast('Configurazione sincronizzazione salvata.');
+  if (!requireWriteAccess('sincronizzare')) return;
+  if (typeof window.forceSyncToSupabase === 'function') {
+    window.forceSyncToSupabase().then(() => showToast('Sincronizzazione completata'));
+  } else {
+    showToast('Sync Supabase non disponibile');
+  }
 }
 
 function updateSyncUI(){
   const el = document.getElementById('sync-status');
   if(!el) return;
-  let html = '';
-  if(!syncConfig.enabled) html = '<div style="font-size:13px;color:var(--text3)">Sincronizzazione cloud disattivata</div>';
-  else html = `<div style="font-size:13px;color:var(--text3)"><span class="status-pill ok"><span class="status-dot ok"></span>Modalita Supabase</span>${syncState.lastSync? ' Ultima applicazione: '+new Date(syncState.lastSync).toLocaleString() : ''}</div>`;
-  el.innerHTML = html;
-  const btnPull = document.getElementById('btn-pull'); const btnPush = document.getElementById('btn-push');
-  if(btnPull) btnPull.disabled = true; if(btnPush) btnPush.disabled = false;
+  const active = typeof window.isSupabaseSyncActive === 'function' && window.isSupabaseSyncActive();
+  el.innerHTML = active
+    ? '<div style="font-size:13px;color:var(--text3)"><span class="status-pill ok"><span class="status-dot ok"></span>Supabase connesso</span> — salvataggio automatico attivo</div>'
+    : '<div style="font-size:13px;color:var(--text3)">In attesa di connessione Supabase…</div>';
 }
 // If no explicit login flow is active, show the app and render initial UI
 // === LOGIN SCREEN & AUTH ===
+function authLegalFooter() {
+  return `<p class="login-legal" style="font-size:12px;color:var(--text3);margin-top:16px;text-align:center;line-height:1.55">
+    <a href="pages/terms.html" target="_blank" rel="noopener">Termini di Servizio</a>
+    · <a href="pages/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+  </p>`;
+}
+
 function renderLoginScreen(msg) {
   const loginEl = document.getElementById('login-screen');
   if (!loginEl) return;
   loginEl.innerHTML = `
     <div class="login-card">
-      <div class="login-logo"><div class="logo-mark"><img src="evolution-system.png" alt="Evolution System"></div><span class="login-logo-text">Evolution System - Gestione Scadenze Contratti</span></div>
+      ${renderLoginLogo()}
       <div class="login-subtitle">Accedi con email e password</div>
       <div class="login-err" id="login-err" style="display:${msg?'block':'none'}">${msg||''}</div>
       <div class="form-row single"><div class="form-field"><label>Email</label><input id="login-email" class="f-input" type="email" autocomplete="username" style="width:100%"></div></div>
       <div class="form-row single"><div class="form-field"><label>Password</label><input id="login-password" class="f-input" type="password" autocomplete="current-password" style="width:100%"></div></div>
       <div class="modal-actions" style="margin-top:18px"><button class="m-btn primary" onclick="doLogin()">Accedi</button></div>
-      <div class="login-toggle-link"><a href="#" onclick="showRegister()">Non hai un account? Registrati</a></div>
+      <div class="login-toggle-link"><a href="#" onclick="showRegister();return false;">Non hai un account? Registrati — trial 14 giorni</a></div>
+      ${authLegalFooter()}
     </div>
   `;
   loginEl.style.display = 'flex';
@@ -392,13 +406,13 @@ function renderRegisterScreen(msg) {
   if (!loginEl) return;
   loginEl.innerHTML = `
     <div class="login-card">
-      <div class="login-logo"><div class="logo-mark"><img src="evolution-system.png" alt="Evolution System"></div><span class="login-logo-text">Evolution System - Gestione Scadenze Contratti</span></div>
+      ${renderLoginLogo()}
       <div class="login-subtitle">Crea un nuovo account</div>
       <div class="login-err" id="register-err" style="display:${msg?'block':'none'}">${msg||''}</div>
       <div class="form-row single"><div class="form-field"><label>Email</label><input id="register-email" class="f-input" type="email" autocomplete="username" style="width:100%"></div></div>
       <div class="form-row single"><div class="form-field"><label>Password</label><input id="register-password" class="f-input" type="password" autocomplete="new-password" style="width:100%"></div></div>
       <div class="modal-actions" style="margin-top:18px"><button class="m-btn primary" onclick="doRegister()">Registrati</button></div>
-      <div class="login-toggle-link"><a href="#" onclick="showLogin()">Hai già un account? Accedi</a></div>
+      <div class="login-toggle-link"><a href="#" onclick="showLogin();return false;">Hai già un account? Accedi</a></div>
     </div>
   `;
   loginEl.style.display = 'flex';
@@ -457,7 +471,7 @@ function renderPendingScreen() {
   if (!loginEl) return;
   loginEl.innerHTML = `
     <div class="login-card">
-      <div class="login-logo"><div class="logo-mark"><img src="evolution-system.png" alt="Evolution System"></div><span class="login-logo-text">Evolution System - Gestione Scadenze Contratti</span></div>
+      ${renderLoginLogo()}
       <div class="login-subtitle">Registrazione in attesa</div>
       <div style="text-align:center;padding:16px 0;color:var(--text2);font-size:14px;line-height:1.6">
         Il tuo account è in attesa di approvazione da parte dell'amministratore.<br><br>
@@ -474,7 +488,7 @@ function renderRejectedScreen() {
   if (!loginEl) return;
   loginEl.innerHTML = `
     <div class="login-card">
-      <div class="login-logo"><div class="logo-mark"><img src="evolution-system.png" alt="Evolution System"></div><span class="login-logo-text">Evolution System - Gestione Scadenze Contratti</span></div>
+      ${renderLoginLogo()}
       <div class="login-subtitle">Accesso negato</div>
       <div style="text-align:center;padding:16px 0;color:var(--text2);font-size:14px;line-height:1.6">
         La tua richiesta di registrazione è stata rifiutata.<br>Contatta l'amministratore per maggiori informazioni.
@@ -486,7 +500,54 @@ function renderRejectedScreen() {
 }
 
 
+function formatAuthError(e) {
+  const msg = String(e?.message || e?.statusText || e || '');
+  if (/fetch|network|failed to fetch|521|502|503|504|timeout|ECONNREFUSED/i.test(msg)) {
+    return 'Backend Supabase non raggiungibile. Apri supabase.com/dashboard e verifica che il progetto sia attivo (i progetti free in pausa vanno riattivati).';
+  }
+  if (/already registered|already exists|user already registered/i.test(msg)) {
+    return 'Email già registrata — accedi con le tue credenziali.';
+  }
+  if (/invalid email/i.test(msg)) return 'Email non valida';
+  if (/password/i.test(msg) && /short|least|weak/i.test(msg)) return 'Password troppo debole (minimo 8 caratteri)';
+  if (/rate limit|too many/i.test(msg)) return 'Troppi tentativi — riprova tra qualche minuto';
+  return msg.startsWith('Errore') ? msg : ('Errore: ' + msg);
+}
+
+async function checkSupabaseHealth() {
+  try {
+    if (window.supabaseClientReady) await window.supabaseClientReady;
+    if (!window.supabaseClient) return false;
+    const cfg = window.ES_CONFIG || {};
+    if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) return false;
+    const res = await fetch(cfg.supabaseUrl.replace(/\/$/, '') + '/auth/v1/health', {
+      headers: { apikey: cfg.supabaseAnonKey },
+    });
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function completePendingTenantRegistration(user) {
+  if (!user?.id || typeof window.registerNewTenant !== 'function') return false;
+  const meta = user.user_metadata || {};
+  const fullName = (meta.full_name || meta.fullName || user.email?.split('@')[0] || '').trim();
+  const companyName = (meta.company_name || meta.companyName || '').trim();
+  if (!companyName) return false;
+  const existing = await loadProfileById(user.id);
+  if (existing?.company_id) return true;
+  await window.registerNewTenant(fullName, companyName);
+  return true;
+}
+
 window.doLogin = async function() {
+  try {
+    if (window.supabaseClientReady) await window.supabaseClientReady;
+  } catch (_) {
+    renderLoginScreen('Impossibile connettersi a Supabase. Ricarica la pagina.');
+    return;
+  }
   if (!window.supabaseClient || !window.supabaseClient.auth) {
     renderLoginScreen('Supabase non inizializzato correttamente');
     return;
@@ -500,52 +561,107 @@ window.doLogin = async function() {
     authUser = data?.user ? { ...data.user, uid: data.user.id } : null;
     await afterLogin();
   } catch (e) {
-    let msg = 'Email o password non corretti';
-    const msgRaw = String(e?.message || e || '');
-    if (/invalid email/i.test(msgRaw)) msg = 'Email non valida';
-    if (/too many requests/i.test(msgRaw)) msg = 'Troppi tentativi, riprova piu tardi';
-    renderLoginScreen(msg);
+    renderLoginScreen(formatAuthError(e));
   }
 };
 
 
+function renderRegisterFullScreen(msg) {
+  const loginEl = document.getElementById('login-screen');
+  if (!loginEl) return;
+  loginEl.innerHTML = `
+    <div class="login-card">
+      ${renderLoginLogo('Registrazione')}
+      <div class="login-subtitle">Crea il tuo account e inizia il trial gratuito di 14 giorni</div>
+      <div class="login-err" id="register-err" style="display:${msg?'block':'none'}">${msg||''}</div>
+      <div class="form-row single"><div class="form-field"><label>Nome completo</label><input id="register-fullname" class="f-input" type="text" placeholder="Mario Rossi" style="width:100%"></div></div>
+      <div class="form-row single"><div class="form-field"><label>Nome azienda</label><input id="register-company" class="f-input" type="text" placeholder="Acme S.r.l." style="width:100%"></div></div>
+      <div class="form-row single"><div class="form-field"><label>Email</label><input id="register-email" class="f-input" type="email" autocomplete="username" style="width:100%"></div></div>
+      <div class="form-row single"><div class="form-field"><label>Password <span style="color:var(--text3);font-size:12px">(min. 8 caratteri)</span></label><input id="register-password" class="f-input" type="password" autocomplete="new-password" style="width:100%"></div></div>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text2);margin-top:12px;line-height:1.45;cursor:pointer">
+        <input type="checkbox" id="register-terms" style="margin-top:3px">
+        <span>Accetto i <a href="pages/terms.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">Termini di Servizio</a> e la <a href="pages/privacy.html" target="_blank" rel="noopener" onclick="event.stopPropagation()">Privacy Policy</a></span>
+      </label>
+      <div class="modal-actions" style="margin-top:18px"><button class="m-btn primary" onclick="doRegister()">Crea account</button></div>
+      <div class="login-toggle-link"><a href="#" onclick="showLogin();return false;">Hai già un account? Accedi</a></div>
+    </div>
+  `;
+  loginEl.style.display = 'flex';
+}
+
+window.showRegister = function() { renderRegisterFullScreen(); };
+
 window.doRegister = async function() {
-  if (!window.supabaseClient || !window.supabaseClient.auth) {
-    renderRegisterScreen('Supabase non inizializzato correttamente');
+  try {
+    if (window.supabaseClientReady) await window.supabaseClientReady;
+  } catch (_) {
+    renderRegisterFullScreen('Impossibile connettersi a Supabase. Ricarica la pagina.');
     return;
   }
-  const email = (document.getElementById('register-email')||{}).value?.trim();
-  const password = (document.getElementById('register-password')||{}).value;
-  if (!email || !password) { renderRegisterScreen('Inserisci email e password'); return; }
+  if (!window.supabaseClient || !window.supabaseClient.auth) {
+    renderRegisterFullScreen('Supabase non inizializzato correttamente');
+    return;
+  }
+  const fullName   = (document.getElementById('register-fullname') ||{}).value?.trim();
+  const companyName= (document.getElementById('register-company')  ||{}).value?.trim();
+  const email      = (document.getElementById('register-email')    ||{}).value?.trim();
+  const password   = (document.getElementById('register-password') ||{}).value;
+  if (!email || !password) { renderRegisterFullScreen('Inserisci email e password'); return; }
+  if (password.length < 8) { renderRegisterFullScreen('La password deve essere di almeno 8 caratteri'); return; }
+  if (!companyName) { renderRegisterFullScreen('Inserisci il nome della tua azienda'); return; }
+  if (!(document.getElementById('register-terms') || {}).checked) {
+    renderRegisterFullScreen('Devi accettare Termini di Servizio e Privacy Policy');
+    return;
+  }
   try {
-    const { data, error } = await window.supabaseClient.auth.signUp({ email, password });
+    const { data, error } = await window.supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName || email.split('@')[0],
+          company_name: companyName,
+        },
+      },
+    });
     if (error) throw error;
     const user = data?.user || null;
+    const session = data?.session || null;
+
     if (!user) {
-      renderRegisterScreen('Registrazione avviata. Controlla la tua email per confermare l\'account.');
+      renderRegisterFullScreen('Registrazione avviata. Controlla la tua email per confermare l\'account, poi accedi.');
       return;
     }
 
-    await saveProfilePatch(user.id, {
-      email,
-      role: 'viewer',
-      status: 'pending',
-      created_at: new Date().toISOString()
-    });
+    if (!session) {
+      renderRegisterFullScreen('Account creato! Controlla la tua email, conferma l\'indirizzo e poi accedi — il trial partirà al primo login.');
+      return;
+    }
 
-    await window.supabaseClient.auth.signOut();
-    authUser = null;
-    renderPendingScreen();
-    return;
+    authUser = { ...user, uid: user.id };
+    try {
+      await window.registerNewTenant(fullName || email.split('@')[0], companyName);
+    } catch (rpcErr) {
+      console.warn('register_new_tenant RPC:', rpcErr.message);
+      throw new Error(rpcErr.message || 'Impossibile creare l\'azienda. Verifica che le migrazioni SQL siano state applicate su Supabase.');
+    }
+    await afterLogin();
   } catch (e) {
-    renderRegisterScreen('Errore: ' + (e.message || 'Impossibile registrare'));
+    renderRegisterFullScreen(formatAuthError(e));
   }
 };
 
 async function afterLogin() {
   if (!authUser) return;
   try {
-    const profile = await ensureProfileForUser(authUser);
+    try {
+      await completePendingTenantRegistration(authUser);
+    } catch (regErr) {
+      console.warn('completePendingTenantRegistration', regErr);
+    }
+
+    let profile = await loadProfileById(authUser.id);
+    if (!profile) profile = await ensureProfileForUser(authUser);
     if (typeof window.setCurrentUserRole === 'function') {
       window.setCurrentUserRole(profile?.role || 'viewer');
     }
@@ -597,11 +713,11 @@ function renderLicenseScreen(licKey) {
   if (!loginEl) return;
   loginEl.innerHTML = `
     <div class="login-card license-card">
-      <div class="login-logo"><div class="logo-mark"><img src="evolution-system.png" alt="Evolution System"></div><span class="login-logo-text">Evolution System — Termini di utilizzo</span></div>
+      ${renderLoginLogo('Termini di utilizzo')}
       <div class="license-version">Versione 1.0 — Maggio 2026</div>
       <div class="license-body" id="license-body">
         <h4>Contratto di licenza d'uso del software</h4>
-        <p>Il presente Contratto di Licenza d'Uso ("Contratto") disciplina l'accesso e l'utilizzo della piattaforma <strong>Evolution System – Gestione Scadenze Contratti</strong> (il "Software"), sviluppata e di proprietà esclusiva di <strong>Evolution System</strong> (il "Fornitore").</p>
+        <p>Il presente Contratto di Licenza d'Uso ("Contratto") disciplina l'accesso e l'utilizzo della piattaforma <strong>${APP_NAME}</strong> (il "Software"), sviluppata e di proprietà esclusiva del Fornitore.</p>
 
         <h4>1. Concessione di licenza</h4>
         <p>Il Fornitore concede all'Utente una licenza personale, non esclusiva, non trasferibile e revocabile per l'utilizzo del Software esclusivamente per le finalità di gestione interna dei contratti di lavoro e dei cantieri. È vietato cedere, sublicenziare, distribuire o rivendere il Software o qualsiasi parte di esso.</p>
@@ -625,7 +741,7 @@ function renderLicenseScreen(licKey) {
         <p>Il Fornitore si riserva il diritto di sospendere o revocare l'accesso al Software in caso di violazione del presente Contratto, senza obbligo di preavviso e senza alcun obbligo di rimborso.</p>
 
         <h4>8. Contatti</h4>
-        <p>Per qualsiasi richiesta relativa alla licenza o al trattamento dei dati: <strong>support@evolution-system.com</strong></p>
+        <p>Per qualsiasi richiesta relativa alla licenza o al trattamento dei dati: <strong>${(window.ES_CONFIG&&window.ES_CONFIG.contactEmail)||'support@prorogapro.it'}</strong></p>
       </div>
       <div class="license-scroll-hint" id="license-hint">↓ Scorri per leggere prima di accettare</div>
       <div class="license-accept-row">
@@ -672,16 +788,21 @@ window.acceptLicense = async function(licKey) {
   _doEnterApp();
 };
 
-function _doEnterApp() {
+async function _doEnterApp() {
   // Nasconde la schermata di login e mostra la dashboard
   const ls = document.getElementById('login-screen'); if (ls) { ls.innerHTML = ''; ls.style.display = 'none'; }
   const appShell = document.getElementById('app-shell'); if (appShell) appShell.style.display = 'flex';
-  updateNav();
-  renderSidebarCompanies();
-  renderPage();
+  // Carica dati da Supabase prima di renderizzare
+  if (typeof window.initSupabaseSync === 'function') {
+    await window.initSupabaseSync();
+  } else {
+    updateNav();
+    renderSidebarCompanies();
+    renderPage();
+  }
   startAutoSend();
-  initSync();
-  // Registra Service Worker e abilita notifiche push di sistema
+  if (typeof updateSyncUI === 'function') updateSyncUI();
+  if (typeof applyWriteRoleUI === 'function') applyWriteRoleUI();
   if (typeof initPushNotifications === 'function') initPushNotifications();
 }
 // Salva la configurazione utente su profilo Supabase
@@ -729,6 +850,52 @@ window.toggleAutoSend = checked => { emailSettings.autoSend.enabled = checked; s
 window.toggleDay = d => { const a = emailSettings.autoSend.daysBeforeExpiry; const i = a.indexOf(d); if (i >= 0) a.splice(i, 1); else a.push(d); a.sort((x, y) => y - x); save(SK.settings, emailSettings); saveUserConfig(); renderPage(); };
 window.saveCheckInterval = v => { emailSettings.autoSend.checkIntervalMinutes = Math.max(5, Math.min(1440, v || 60)); save(SK.settings, emailSettings); saveUserConfig(); if (emailSettings.autoSend.enabled) startAutoSend(); };
 window.clearEmailLog = () => { emailLog = []; save(SK.log, []); renderPage(); showToast('Log cancellato'); };
+
+window.loadProfileSettings = async function(){
+  try{
+    if(window.supabaseClientReady) await window.supabaseClientReady;
+    const emailInput=document.getElementById('settings-profile-email');
+    if(!emailInput)return;
+    const result=await window.supabaseClient.auth.getUser();
+    emailInput.value=result?.data?.user?.email||'';
+    const pwdInput=document.getElementById('settings-profile-password');
+    if(pwdInput)pwdInput.value='';
+  }catch(e){ console.error('loadProfileSettings',e); }
+};
+
+window.updateProfileSettings = async function(){
+  const feedback=document.getElementById('settings-profile-feedback');
+  const emailInput=document.getElementById('settings-profile-email');
+  const pwdInput=document.getElementById('settings-profile-password');
+  if(!feedback||!emailInput||!pwdInput)return;
+  feedback.style.display='none';
+  try{
+    if(window.supabaseClientReady) await window.supabaseClientReady;
+    const email=(emailInput.value||'').trim();
+    const password=(pwdInput.value||'').trim();
+    if(email){
+      const { error: emailErr } = await window.supabaseClient.auth.updateUser({ email });
+      if(emailErr) throw emailErr;
+    }
+    if(password){
+      if(password.length < 8) throw new Error('La password deve essere di almeno 8 caratteri');
+      const { error: passErr } = await window.supabaseClient.auth.updateUser({ password });
+      if(passErr) throw passErr;
+    }
+    feedback.textContent='Account aggiornato con successo.';
+    feedback.style.background='var(--green-bg)';
+    feedback.style.color='var(--green)';
+    feedback.style.border='1px solid var(--green-border)';
+    feedback.style.display='block';
+    pwdInput.value='';
+  }catch(err){
+    feedback.textContent=err?.message||'Errore aggiornamento account';
+    feedback.style.background='var(--red-bg)';
+    feedback.style.color='var(--red)';
+    feedback.style.border='1px solid var(--red-border)';
+    feedback.style.display='block';
+  }
+};
 
 window.testEmailJS = async () => {
   if (!isEmailJSConfigured()) { showToast('Configura EmailJS prima'); return; }
@@ -818,6 +985,8 @@ async function checkAuth() {
   }
 
   try {
+    if (window.supabaseClientReady) await window.supabaseClientReady;
+
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     if (session && session.user) {
       authUser = { ...session.user, uid: session.user.id };
