@@ -403,11 +403,11 @@ function getUrgentNotifications(){
 }
 
 function updateNav(){
-  ['dashboard','calendar','cantieri','indeterminati','cessati','gestite','terminate','analytics','settings'].forEach(p=>{
+  ['dashboard','calendar','cantieri','indeterminati','cessati','gestite','terminate','compliance','analytics','settings'].forEach(p=>{
     const el=document.getElementById('nav-'+p);
     if(el)el.className=`nav-item${state.page===p?' active':''}`;
   });
-  const titles={dashboard:'Dashboard',calendar:'Calendario',cantieri:'Cantieri',indeterminati:'Indeterminati',cessati:'Cessati',gestite:'Gestite',terminate:'Terminate',analytics:'Analytics',settings:'Impostazioni',company:state.activeCompany||'Azienda'};
+  const titles={dashboard:'Dashboard',calendar:'Calendario',cantieri:'Cantieri',indeterminati:'Indeterminati',cessati:'Cessati',gestite:'Gestite',terminate:'Terminate',compliance:'Compliance',analytics:'Analytics',settings:'Impostazioni',company:state.activeCompany||'Azienda'};
   const el=document.getElementById('topbar-title');
   if(el)el.textContent=titles[state.page]||'';
   const sw=document.getElementById('topbar-search-wrap');
@@ -426,10 +426,18 @@ function updateNav(){
       else{cb.style.display='none';cb.textContent='0'}
     }
     const urgentData=getUrgentNotifications();
+    const legalData=typeof getLegalNotifications==='function'?getLegalNotifications():{overdue:[],pending:[]};
     const nb=document.getElementById('notif-badge');
     if(nb){
-      if(urgentData.total>0){nb.style.display='';nb.textContent=compactBadgeCount(urgentData.total);nb.title=`${urgentData.total} notifiche`}
+      const totalNotif=urgentData.total+(legalData.overdue?.length||0);
+      if(totalNotif>0){nb.style.display='';nb.textContent=compactBadgeCount(totalNotif);nb.title=`${totalNotif} notifiche`}
       else{nb.style.display='none';nb.textContent='0'}
+    }
+    const cb2=document.getElementById('compliance-badge');
+    if(cb2){
+      const n=(legalData.pending||[]).length;
+      if(n>0){cb2.style.display='';cb2.textContent=compactBadgeCount(n)}
+      else{cb2.style.display='none';cb2.textContent='0'}
     }
   }catch(e){console.error('updateNav badges',e)}
 }

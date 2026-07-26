@@ -1,15 +1,283 @@
 <!DOCTYPE html>
 <html lang="it">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Redirecting…</title>
-    <meta http-equiv="refresh" content="0;url=contract_manager_dashboard.html">
-    <link rel="canonical" href="contract_manager_dashboard.html">
-    <link rel="icon" href="assets/prorogapro-favicon.png" type="image/png">
-    <script>window.location.replace('contract_manager_dashboard.html');</script>
-  </head>
-  <body>
-    <p>Reindirizzamento in corso. Se la pagina non si carica automaticamente, clicca <a href="contract_manager_dashboard.html">qui</a>.</p>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProrogaPro — Scadenze, proroghe e compliance contrattuale</title>
+  <meta name="description" content="ProrogaPro è la piattaforma per PMI e studi professionali che gestiscono scadenze contrattuali, proroghe, cantieri e adempimenti UNILAV con alert intelligenti e export operativi.">
+  <meta property="og:title" content="ProrogaPro — Scadenze e proroghe contrattuali">
+  <meta property="og:description" content="Dashboard, compliance normativa, calendario scadenze e analytics. Prova la demo interattiva.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/screenshots/dashboard.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="icon" href="assets/prorogapro-favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/prorogapro-apple-touch.png">
+  <link rel="stylesheet" href="styles/landing.css">
+</head>
+<body>
+
+  <header class="site-nav">
+    <div class="container site-nav-inner">
+      <a class="brand" href="index.html">
+        <img src="assets/prorogapro-mark.png" alt="ProrogaPro">
+        <span>Proroga<span class="brand-pro">Pro</span></span>
+      </a>
+      <nav class="nav-links" aria-label="Navigazione principale">
+        <a href="#destinatari" class="hide-mobile">A chi è destinata</a>
+        <a href="#funzionalita" class="hide-mobile">Funzionalità</a>
+        <a href="#compliance" class="hide-mobile">Compliance</a>
+        <a href="#come-funziona" class="hide-mobile">Come funziona</a>
+        <a class="btn btn-ghost hide-mobile" href="https://evolofabio.github.io/Gestione-scadenze-contratti-DEMO/contract_manager_dashboard.html" target="_blank" rel="noopener">Demo live</a>
+        <a class="btn btn-primary" href="contract_manager_dashboard.html">Accedi / Registrati</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="kicker">Piattaforma SaaS · Made in Italy</span>
+          <h1>Non perdere più una scadenza contrattuale né una proroga da comunicare</h1>
+          <p class="hero-lead">
+            <strong>ProrogaPro</strong> centralizza contratti, cantieri, alert e adempimenti normativi
+            in un'unica dashboard pensata per chi gestisce personale, appalti e forniture ogni giorno.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="contract_manager_dashboard.html">Inizia — trial 14 giorni</a>
+            <a class="btn btn-secondary" href="https://evolofabio.github.io/Gestione-scadenze-contratti-DEMO/contract_manager_dashboard.html" target="_blank" rel="noopener">Demo interattiva (senza login)</a>
+          </div>
+          <div class="hero-trust">
+            <div><strong>4/4</strong> proroghe monitorate</div>
+            <div><strong>5 gg</strong> scadenza UNILAV</div>
+            <div><strong>Excel · PDF · CSV</strong> export immediato</div>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <figure class="screen-frame">
+            <img src="assets/screenshots/dashboard.png" width="1440" height="900" alt="Dashboard ProrogaPro con contratti in scadenza, metriche e alert urgenti">
+            <figcaption class="screen-caption">Screenshot reale — Dashboard operativa con alert scadenze e contratti prorogabili</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="destinatari">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Target</p>
+          <h2>A chi è destinata ProrogaPro</h2>
+          <p>Progettata per organizzazioni che devono tenere sotto controllo molte scadenze, spesso con vincoli di legge su proroghe e comunicazioni obbligatorie.</p>
+        </div>
+        <div class="audience-grid">
+          <article class="audience-card">
+            <h3><span class="audience-icon" aria-hidden="true">🏢</span> PMI e imprese</h3>
+            <p>Uffici amministrativi, HR e direzione che gestiscono decine o centinaia di rapporti contrattuali.</p>
+            <ul>
+              <li>Tempo determinato e rinnovi</li>
+              <li>Appalti privati e forniture B2B</li>
+              <li>Cantieri con scadenze dedicate</li>
+            </ul>
+          </article>
+          <article class="audience-card">
+            <h3><span class="audience-icon" aria-hidden="true">⚖️</span> Studi professionali</h3>
+            <p>Commercialisti, consulenti del lavoro e studi legali che assistono più clienti su proroghe e compliance.</p>
+            <ul>
+              <li>Vista multi-azienda</li>
+              <li>Verifica causali art. 19</li>
+              <li>Dossier PDF per ogni proroga</li>
+            </ul>
+          </article>
+          <article class="audience-card">
+            <h3><span class="audience-icon" aria-hidden="true">🏗️</span> Settore operativo</h3>
+            <p>Imprese edili, facility, servizi e somministrazione con contratti legati a commesse e cantieri.</p>
+            <ul>
+              <li>Monitoraggio cantieri per azienda</li>
+              <li>Alert su scadenze critiche</li>
+              <li>Registro adempimenti UNILAV</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="stats-bar" style="margin-top:36px" aria-label="Indicatori chiave">
+          <div class="stat-item"><strong>−30%</strong><span>scadenze gestite in ritardo*</span></div>
+          <div class="stat-item"><strong>100%</strong><span>contratti attivi mappati</span></div>
+          <div class="stat-item"><strong>−40%</strong><span>tempo su report operativi*</span></div>
+          <div class="stat-item"><strong>24/7</strong><span>monitoraggio e notifiche</span></div>
+        </div>
+        <p style="text-align:center;font-size:0.78rem;color:var(--text3);margin-top:12px">* KPI obiettivo indicativo nei primi 90 giorni di utilizzo (clienti Growth)</p>
+      </div>
+    </section>
+
+    <section id="funzionalita">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Prodotto</p>
+          <h2>Tutto ciò che serve, in un'unica interfaccia</h2>
+          <p>Schermate reali dalla piattaforma — nessun mockup generico.</p>
+        </div>
+
+        <div class="feature-block">
+          <div class="feature-copy">
+            <h3>Dashboard e priorità immediate</h3>
+            <p>Vedi subito cosa scade, cosa è urgente e quali contratti sono prorogabili. Metriche, barre di avanzamento e badge di stato ti guidano nelle azioni del giorno.</p>
+            <ul class="feature-list">
+              <li>Alert configurabili (60, 30, 15, 7, 3, 1 giorni)</li>
+              <li>Proroga rapida con verifica causale integrata</li>
+              <li>Ricerca per dipendente, azienda o tipo contratto</li>
+              <li>Centro notifiche con scadenze contratti e cantieri</li>
+            </ul>
+          </div>
+          <figure class="screen-frame">
+            <img src="assets/screenshots/dashboard.png" loading="lazy" alt="Schermata dashboard ProrogaPro">
+          </figure>
+        </div>
+
+        <div class="feature-block reverse">
+          <div class="feature-copy">
+            <h3>Calendario e pianificazione</h3>
+            <p>Distribuisci le scadenze nel tempo e pianifica rinnovi, disdette e comunicazioni con una vista mensile chiara.</p>
+            <ul class="feature-list">
+              <li>Navigazione mese per mese</li>
+              <li>Contratti evidenziati per data di fine</li>
+              <li>Ideale per riunioni HR e amministrazione</li>
+            </ul>
+          </div>
+          <figure class="screen-frame">
+            <img src="assets/screenshots/calendar.png" loading="lazy" alt="Calendario scadenze contrattuali">
+          </figure>
+        </div>
+
+        <div class="feature-block">
+          <div class="feature-copy">
+            <h3>Cantieri e commesse</h3>
+            <p>Ogni azienda può avere cantieri con scadenze autonome: documenti, fine commessa, controlli periodici.</p>
+            <ul class="feature-list">
+              <li>Cantieri deduplicati per azienda</li>
+              <li>Importi e committente opzionali</li>
+              <li>Alert cantieri nel centro notifiche</li>
+            </ul>
+          </div>
+          <figure class="screen-frame">
+            <img src="assets/screenshots/cantieri.png" loading="lazy" alt="Gestione cantieri e scadenze commessa">
+          </figure>
+        </div>
+
+        <div class="feature-block reverse">
+          <div class="feature-copy">
+            <h3>Analytics e decisioni</h3>
+            <p>Grafici su tipologie contrattuali, scadenze mensili e distribuzione del rischio per supportare il management.</p>
+            <ul class="feature-list">
+              <li>Contratti per mese di scadenza</li>
+              <li>Distribuzione per tipologia</li>
+              <li>Indicatori prorogabili vs totali</li>
+            </ul>
+          </div>
+          <figure class="screen-frame">
+            <img src="assets/screenshots/analytics.png" loading="lazy" alt="Analytics contratti e scadenze">
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="compliance">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Compliance</p>
+          <h2>Regole, causali e UNILAV sotto controllo</h2>
+          <p>Il modulo compliance traduce la normativa operativa in checklist e alert — non sostituisce il parere legale, ma evita dimenticanze costose.</p>
+        </div>
+
+        <div class="feature-block">
+          <div class="feature-copy">
+            <h3>Registro adempimenti e verifica legale</h3>
+            <p>ProrogaPro controlla limiti di durata, numero proroghe, causali art. 19 e crea automaticamente task UNILAV entro 5 giorni da proroga, rinnovo o cessazione.</p>
+            <ul class="feature-list">
+              <li>Categorie: TD, apprendistato, appalti PA/privati, forniture B2B</li>
+              <li>Stop-and-go tra contratto e proroga</li>
+              <li>Banner causale TOP fino al 31/12/2026</li>
+              <li>Export dossier proroga PDF e CSV compliance</li>
+            </ul>
+            <div class="pill-row">
+              <span class="pill">Art. 19 D.Lgs. 81/2015</span>
+              <span class="pill">UNILAV 5 gg</span>
+              <span class="pill">D.Lgs. 36/2023 appalti PA</span>
+            </div>
+          </div>
+          <figure class="screen-frame">
+            <img src="assets/screenshots/compliance.png" loading="lazy" alt="Pagina compliance con adempimenti UNILAV e registro scadenze">
+            <figcaption class="screen-caption">Screenshot reale — Registro compliance con adempimenti in sospeso</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="come-funziona">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Workflow</p>
+          <h2>Come funziona in pratica</h2>
+          <p>Dalla registrazione del contratto all'export per archivio o cliente — in quattro passaggi.</p>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <div class="step-num">1</div>
+            <h4>Inserisci i contratti</h4>
+            <p>Manualmente, via Excel o import backup JSON. Categoria legale, causale e date di preavviso inclusi.</p>
+          </article>
+          <article class="step">
+            <div class="step-num">2</div>
+            <h4>Ricevi gli alert</h4>
+            <p>Email automatiche o mailto, notifiche push e badge in app quando avvicini scadenze o disdette.</p>
+          </article>
+          <article class="step">
+            <div class="step-num">3</div>
+            <h4>Proroga con controllo</h4>
+            <p>Proroga o rinnovo guidato: verifica limiti, stop-and-go e creazione task UNILAV se necessario.</p>
+          </article>
+          <article class="step">
+            <div class="step-num">4</div>
+            <h4>Esporta e condividi</h4>
+            <p>Excel, PDF, CSV, dossier proroga e backup completo per audit interni o consegna al cliente.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="cta-band">
+          <h2>Inizia con il trial gratuito</h2>
+          <p>Registrati in pochi minuti e importa i tuoi contratti. Preferisci esplorare prima? Apri la demo pubblica senza account.</p>
+          <div class="cta-actions">
+            <a class="btn btn-secondary" href="https://evolofabio.github.io/Gestione-scadenze-contratti-DEMO/contract_manager_dashboard.html" target="_blank" rel="noopener">Demo interattiva</a>
+            <a class="btn btn-primary" href="contract_manager_dashboard.html" style="background:#fff;color:#1e3a8a;box-shadow:none">Accedi / Registrati</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:8px">
+          <img src="assets/prorogapro-mark.png" alt="" width="28" height="28">
+          <span>Proroga<span class="brand-pro">Pro</span></span>
+        </div>
+        <p>Scadenze e proroghe contrattuali per PMI e studi professionali.</p>
+        <p style="margin-top:8px">© 2026 ProrogaPro · MIT License</p>
+      </div>
+      <nav class="footer-links" aria-label="Link utili">
+        <a href="contract_manager_dashboard.html">Accedi all'app</a>
+        <a href="pages/terms.html">Termini</a>
+        <a href="pages/privacy.html">Privacy</a>
+        <a href="mailto:evolo434@gmail.com">Contatti</a>
+      </nav>
+    </div>
+  </footer>
+
+</body>
 </html>

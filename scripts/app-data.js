@@ -14,10 +14,13 @@ window.openEmailModal=function(id){
 }
 function generateEmailBody(c,days){
   let b=`Gentile amministratore,\n\nquesto è un avviso: il contratto con ${c.name}${c.employeeName?' — dipendente: '+c.employeeName:''} (${c.contractType}) scadrà il ${formatDate(c.endDate)}, tra ${days} giorni.\n\n`;
-  if(c.renewable)b+=`Il contratto è prorogabile per ${c.renewMonths} mesi — modalità: ${c.renewType}. Preavviso richiesto: ${c.renewNotice} giorni.\nProroghe effettuate: ${c.renewCount||0}/4.\n\n`;
-  else b+=`Il contratto non è prorogabile.\n\n`;
+  if(c.renewable)b+=`Il contratto è prorogabile per ${c.renewMonths} mesi — modalità: ${c.renewType}. Preavviso richiesto: ${c.renewNotice} giorni.\nProroghe effettuate: ${c.renewCount||0}/4.\n`;
+  if(typeof getDisdettaDaysLeft==='function'){const ddl=getDisdettaDaysLeft(c);if(ddl!==null)b+=`Giorni alla scadenza preavviso disdetta: ${ddl}.\n`;}
+  if(typeof analyzeContractCompliance==='function'){const r=analyzeContractCompliance(c);if(r&&r.stato!=='OK')b+=`\nVerifica legale: ${r.stato} — ${r.msg}\n`;}
+  b+=`\n`;
+  if(!c.renewable)b+=`Il contratto non è prorogabile.\n\n`;
   if(c.notes)b+=`Note: ${c.notes}\n\n`;
-  b+=`Si prega di procedere con le formalità necessarie.\n\n— Sistema gestione contratti`;
+  b+=`Si prega di procedere con le formalità necessarie (incluso UNILAV ove previsto entro 5 gg).\n\n— ProrogaPro`;
   return b;
 }
 function renderEmailModal(c){
@@ -81,13 +84,25 @@ async function runAutoCheck(){
   if(!emailSettings.autoSend.enabled)return;
   for(const c of state.companies){
     const d=daysLeft(c.endDate);if(d<0)continue;
-    for(const t of(emailSettings.autoSend.daysBeforeExpiry||[])){
+    const thresholds=typeof getAlertDaysForContract==='function'?getAlertDaysForContract(c):(emailSettings.autoSend.daysBeforeExpiry||[]);
+    for(const t of thresholds){
       if(d<=t){
         const key=`${c.id}_${t}_${new Date().toISOString().split('T')[0]}`;
         if(sentTracker[key])continue;
-        const r=await sendEmailReal(`${c.adminEmail}; ${c.companyEmail}`,`[AUTO] ${c.name} scade tra ${d}gg`,generateEmailBody(c,d),c.name);
+        const subj=t===(parseInt(c.renewNotice)||0)?`[DISDETTA] Preavviso ${c.name} (${d}gg)`:`[AUTO] ${c.name} scade tra ${d}gg`;
+        const r=await sendEmailReal(`${c.adminEmail}; ${c.companyEmail}`,subj,generateEmailBody(c,d),c.name);
         if(r.ok){sentTracker[key]=new Date().toISOString();save(SK.sent,sentTracker)}
         break;
+      }
+    }
+    if(typeof getDisdettaDaysLeft==='function'){
+      const ddl=getDisdettaDaysLeft(c);
+      if(ddl!==null&&ddl<=0&&ddl>=-1&&c.renewable!==false){
+        const dk=`${c.id}_disdetta_${new Date().toISOString().split('T')[0]}`;
+        if(!sentTracker[dk]){
+          const r=await sendEmailReal(`${c.adminEmail}; ${c.companyEmail}`,`[DISDETTA] Termine preavviso — ${c.name}`,generateEmailBody(c,d)+'\n\n⚠ Finestra preavviso/disdetta raggiunta.',c.name);
+          if(r.ok){sentTracker[dk]=new Date().toISOString();save(SK.sent,sentTracker)}
+        }
       }
     }
   }
@@ -1023,12 +1038,25 @@ window.monthsRemainingTo12 = function(c){
 
 window.markIndeterminate = function(id){
   const c = state.companies.find(x=>x.id===id); if(!c) return;
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Converti a tempo indeterminato</h3><p>Sei sicuro di voler convertire il contratto di <strong>${esc(c.employeeName||c.name)}</strong> a tempo indeterminato?</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="(function(){hideModal();(function doIt(){const idx=state.companies.findIndex(x=>x.id===${id});if(idx<0)return;state.companies[idx].indeterminate=true;state.companies[idx].renewable=false;saveData();renderPage();renderSidebarCompanies();showToast('Contratto convertito a tempo indeterminato');})();})()">Conferma</button></div></div></div>`);
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Converti a tempo indeterminato</h3><p>Sei sicuro di voler convertire il contratto di <strong>${esc(c.employeeName||c.name)}</strong> a tempo indeterminato?</p><p style="font-size:12px;color:var(--text2)">Verrà creata scadenza UNILAV trasformazione (5 gg).</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="confirmMarkIndeterminate(${id})">Conferma</button></div></div></div>`);
+}
+window.confirmMarkIndeterminate=function(id){
+  const idx=state.companies.findIndex(x=>x.id===id);if(idx<0)return;
+  state.companies[idx].indeterminate=true;state.companies[idx].renewable=false;
+  if(typeof addComplianceTask==='function') addComplianceTask(state.companies[idx],'unilav_trasformazione',new Date().toISOString().split('T')[0],'Conversione T.I.');
+  hideModal();saveData();renderPage();renderSidebarCompanies();showToast('Convertito a T.I. — UNILAV entro 5 gg');
 }
 
 window.markCessato = function(id){
   const c = state.companies.find(x=>x.id===id); if(!c) return;
-  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Segna come cessato</h3><p>Segnare come cessato il contratto di <strong>${esc(c.employeeName||c.name)}</strong>?</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn danger" onclick="(function(){hideModal();(function doIt(){const idx=state.companies.findIndex(x=>x.id===${id});if(idx<0)return;state.companies[idx].cessato=true;saveData();renderPage();renderSidebarCompanies();showToast('Contratto segnato come cessato');})();})()">Conferma</button></div></div></div>`);
+  showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Segna come cessato</h3><p>Segnare come cessato il contratto di <strong>${esc(c.employeeName||c.name)}</strong>?</p><p style="font-size:12px;color:var(--text2)">Verrà creata scadenza UNILAV cessazione (5 gg).</p><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn danger" onclick="confirmMarkCessato(${id})">Conferma</button></div></div></div>`);
+}
+window.confirmMarkCessato=function(id){
+  const idx=state.companies.findIndex(x=>x.id===id);if(idx<0)return;
+  state.companies[idx].cessato=true;
+  const ev=state.companies[idx].endDate||new Date().toISOString().split('T')[0];
+  if(typeof addComplianceTask==='function') addComplianceTask(state.companies[idx],'unilav_cessazione',ev,'Cessazione rapporto');
+  hideModal();saveData();renderPage();renderSidebarCompanies();showToast('Cessato — UNILAV entro 5 gg');
 }
 
 window.openWorkNoteModal = function(id){

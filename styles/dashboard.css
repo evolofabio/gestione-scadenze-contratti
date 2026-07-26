@@ -1258,3 +1258,23 @@ body.role-readonly .requires-write{display:none!important}
 [data-theme=dark] .billing-bar--ok{background:#0d2a18;color:#6fcf97}
 [data-theme=dark] .billing-bar--warn{background:#2a1e00;color:#f0c040}
 [data-theme=dark] .billing-bar--err{background:#2a0000;color:#f07070}
+
+/* Legal / compliance */
+.legal-banner-wrap{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.legal-banner{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;border:1px solid var(--border)}
+.legal-banner.info{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}
+.legal-banner.warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.legal-banner.err{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.legal-banner a{color:inherit;font-weight:600}
+.form-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:14px 0 8px}
+.compliance-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.compliance-table-wrap .data-table{width:100%;border-collapse:collapse;font-size:13px}
+.compliance-table-wrap th,.compliance-table-wrap td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border2)}
+.compliance-table-wrap th{background:var(--surface2);font-weight:600;font-size:12px}
+.compliance-actions{margin:12px 0 16px}
+.compliance-done-list{font-size:13px;color:var(--text2);padding-left:18px}
+.badge-amber{background:#fff7e0;color:#8a5a00}
+.badge-red{background:#fee2e2;color:#991b1b}
+[data-theme=dark] .legal-banner.info{background:#0f172a;color:#93c5fd}
+[data-theme=dark] .legal-banner.warn{background:#292011;color:#fcd34d}
+[data-theme=dark] .legal-banner.err{background:#2a1010;color:#fca5a5}

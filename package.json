@@ -4,7 +4,8 @@
   "description": "ProrogaPro — Scadenze e proroghe contrattuali: piattaforma SaaS per PMI italiane.",
   "main": "index.html",
   "scripts": {
-    "test": "node scripts/capture_console.js --strict"
+    "test": "node scripts/capture_console.js --strict",
+    "screenshots": "node scripts/capture_screenshots.js"
   },
   "keywords": ["proroghe", "scadenze", "contratti", "saas", "hr"],
   "author": "",

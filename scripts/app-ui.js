@@ -661,6 +661,10 @@ function renderContractCard(c){
     const progressLabel = d<0 ? 'Contratto scaduto' : d<=ALERT_DAYS ? 'Intervento prioritario' : 'Monitoraggio regolare';
     const cStatus=c.status||'da_gestire';
     const sLbl=cStatus==='gestita'?'Gestita':cStatus==='terminato'?'Terminato':'Da gestire';
+    if(typeof normalizeContractLegal==='function') normalizeContractLegal(c);
+    const pendingCompliance=(c.complianceTasks||[]).filter(t=>t.status!=='done').length;
+    const compR=typeof analyzeContractCompliance==='function'?analyzeContractCompliance(c):null;
+    const disdettaDl=typeof getDisdettaDaysLeft==='function'?getDisdettaDaysLeft(c):null;
     return `<div class="contract-card ${urg} status-${cStatus}" data-id="${escAttr(c.id)}">
       <div class="card-main">
         <div class="card-top">
@@ -676,6 +680,10 @@ function renderContractCard(c){
               <div class="status-badge s-${cStatus}">${sLbl}</div>
               ${c.indeterminate?`<div class="badge badge-gray">T.I.</div>`:''}
               ${c.cessato?`<div class="badge badge-gray">Cessato</div>`:''}
+              ${pendingCompliance?`<div class="badge badge-red" title="Adempimenti pendenti">${pendingCompliance} UNILAV</div>`:''}
+              ${compR&&compR.stato==='ERRORE'?`<div class="badge badge-red">Non conforme</div>`:''}
+              ${compR&&compR.stato==='ATTENZIONE'?`<div class="badge badge-amber">Verifica legale</div>`:''}
+              ${disdettaDl!==null&&disdettaDl<=7&&disdettaDl>=-3?`<div class="badge badge-amber">Disdetta ${disdettaDl}gg</div>`:''}
               ${c.inProgress?`<div class="badge badge-purple">In lavorazione</div>`:''}
               ${(c.workNotes && c.workNotes.length)?`<div class="badge badge-blue" title="Note di lavorazione: clicca per visualizzare" onclick="viewWorkNotes(${escAttr(c.id)})">${c.workNotes.length} note</div>`:''}
             </div>
@@ -697,7 +705,8 @@ function renderContractCard(c){
         ${canManageData()?`<div class="status-selector"><span class="status-selector-label">Stato:</span><button class="status-btn s-da_gestire${cStatus==='da_gestire'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'da_gestire')">Da gestire</button><button class="status-btn s-gestita${cStatus==='gestita'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'gestita')">Gestita</button><button class="status-btn s-terminato${cStatus==='terminato'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'terminato')">Terminato</button></div>
         <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
         <button class="act-btn" onclick="openAddCantiere(${escAttr(c.id)})">+ Cantiere</button>
-        ${c.renewable?`<button class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button>`:''}
+        ${c.renewable?`<button class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button><button class="act-btn" onclick="openRenewModal(${escAttr(c.id)})">Rinnovo</button>`:''}
+        <button class="act-btn" onclick="exportDossierProroga(${escAttr(c.id)})">Dossier PDF</button>
         <button class="act-btn" onclick="openWorkNoteModal(${escAttr(c.id)})">Nota</button>
         ${!c.indeterminate?`<button class="act-btn" onclick="markIndeterminate(${escAttr(c.id)})">Converti T.I.</button>`:'<button class="act-btn" disabled>Convertito</button>'}
         ${!c.cessato?`<button class="act-btn" onclick="markCessato(${escAttr(c.id)})">Segna cessato</button>`:'<button class="act-btn" disabled>Cessato</button>'}
@@ -971,20 +980,26 @@ window.openQuickRenew=function(id){
 
 window.doQuickRenew=function(id){
   try{
-    const m=parseInt((document.getElementById('qr-months')||{}).value)||0;const idx=state.companies.findIndex(c=>c.id===id);if(idx<0)return;const c=state.companies[idx];
+    const m=parseInt((document.getElementById('qr-months')||{}).value)||0;
     if(m<=0){showToast('Inserire mesi validi');return}
-    if(!c.endDate||!c.startDate){showToast('Contratto senza data di scadenza o inizio');return}
-    const d=new Date(c.endDate);d.setMonth(d.getMonth()+m);const newEndStr=d.toISOString().split('T')[0];
-    const newDur=durationMonths(c.startDate,newEndStr);const newRenew=(c.renewCount||0)+1;
-    const r=verificaCausale(newDur,newRenew,c.renewType==='Con causale');
+    const c=state.companies.find(x=>x.id===id);
+    if(!c?.endDate||!c?.startDate){showToast('Contratto senza date');return}
+    const newEnd=addMonthsISO(c.endDate,m);
+    const r=typeof analyzeContractCompliance==='function'?analyzeContractCompliance(c,{projectedDurationMonths:durationMonths(c.startDate,newEnd),projectedRenewCount:(c.renewCount||0)+1}):verificaCausale(durationMonths(c.startDate,newEnd),(c.renewCount||0)+1,c.renewType==='Con causale');
     if(r.stato==='ERRORE'){showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Impossibile applicare proroga</h3><div style="margin-bottom:12px">${esc(r.msg)}</div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Chiudi</button></div></div></div>`);return}
     if(r.stato==='ATTENZIONE'){
       showModal(`<div class="modal-bg" onclick="hideModal()"><div class="modal" onclick="event.stopPropagation()"><h3>Attenzione nella proroga</h3><div style="margin-bottom:12px">${esc(r.msg)}</div><div class="modal-actions"><button class="m-btn" onclick="hideModal()">Annulla</button><button class="m-btn primary" onclick="doQuickRenewConfirm(${id},${m})">Procedi comunque</button></div></div></div>`);
       return;
     }
-    // OK — apply
-    state.companies[idx].endDate=newEndStr;state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData();hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata');
+    const res=typeof applyContractExtension==='function'?applyContractExtension(id,{kind:'proroga',months:m}):null;
+    if(res&&!res.ok){showToast(res.error||'Errore proroga');return}
+    if(!res){const idx=state.companies.findIndex(c=>c.id===id);state.companies[idx].endDate=newEnd;state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData()}
+    hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata — verifica UNILAV entro 5 gg');
   }catch(e){console.error('doQuickRenew',e);showToast('Errore durante la proroga')}
+}
+
+function addMonthsISO(dateStr,months){
+  const d=new Date(dateStr);d.setMonth(d.getMonth()+months);return d.toISOString().split('T')[0];
 }
 
 // Main page renderer
@@ -1015,6 +1030,7 @@ function renderPage(){
     </div>
     <div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div>
   </div>`;
+        html+=`<div class="legal-banner-wrap">${typeof renderLegalBannerHtml==='function'?renderLegalBannerHtml():''}</div>`;
         html+=`<div class="metrics-grid" style="margin-bottom:20px">
     <div class="metric-card"><div class="metric-label">Durata media</div><div class="metric-val">${avgDur}<span style="font-size:16px;font-weight:400"> mesi</span></div></div>
     <div class="metric-card"><div class="metric-label">Prorogabili</div><div class="metric-val c-blue">${renewableCnt}</div><div class="metric-delta">su ${state.companies.length} totali</div></div>
@@ -1053,6 +1069,9 @@ function renderPage(){
       case 'terminate':
         html=renderTerminatePage();
         break;
+      case 'compliance':
+        html=typeof renderCompliancePage==='function'?renderCompliancePage():'<div class="empty-state">Modulo compliance non disponibile</div>';
+        break;
       case 'analytics':
         html=renderAnalyticsPage();
         break;
@@ -1082,7 +1101,7 @@ function renderContractModal(c,base){
 
   let causaleInit='';
   if(c&&c.startDate&&c.endDate){
-    const r=verificaCausale(dm,c.renewCount||0,c.renewType==='Con causale');
+    const r=typeof analyzeContractCompliance==='function'?analyzeContractCompliance(c):verificaCausale(dm,c.renewCount||0,c.renewType==='Con causale');
     if(r.stato!=='OK'){
       const cls=r.stato==='ERRORE'?'err':'warn';
       causaleInit=`<div class="causale-inline ${cls}" id="causale-live">
@@ -1098,12 +1117,10 @@ function renderContractModal(c,base){
     <h3>${title}</h3>
     ${!isEdit&&!base?`<div class="form-row">
       <div class="form-field"><label>Nome azienda *</label><input class="f-input" id="f-name" type="text" value="${escAttr(v.name||'')}" placeholder="Acme S.r.l." style="width:100%"></div>
-      <div class="form-field"><label>Tipo contratto</label><input class="f-input" id="f-type" type="text" value="${escAttr(v.contractType||'')}" placeholder="Fornitura servizi" style="width:100%"></div>
-    </div>`:`<input id="f-name" type="hidden" value="${escAttr(v.name||'')}">
-    ${isEdit?`<div class="form-row single"><div class="form-field"><label>Tipo contratto</label><input class="f-input" id="f-type" type="text" value="${escAttr(v.contractType||'')}" placeholder="Fornitura servizi" style="width:100%"></div></div>`:''}`}
+    </div>`:`<input id="f-name" type="hidden" value="${escAttr(v.name||'')}">`}
+    ${typeof renderLegalFormFields==='function'?renderLegalFormFields(v):`<div class="form-row single"><div class="form-field"><label>Tipo contratto</label><input class="f-input" id="f-type" type="text" value="${escAttr(v.contractType||'')}" style="width:100%"></div></div>`}
     <div class="form-row">
-      <div class="form-field"><label>Nome dipendente</label><input class="f-input" id="f-emp" type="text" value="${escAttr(v.employeeName||'')}" placeholder="Mario Rossi" style="width:100%"></div>
-      ${(!isEdit&&base)?`<div class="form-field"><label>Tipo contratto</label><input class="f-input" id="f-type" type="text" value="${escAttr(v.contractType||'')}" placeholder="Fornitura servizi" style="width:100%"></div>`:''}
+      <div class="form-field"><label>Nome dipendente / controparte</label><input class="f-input" id="f-emp" type="text" value="${escAttr(v.employeeName||'')}" placeholder="Mario Rossi" style="width:100%"></div>
     </div>
     <div class="form-row">
       <div class="form-field"><label>Data inizio</label><input class="f-input" id="f-start" type="date" value="${v.startDate||''}" style="width:100%"></div>
@@ -1116,11 +1133,11 @@ function renderContractModal(c,base){
     <div class="form-row triple">
       <div class="form-field"><label>Prorogabile</label><select class="f-input" id="f-renew" style="width:100%"><option value="yes"${v.renewable!==false?' selected':''}>Sì</option><option value="no"${v.renewable===false?' selected':''}>No</option></select></div>
       <div class="form-field"><label>Durata proroga (mesi)</label><input class="f-input" id="f-months" type="number" min="1" value="${v.renewMonths||dm||12}" style="width:100%"></div>
-      <div class="form-field"><label>Tipo proroga</label><select class="f-input" id="f-rtype" style="width:100%"><option${v.renewType==='Con causale'?' selected':''}>Con causale</option><option${v.renewType==='Senza causale'?' selected':''}>Senza causale</option><option${v.renewType==='Automatica'?' selected':''}>Automatica</option></select></div>
+      <div class="form-field"><label>Preavviso disdetta (gg)</label><input class="f-input" id="f-notice" type="number" min="0" value="${v.renewNotice||30}" style="width:100%"></div>
     </div>
     <div class="form-row">
-      <div class="form-field"><label>Preavviso (giorni)</label><input class="f-input" id="f-notice" type="number" min="0" value="${v.renewNotice||30}" style="width:100%"></div>
       <div class="form-field"><label>Proroghe effettuate</label><input class="f-input" id="f-rcount" type="number" min="0" value="${v.renewCount||0}" style="width:100%"></div>
+      <div class="form-field"><label>Fine contratto precedente (rinnovo)</label><input class="f-input" id="f-last-end" type="date" value="${v.lastContractEndDate||''}" style="width:100%"></div>
     </div>
     ${causaleInit}
     <div class="form-row single"><div class="form-field"><label>Note</label><textarea class="f-input" id="f-notes" style="width:100%">${esc(v.notes||'')}</textarea></div></div>
@@ -1132,28 +1149,36 @@ function renderContractModal(c,base){
 }
 
 function attachModalListeners(){
-  ['f-start','f-end','f-rtype','f-rcount'].forEach(id=>{
+  ['f-start','f-end','f-rtype','f-rcount','f-legal-cat','f-causale-code','f-causale-text'].forEach(id=>{
     const el=document.getElementById(id);
     if(el)el.addEventListener('input',updateCausaleLive);
   });
   window.doQuickRenewConfirm=function(id,m){
     try{
-      const idx=state.companies.findIndex(c=>c.id===id);if(idx<0)return;const c=state.companies[idx];if(!c.endDate){showToast('Contratto senza data di scadenza');hideModal();return}
-      const d=new Date(c.endDate);d.setMonth(d.getMonth()+m);const newEndStr=d.toISOString().split('T')[0];
-      state.companies[idx].endDate=newEndStr;state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;saveData();hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata (procedi comunque)');
+      const res=typeof applyContractExtension==='function'?applyContractExtension(id,{kind:'proroga',months:m,force:true}):null;
+      if(res&&!res.ok){showToast(res.error||'Errore');return}
+      if(!res){
+        const idx=state.companies.findIndex(c=>c.id===id);if(idx<0)return;
+        const d=new Date(state.companies[idx].endDate);d.setMonth(d.getMonth()+m);
+        state.companies[idx].endDate=d.toISOString().split('T')[0];
+        state.companies[idx].renewCount=(state.companies[idx].renewCount||0)+1;
+        saveData();
+      }
+      hideModal();renderPage();renderSidebarCompanies();showToast('Proroga applicata (procedi comunque)');
     }catch(e){console.error('doQuickRenewConfirm',e);showToast('Errore')}
   }
   // Aggiorna messaggio causale quando si modificano campi nel modal
   function updateCausaleLive(){
     const s = (document.getElementById('f-start')||{}).value;
     const e = (document.getElementById('f-end')||{}).value;
-    const rt = (document.getElementById('f-rtype')||{}).value || '';
+    const rt = (document.getElementById('f-rtype')||{}).value || (document.getElementById('f-causale-code')||{}).value || '';
     const rc = parseInt((document.getElementById('f-rcount')||{}).value) || 0;
     const fb = document.getElementById('causale-live');
     if(!fb) return;
     if(!s||!e){fb.innerHTML='';return}
     const dm = durationMonths(s,e);
-    const r = verificaCausale(dm,rc,rt==='Con causale');
+    const stub = { legalCategory:(document.getElementById('f-legal-cat')||{}).value||'td', renewCount:rc, renewType:rt==='Con causale'||rt==='parti_top'||rt==='ccnl'||rt==='sostituzione'?'Con causale':'Senza causale', causaleCode:rt||'n_a', causaleText:(document.getElementById('f-causale-text')||{}).value||'', startDate:s, endDate:e };
+    const r = typeof analyzeContractCompliance==='function'?analyzeContractCompliance(stub):verificaCausale(dm,rc,stub.renewType==='Con causale');
     if(r.stato==='OK'){fb.innerHTML='';return}
     const cls = r.stato==='ERRORE' ? 'err' : 'warn';
     const icon = r.stato==='ERRORE'
@@ -1207,36 +1232,41 @@ window.saveContract=function(editId){
   }
   const name=(document.getElementById('f-name')||{}).value?.trim();
   const emp=(document.getElementById('f-emp')||{}).value?.trim();
-  const type=(document.getElementById('f-type')||{}).value?.trim()||'Non specificato';
+  const type=(document.getElementById('f-type')||{}).value?.trim();
+  const legalExtra=typeof readLegalFieldsFromForm==='function'?readLegalFieldsFromForm(editId!==null&&editId!==undefined?state.companies.find(c=>c.id===editId):null):{};
+  const resolvedType=legalExtra.contractType||type||'Non specificato';
   const start=(document.getElementById('f-start')||{}).value;
   const end=(document.getElementById('f-end')||{}).value;
   const admin=(document.getElementById('f-admin')||{}).value?.trim();
   const company=(document.getElementById('f-company')||{}).value?.trim();
   const renewable=(document.getElementById('f-renew')||{}).value==='yes';
   const months=parseInt((document.getElementById('f-months')||{}).value)||12;
-  const rtype=(document.getElementById('f-rtype')||{}).value||'Senza causale';
+  const rtype=legalExtra.renewType||(document.getElementById('f-rtype')||{}).value||'Senza causale';
   const notice=parseInt((document.getElementById('f-notice')||{}).value)||30;
   const rcount=parseInt((document.getElementById('f-rcount')||{}).value)||0;
   const notes=(document.getElementById('f-notes')||{}).value?.trim();
+  const lastContractEndDate=(document.getElementById('f-last-end')||{}).value||'';
 
   if(!name||!end){showToast('Inserire nome azienda e data scadenza');return}
 
   if(start&&end){
-    const dm=durationMonths(start,end);
-    const r=verificaCausale(dm,rcount,rtype==='Con causale');
+    const stub={...legalExtra,startDate:start,endDate:end,renewCount:rcount,renewType:rtype,renewNotice:notice};
+    const r=typeof analyzeContractCompliance==='function'?analyzeContractCompliance(stub):verificaCausale(durationMonths(start,end),rcount,rtype==='Con causale');
     if(r.stato==='ERRORE'){showToast('⚠ '+r.msg);return}
     if(r.stato==='ATTENZIONE')showToast('⚠ Attenzione: '+r.msg);
   }
 
+  const payload={name,employeeName:emp,contractType:resolvedType,startDate:start,endDate:end,adminEmail:admin,companyEmail:company,renewable,renewMonths:months,renewType:rtype,renewNotice:notice,renewCount:rcount,notes,lastContractEndDate,...legalExtra};
+
   if(editId!==null&&editId!==undefined){
     const idx=state.companies.findIndex(c=>c.id===editId);
     if(idx>=0){
-      state.companies[idx]={...state.companies[idx],name,employeeName:emp,contractType:type,startDate:start,endDate:end,adminEmail:admin,companyEmail:company,renewable,renewMonths:months,renewType:rtype,renewNotice:notice,renewCount:rcount,notes};
+      state.companies[idx]={...state.companies[idx],...payload};
     }
     showToast('Contratto aggiornato');
   }else{
     const newId=Math.max(0,...state.companies.map(c=>c.id||0))+1;
-    state.companies.push({id:newId,name,employeeName:emp,contractType:type,startDate:start,endDate:end,adminEmail:admin,companyEmail:company,renewable,renewMonths:months,renewType:rtype,renewNotice:notice,renewCount:rcount,notes,cantieri:[]});
+    state.companies.push({id:newId,...payload,cantieri:[],complianceTasks:[],contractHistory:[]});
     showToast('Contratto aggiunto');
   }
   hideModal();saveData();renderPage();renderSidebarCompanies();

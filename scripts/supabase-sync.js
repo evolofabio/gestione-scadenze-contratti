@@ -10,7 +10,26 @@ let _syncLastState       = null;
 
 const SYNC_DEBOUNCE_MS = 800;
 
+function _legalMetaFromRow(row) {
+  const meta = row.legal_meta && typeof row.legal_meta === 'object' ? row.legal_meta : {};
+  return meta;
+}
+
+function _legalMetaFromEntry(entry) {
+  return {
+    legalCategory: entry.legalCategory || '',
+    causaleCode: entry.causaleCode || '',
+    causaleText: entry.causaleText || '',
+    ccnlApplied: entry.ccnlApplied || '',
+    lastContractEndDate: entry.lastContractEndDate || '',
+    complianceTasks: Array.isArray(entry.complianceTasks) ? entry.complianceTasks : [],
+    contractHistory: Array.isArray(entry.contractHistory) ? entry.contractHistory : [],
+    publicProcurement: entry.publicProcurement || {},
+  };
+}
+
 function _rowToEntry(row) {
+  const meta = _legalMetaFromRow(row);
   return {
     id:             row.id,
     supabaseId:     row.id,
@@ -33,6 +52,14 @@ function _rowToEntry(row) {
     indeterminate:  !!row.indeterminate,
     cessato:        !!row.cessato,
     inProgress:     !!row.in_progress,
+    legalCategory:  meta.legalCategory || '',
+    causaleCode:    meta.causaleCode || '',
+    causaleText:    meta.causaleText || '',
+    ccnlApplied:    meta.ccnlApplied || '',
+    lastContractEndDate: meta.lastContractEndDate || '',
+    complianceTasks: Array.isArray(meta.complianceTasks) ? meta.complianceTasks : [],
+    contractHistory: Array.isArray(meta.contractHistory) ? meta.contractHistory : [],
+    publicProcurement: meta.publicProcurement || {},
   };
 }
 
@@ -59,6 +86,7 @@ function _entryToRow(entry, companyId) {
     indeterminate:       !!entry.indeterminate,
     cessato:             !!entry.cessato,
     in_progress:         !!entry.inProgress,
+    legal_meta:          _legalMetaFromEntry(entry),
     updated_at:          new Date().toISOString(),
   };
   if (entry.supabaseId) row.id = entry.supabaseId;
