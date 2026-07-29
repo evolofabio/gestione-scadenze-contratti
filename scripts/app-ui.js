@@ -704,6 +704,7 @@ function renderContractCard(c){
         <div class="card-actions">
         ${canManageData()?`<div class="status-selector"><span class="status-selector-label">Stato:</span><button class="status-btn s-da_gestire${cStatus==='da_gestire'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'da_gestire')">Da gestire</button><button class="status-btn s-gestita${cStatus==='gestita'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'gestita')">Gestita</button><button class="status-btn s-terminato${cStatus==='terminato'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'terminato')">Terminato</button></div>
         <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
+        <button class="act-btn" onclick="duplicateContract(${escAttr(c.id)})">Duplica</button>
         <button class="act-btn" onclick="openAddCantiere(${escAttr(c.id)})">+ Cantiere</button>
         ${c.renewable?`<button class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button><button class="act-btn" onclick="openRenewModal(${escAttr(c.id)})">Rinnovo</button>`:''}
         <button class="act-btn" onclick="exportDossierProroga(${escAttr(c.id)})">Dossier PDF</button>
@@ -1031,6 +1032,7 @@ function renderPage(){
     <div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div>
   </div>`;
         html+=`<div class="legal-banner-wrap">${typeof renderLegalBannerHtml==='function'?renderLegalBannerHtml():''}</div>`;
+        html+=typeof renderStudioWeekWidget==='function'?renderStudioWeekWidget():'';
         html+=`<div class="metrics-grid" style="margin-bottom:20px">
     <div class="metric-card"><div class="metric-label">Durata media</div><div class="metric-val">${avgDur}<span style="font-size:16px;font-weight:400"> mesi</span></div></div>
     <div class="metric-card"><div class="metric-label">Prorogabili</div><div class="metric-val c-blue">${renewableCnt}</div><div class="metric-delta">su ${state.companies.length} totali</div></div>
@@ -1056,6 +1058,9 @@ function renderPage(){
         break;
       case 'cantieri':
         html=renderCantieriPage();
+        break;
+      case 'clienti':
+        html=typeof renderStudioPortfolioPage==='function'?renderStudioPortfolioPage():'<div class="empty-state">Vista clienti non disponibile</div>';
         break;
       case 'indeterminati':
         html=renderIndeterminatiPage();
@@ -1258,15 +1263,18 @@ window.saveContract=function(editId){
 
   const payload={name,employeeName:emp,contractType:resolvedType,startDate:start,endDate:end,adminEmail:admin,companyEmail:company,renewable,renewMonths:months,renewType:rtype,renewNotice:notice,renewCount:rcount,notes,lastContractEndDate,...legalExtra};
 
-  if(editId!==null&&editId!==undefined){
+  if (editId!==null&&editId!==undefined){
     const idx=state.companies.findIndex(c=>c.id===editId);
     if(idx>=0){
       state.companies[idx]={...state.companies[idx],...payload};
+      if(typeof syncDerivedStudioTasks==='function') syncDerivedStudioTasks(state.companies[idx]);
     }
     showToast('Contratto aggiornato');
   }else{
     const newId=Math.max(0,...state.companies.map(c=>c.id||0))+1;
-    state.companies.push({id:newId,...payload,cantieri:[],complianceTasks:[],contractHistory:[]});
+    const entry={id:newId,...payload,cantieri:[],complianceTasks:[],contractHistory:[]};
+    if(typeof syncDerivedStudioTasks==='function') syncDerivedStudioTasks(entry);
+    state.companies.push(entry);
     showToast('Contratto aggiunto');
   }
   hideModal();saveData();renderPage();renderSidebarCompanies();

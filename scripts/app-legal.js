@@ -35,7 +35,19 @@ const COMPLIANCE_TYPES = {
   unilav_cessazione:     { label: 'UNILAV — Cessazione', deadlineDays: UNILAV_DEADLINE_DAYS },
   disdetta:              { label: 'Disdetta / mancato rinnovo', deadlineDays: 0 },
   gara_pubblica:         { label: 'Avvio nuova gara (appalto PA)', deadlineDays: 0 },
+  fine_prova:            { label: 'Fine periodo di prova', deadlineDays: 0 },
+  preavviso_disdetta:    { label: 'Termine invio disdetta / preavviso', deadlineDays: 0 },
+  permesso_soggiorno:    { label: 'Scadenza permesso di soggiorno', deadlineDays: 0 },
+  scadenza_custom:       { label: 'Scadenza personalizzata', deadlineDays: 0 },
 };
+
+let _complianceFilter = 'all';
+
+function complianceTypeLabel(type, note){
+  const base = (COMPLIANCE_TYPES[type] || {}).label || type;
+  if (type === 'scadenza_custom' && note) return note;
+  return base;
+}
 
 function legalCat(code){
   const key = (code && LEGAL_CATEGORIES[code]) ? code : 'altro';
@@ -69,13 +81,90 @@ function normalizeContractLegal(c){
   if (!c.publicProcurement || typeof c.publicProcurement !== 'object') {
     c.publicProcurement = { prorogaOption: false, prorogaOptionMax: 0, prorogaTecnica: false, garaAvviata: false, prorogheOpzioneCount: 0 };
   }
+  if (!c.taxCode) c.taxCode = '';
+  if (!c.jobTitle) c.jobTitle = '';
+  if (c.trialDays === undefined || c.trialDays === null) c.trialDays = '';
+  if (!c.trialEndDate) c.trialEndDate = '';
+  if (!c.workPermitExpiry) c.workPermitExpiry = '';
+  if (!Array.isArray(c.customDeadlines)) c.customDeadlines = [];
   c.contractType = legalCat(c.legalCategory).label;
   return c;
 }
 
+function getTrialEndDate(c){
+  normalizeContractLegal(c);
+  if (c.trialEndDate) return c.trialEndDate;
+  const days = parseInt(c.trialDays);
+  if (c.startDate && days > 0) return addDaysISO(c.startDate, days);
+  return null;
+}
+
+function getDisdettaDeadlineDate(c){
+  if (!c?.endDate || c.renewable === false || c.cessato) return null;
+  const notice = parseInt(c.renewNotice) || 30;
+  const d = new Date(c.endDate);
+  d.setDate(d.getDate() - notice);
+  return d.toISOString().split('T')[0];
+}
+
+function upsertDerivedTask(c, stableId, type, dueDate, eventDate, note){
+  if (!dueDate || !c) return;
+  normalizeContractLegal(c);
+  const existing = (c.complianceTasks || []).find(t => t.id === stableId);
+  if (existing && existing.status === 'done') return;
+  const payload = {
+    id: stableId,
+    type,
+    eventDate: eventDate || dueDate,
+    dueDate,
+    status: 'pending',
+    note: note || '',
+    doneAt: null,
+    derived: true,
+  };
+  if (existing) {
+    Object.assign(existing, payload, { status: existing.status, doneAt: existing.doneAt });
+    return;
+  }
+  c.complianceTasks.unshift(payload);
+}
+
+function syncDerivedStudioTasks(c){
+  if (!c || c.cessato || c.indeterminate) return;
+  normalizeContractLegal(c);
+  const cid = c.id;
+  const trialEnd = getTrialEndDate(c);
+  if (trialEnd) {
+    upsertDerivedTask(c, `derived_prova_${cid}`, 'fine_prova', trialEnd, trialEnd, 'Verificare esito periodo di prova');
+  }
+  const disdettaDue = getDisdettaDeadlineDate(c);
+  if (disdettaDue) {
+    upsertDerivedTask(c, `derived_disdetta_${cid}`, 'preavviso_disdetta', disdettaDue, c.endDate,
+      `Inviare disdetta entro preavviso (${parseInt(c.renewNotice) || 30} gg)`);
+  }
+  if (c.workPermitExpiry) {
+    upsertDerivedTask(c, `derived_permesso_${cid}`, 'permesso_soggiorno', c.workPermitExpiry, c.workPermitExpiry,
+      'Verificare rinnovo permesso di soggiorno');
+  }
+  (c.customDeadlines || []).forEach((cd, i) => {
+    if (!cd?.dueDate || cd.status === 'done') return;
+    const id = cd.id || `custom_${cid}_${i}`;
+    cd.id = id;
+    upsertDerivedTask(c, `derived_${id}`, 'scadenza_custom', cd.dueDate, cd.dueDate, cd.label || 'Scadenza personalizzata');
+  });
+}
+
+function syncAllStudioTasks(){
+  (state?.companies || []).forEach(syncDerivedStudioTasks);
+}
+
 function normalizeAllContractsLegal(){
   if (!state?.companies) return;
-  state.companies = state.companies.map(normalizeContractLegal);
+  state.companies = state.companies.map(c => {
+    normalizeContractLegal(c);
+    syncDerivedStudioTasks(c);
+    return c;
+  });
 }
 
 function addDaysISO(dateStr, days){
@@ -219,14 +308,175 @@ function getDisdettaDaysLeft(c){
 }
 
 function getPendingComplianceTasks(companies){
+  syncAllStudioTasks();
   const list = (companies || state.companies || []).flatMap(c => {
     normalizeContractLegal(c);
     return (c.complianceTasks || [])
       .filter(t => t.status !== 'done')
-      .map(t => ({ ...t, contractId: c.id, contractName: c.name, employeeName: c.employeeName }));
+      .map(t => ({
+        ...t,
+        contractId: c.id,
+        contractName: c.name,
+        employeeName: c.employeeName,
+        taxCode: c.taxCode || '',
+        label: complianceTypeLabel(t.type, t.note),
+      }));
   });
   return list.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
 }
+
+function filterStudioDeadlines(tasks, filter){
+  const f = filter || _complianceFilter || 'all';
+  if (f === 'all') return tasks;
+  return tasks.filter(t => {
+    const d = daysLeft(t.dueDate);
+    if (f === 'overdue') return d < 0;
+    if (f === 'today') return d >= 0 && d <= 1;
+    if (f === 'week') return d >= 0 && d <= 7;
+    return true;
+  });
+}
+
+function getClientPortfolioStats(){
+  syncAllStudioTasks();
+  const map = {};
+  (state.companies || []).forEach(c => {
+    const name = c.name || 'Senza nome';
+    if (!map[name]) {
+      map[name] = { name, contracts: 0, urgent: 0, overdue: 0, pendingTasks: 0, riskScore: 0 };
+    }
+    const row = map[name];
+    row.contracts++;
+    const d = daysLeft(c.endDate);
+    if (d >= 0 && d <= 30) row.urgent++;
+    if (d < 0) row.overdue++;
+    const pending = (c.complianceTasks || []).filter(t => t.status !== 'done');
+    row.pendingTasks += pending.length;
+    pending.forEach(t => { if (daysLeft(t.dueDate) < 0) row.overdue++; });
+  });
+  return Object.values(map).map(r => {
+    r.riskScore = r.overdue * 100 + r.pendingTasks * 10 + r.urgent * 2;
+    return r;
+  }).sort((a, b) => b.riskScore - a.riskScore || a.name.localeCompare(b.name, 'it'));
+}
+
+function renderStudioWeekWidget(){
+  const tasks = filterStudioDeadlines(getPendingComplianceTasks(), 'week');
+  const overdue = getPendingComplianceTasks().filter(t => daysLeft(t.dueDate) < 0);
+  const today = tasks.filter(t => daysLeft(t.dueDate) <= 1);
+  let html = `<div class="studio-week-panel">
+    <div class="studio-week-head">
+      <div><div class="studio-week-title">Piano settimanale studio</div>
+      <div class="studio-week-sub">${today.length} oggi/domani · ${tasks.length} entro 7 gg · ${overdue.length} scaduti</div></div>
+      <button class="tb-btn" onclick="setPage('compliance')">Scadenziario completo</button>
+    </div>`;
+  if (!tasks.length && !overdue.length) {
+    html += `<div class="studio-week-empty">Nessuna scadenza critica nei prossimi 7 giorni.</div>`;
+  } else {
+    const show = [...overdue.slice(0, 3), ...tasks.filter(t => daysLeft(t.dueDate) >= 0).slice(0, 6)];
+    html += `<ul class="studio-week-list">`;
+    show.forEach(t => {
+      const d = daysLeft(t.dueDate);
+      const cls = d < 0 ? 'overdue' : d <= 1 ? 'today' : '';
+      html += `<li class="studio-week-item ${cls}"><span class="studio-week-date">${formatDate(t.dueDate)} (${d} gg)</span>
+        <strong>${esc(t.label)}</strong> — ${esc(t.contractName)}${t.employeeName ? ' · ' + esc(t.employeeName) : ''}
+        <button class="act-btn sm" onclick="markComplianceDone(${escJsArg(t.contractId)},${escJsArg(t.id)})">Fatto</button></li>`;
+    });
+    html += `</ul>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderStudioPortfolioPage(){
+  const clients = getClientPortfolioStats();
+  let html = `<div class="dashboard-hero"><div class="dashboard-hero-copy">
+    <div class="dashboard-kicker">Studio</div>
+    <div class="dashboard-title">Portfolio clienti</div>
+    <div class="dashboard-subtitle">Vista per azienda: contratti attivi, adempimenti pendenti e priorità operative.</div>
+  </div></div>`;
+  if (!clients.length) {
+    html += `<div class="empty-state">Nessun cliente registrato.</div>`;
+    return html;
+  }
+  html += `<div class="client-portfolio-grid">`;
+  clients.forEach(cl => {
+    const badge = cl.overdue > 0 ? 'err' : cl.pendingTasks > 0 ? 'warn' : 'ok';
+    html += `<article class="client-portfolio-card">
+      <div class="client-portfolio-top">
+        <h3>${esc(cl.name)}</h3>
+        <span class="client-badge ${badge}">${cl.pendingTasks} ademp.</span>
+      </div>
+      <div class="client-portfolio-stats">
+        <span><strong>${cl.contracts}</strong> contratti</span>
+        <span><strong>${cl.urgent}</strong> in scadenza 30gg</span>
+        <span class="${cl.overdue ? 'c-red' : ''}"><strong>${cl.overdue}</strong> critici</span>
+      </div>
+      <div class="client-portfolio-actions">
+        <button class="tb-btn" onclick="setCompanyPage(${escJsArg(cl.name)})">Apri contratti</button>
+        <button class="tb-btn" onclick="exportClientWeeklyReport(${escJsArg(cl.name)})">Report settimanale</button>
+      </div>
+    </article>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+window.setComplianceFilter = function(f){
+  _complianceFilter = f || 'all';
+  renderPage();
+};
+
+window.exportClientWeeklyReport = function(clientName){
+  syncAllStudioTasks();
+  const contracts = (state.companies || []).filter(c => c.name === clientName);
+  if (!contracts.length) { showToast('Cliente non trovato'); return; }
+  const tasks = getPendingComplianceTasks(contracts);
+  if (!window.jspdf) { showToast('jsPDF non disponibile'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  let y = 16;
+  doc.setFontSize(15); doc.setFont(undefined, 'bold');
+  doc.text('ProrogaPro — Report scadenze settimanale', 14, y); y += 8;
+  doc.setFontSize(10); doc.setFont(undefined, 'normal');
+  doc.text(`Cliente: ${clientName}`, 14, y); y += 5;
+  doc.text(`Generato: ${new Date().toLocaleString('it-IT')}`, 14, y); y += 5;
+  doc.text(`Contratti monitorati: ${contracts.length}`, 14, y); y += 8;
+  if (!tasks.length) {
+    doc.text('Nessun adempimento pendente.', 14, y);
+  } else {
+    tasks.slice(0, 35).forEach(t => {
+      if (y > 270) { doc.addPage(); y = 16; }
+      const dl = daysLeft(t.dueDate);
+      doc.text(`• ${formatDate(t.dueDate)} (${dl} gg) — ${t.label} — ${t.employeeName || '—'}`, 14, y);
+      y += 5;
+    });
+  }
+  const safe = String(clientName).replace(/[^\w\-]+/g, '_').substring(0, 40);
+  doc.save(`prorogapro_report_${safe}_${new Date().toISOString().split('T')[0]}.pdf`);
+  showToast('Report cliente esportato');
+};
+
+window.duplicateContract = function(id){
+  if (!requireWriteAccess('duplicare contratti')) return;
+  if (!canAddContract(1)) { showToast('Limite contratti del piano raggiunto'); return; }
+  const c = state.companies.find(x => x.id === id);
+  if (!c) return;
+  const newId = Math.max(0, ...state.companies.map(x => x.id || 0)) + 1;
+  const copy = JSON.parse(JSON.stringify(c));
+  copy.id = newId;
+  delete copy.supabaseId;
+  copy.complianceTasks = [];
+  copy.contractHistory = [];
+  copy.employeeName = (copy.employeeName ? copy.employeeName + ' (copia)' : 'Copia');
+  normalizeContractLegal(copy);
+  syncDerivedStudioTasks(copy);
+  state.companies.push(copy);
+  saveData();
+  renderPage();
+  renderSidebarCompanies();
+  showToast('Contratto duplicato — aggiorna le date');
+};
 
 function getLegalNotifications(){
   const pending = getPendingComplianceTasks();
@@ -260,27 +510,39 @@ function renderLegalBannerHtml(){
 }
 
 function renderCompliancePage(){
-  const tasks = getPendingComplianceTasks();
-  const done = (state.companies || []).flatMap(c => (c.complianceTasks || []).filter(t => t.status === 'done').map(t => ({ ...t, contractId: c.id, contractName: c.name, employeeName: c.employeeName }))).slice(0, 30);
-  let html = `<div class="dashboard-hero"><div class="dashboard-hero-copy"><div class="dashboard-kicker">Compliance</div><div class="dashboard-title">Registro adempimenti</div><div class="dashboard-subtitle">UNILAV (5 gg), disdetta, appalti PA — scadenze derivate da proroghe e rinnovi.</div></div></div>`;
+  syncAllStudioTasks();
+  const allTasks = getPendingComplianceTasks();
+  const tasks = filterStudioDeadlines(allTasks, _complianceFilter);
+  const done = (state.companies || []).flatMap(c => (c.complianceTasks || []).filter(t => t.status === 'done').map(t => ({
+    ...t, contractId: c.id, contractName: c.name, employeeName: c.employeeName, label: complianceTypeLabel(t.type, t.note),
+  }))).slice(0, 30);
+  const filters = [
+    ['all', 'Tutti', allTasks.length],
+    ['today', 'Oggi', filterStudioDeadlines(allTasks, 'today').length],
+    ['week', '7 giorni', filterStudioDeadlines(allTasks, 'week').length],
+    ['overdue', 'Scaduti', filterStudioDeadlines(allTasks, 'overdue').length],
+  ];
+  let html = `<div class="dashboard-hero"><div class="dashboard-hero-copy"><div class="dashboard-kicker">Scadenziario</div><div class="dashboard-title">Registro adempimenti studio</div><div class="dashboard-subtitle">UNILAV, prova, disdetta, permessi e scadenze personalizzate — tutto in un unico registro.</div></div></div>`;
   html += renderLegalBannerHtml();
+  html += `<div class="compliance-filter-row">${filters.map(([k, lbl, n]) =>
+    `<button class="day-chip${_complianceFilter === k ? ' active' : ''}" onclick="setComplianceFilter('${k}')">${lbl}${n ? ' (' + n + ')' : ''}</button>`
+  ).join('')}</div>`;
   html += `<div class="compliance-actions"><button class="tb-btn" onclick="exportComplianceCSV()">Esporta registro CSV</button></div>`;
   if (!tasks.length) {
-    html += `<div class="empty-state">Nessun adempimento pendente. Le scadenze UNILAV vengono create automaticamente dopo proroga/rinnovo.</div>`;
+    html += `<div class="empty-state">Nessun adempimento in questo filtro. Le scadenze di prova, disdetta e UNILAV si generano automaticamente dai dati contratto.</div>`;
   } else {
-    html += `<div class="compliance-table-wrap"><table class="data-table"><thead><tr><th>Scadenza</th><th>Tipo</th><th>Contratto</th><th>Evento</th><th>Stato</th><th></th></tr></thead><tbody>`;
+    html += `<div class="compliance-table-wrap"><table class="data-table"><thead><tr><th>Scadenza</th><th>Tipo</th><th>Cliente / soggetto</th><th>CF</th><th>Evento</th><th></th></tr></thead><tbody>`;
     tasks.forEach(t => {
       const dl = daysLeft(t.dueDate);
       const cls = dl < 0 ? 'c-red' : dl <= 3 ? 'c-amber' : '';
-      const lbl = (COMPLIANCE_TYPES[t.type] || {}).label || t.type;
-      html += `<tr><td class="${cls}">${formatDate(t.dueDate)} (${dl} gg)</td><td>${esc(lbl)}</td><td>${esc(t.contractName)} — ${esc(t.employeeName || '')}</td><td>${formatDate(t.eventDate)}</td><td>${t.status === 'done' ? 'Completato' : 'Da fare'}</td><td><button class="act-btn" onclick="markComplianceDone(${escJsArg(t.contractId)},${escJsArg(t.id)})">Segna fatto</button></td></tr>`;
+      html += `<tr><td class="${cls}">${formatDate(t.dueDate)} (${dl} gg)</td><td>${esc(t.label)}</td><td>${esc(t.contractName)} — ${esc(t.employeeName || '')}</td><td>${esc(t.taxCode || '—')}</td><td>${formatDate(t.eventDate)}</td><td><button class="act-btn" onclick="markComplianceDone(${escJsArg(t.contractId)},${escJsArg(t.id)})">Segna fatto</button></td></tr>`;
     });
     html += `</tbody></table></div>`;
   }
   if (done.length) {
     html += `<h3 style="margin:24px 0 12px;font-size:15px">Completati di recente</h3><ul class="compliance-done-list">`;
     done.forEach(t => {
-      html += `<li>${formatDate(t.doneAt || t.dueDate)} — ${esc((COMPLIANCE_TYPES[t.type] || {}).label || t.type)} — ${esc(t.contractName)}</li>`;
+      html += `<li>${formatDate(t.doneAt || t.dueDate)} — ${esc(t.label)} — ${esc(t.contractName)}</li>`;
     });
     html += `</ul>`;
   }
@@ -376,8 +638,8 @@ function exportDossierProroga(id){
 
 function exportComplianceCSV(){
   const rows = getPendingComplianceTasks();
-  const h = ['Scadenza', 'Giorni', 'Tipo', 'Azienda', 'Dipendente', 'Evento', 'Stato', 'Note'];
-  const body = rows.map(t => [t.dueDate, daysLeft(t.dueDate), (COMPLIANCE_TYPES[t.type] || {}).label, t.contractName, t.employeeName || '', t.eventDate, t.status, t.note || '']);
+  const h = ['Scadenza', 'Giorni', 'Tipo', 'Azienda', 'Dipendente', 'CF', 'Evento', 'Stato', 'Note'];
+  const body = rows.map(t => [t.dueDate, daysLeft(t.dueDate), t.label, t.contractName, t.employeeName || '', t.taxCode || '', t.eventDate, t.status, t.note || '']);
   const csv = [h, ...body].map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
   const b = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
   const u = URL.createObjectURL(b);
@@ -397,6 +659,53 @@ function causaleOptions(selected){
   return Object.entries(CAUSALI_ART19).map(([k, v]) =>
     `<option value="${k}"${selected === k ? ' selected' : ''}>${esc(v.label)}</option>`
   ).join('');
+}
+
+function renderStudioFormFields(v){
+  v = v || {};
+  normalizeContractLegal(v);
+  const cd = (v.customDeadlines && v.customDeadlines[0]) || {};
+  return `
+    <div class="form-section-label">Dati studio / lavoratore</div>
+    <div class="form-row">
+      <div class="form-field"><label>Codice fiscale</label>
+        <input class="f-input" id="f-tax-code" type="text" value="${escAttr(v.taxCode || '')}" placeholder="RSSMRA80A01H501Z" style="width:100%"></div>
+      <div class="form-field"><label>Qualifica / mansione</label>
+        <input class="f-input" id="f-job-title" type="text" value="${escAttr(v.jobTitle || '')}" placeholder="Es. Impiegato amministrativo" style="width:100%"></div>
+    </div>
+    <div class="form-row triple">
+      <div class="form-field"><label>Giorni prova</label>
+        <input class="f-input" id="f-trial-days" type="number" min="0" max="365" value="${v.trialDays !== '' && v.trialDays != null ? escAttr(String(v.trialDays)) : ''}" placeholder="60" style="width:100%"></div>
+      <div class="form-field"><label>Fine prova (alternativa)</label>
+        <input class="f-input" id="f-trial-end" type="date" value="${v.trialEndDate || ''}" style="width:100%"></div>
+      <div class="form-field"><label>Scadenza permesso soggiorno</label>
+        <input class="f-input" id="f-permit-expiry" type="date" value="${v.workPermitExpiry || ''}" style="width:100%"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Scadenza aggiuntiva (label)</label>
+        <input class="f-input" id="f-custom-label" type="text" value="${escAttr(cd.label || '')}" placeholder="Es. Visita medica, DURC, formazione" style="width:100%"></div>
+      <div class="form-field"><label>Data scadenza aggiuntiva</label>
+        <input class="f-input" id="f-custom-date" type="date" value="${cd.dueDate || ''}" style="width:100%"></div>
+    </div>`;
+}
+
+function readStudioFieldsFromForm(existing){
+  const taxCode = (document.getElementById('f-tax-code') || {}).value?.trim().toUpperCase() || '';
+  const jobTitle = (document.getElementById('f-job-title') || {}).value?.trim() || '';
+  const trialDaysRaw = (document.getElementById('f-trial-days') || {}).value;
+  const trialDays = trialDaysRaw === '' ? '' : parseInt(trialDaysRaw) || '';
+  const trialEndDate = (document.getElementById('f-trial-end') || {}).value || '';
+  const workPermitExpiry = (document.getElementById('f-permit-expiry') || {}).value || '';
+  const customLabel = (document.getElementById('f-custom-label') || {}).value?.trim() || '';
+  const customDate = (document.getElementById('f-custom-date') || {}).value || '';
+  const customDeadlines = Array.isArray(existing?.customDeadlines) ? existing.customDeadlines.slice() : [];
+  if (customDate) {
+    const prev = customDeadlines[0] || { id: 'custom_' + Date.now() };
+    customDeadlines[0] = { ...prev, label: customLabel || 'Scadenza personalizzata', dueDate: customDate, status: prev.status || 'pending' };
+  } else if (customDeadlines.length) {
+    customDeadlines.length = 0;
+  }
+  return { taxCode, jobTitle, trialDays, trialEndDate, workPermitExpiry, customDeadlines };
 }
 
 function renderLegalFormFields(v){
@@ -447,7 +756,7 @@ function renderLegalFormFields(v){
           <select class="f-input" id="f-pp-gara" style="width:100%"><option value="no"${!pp.garaAvviata ? ' selected' : ''}>No</option><option value="yes"${pp.garaAvviata ? ' selected' : ''}>Sì</option></select>
         </div>
       </div>
-    </div>`;
+    </div>${renderStudioFormFields(v)}`;
 }
 
 function readLegalFieldsFromForm(existing){
@@ -471,6 +780,7 @@ function readLegalFieldsFromForm(existing){
     ccnlApplied,
     renewType: causaleCode !== 'n_a' ? 'Con causale' : rtype,
     publicProcurement: pp,
+    ...readStudioFieldsFromForm(existing),
   };
 }
 
@@ -488,8 +798,13 @@ window.markComplianceDone = function(contractId, taskId){
   if (!t) return;
   t.status = 'done';
   t.doneAt = new Date().toISOString().split('T')[0];
+  if (t.type === 'scadenza_custom' && String(taskId).startsWith('derived_custom_')) {
+    const cid = String(taskId).replace('derived_', '');
+    (c.customDeadlines || []).forEach(cd => { if (cd.id === cid) cd.status = 'done'; });
+  }
   saveData();
   renderPage();
+  updateNav();
   showToast('Adempimento segnato come completato');
 };
 
@@ -547,6 +862,11 @@ window.getDisdettaDaysLeft = getDisdettaDaysLeft;
 window.getLegalNotifications = getLegalNotifications;
 window.renderLegalBannerHtml = renderLegalBannerHtml;
 window.renderCompliancePage = renderCompliancePage;
+window.renderStudioPortfolioPage = renderStudioPortfolioPage;
+window.renderStudioWeekWidget = renderStudioWeekWidget;
+window.syncDerivedStudioTasks = syncDerivedStudioTasks;
+window.syncAllStudioTasks = syncAllStudioTasks;
+window.getClientPortfolioStats = getClientPortfolioStats;
 window.renderLegalFormFields = renderLegalFormFields;
 window.readLegalFieldsFromForm = readLegalFieldsFromForm;
 window.exportDossierProroga = exportDossierProroga;

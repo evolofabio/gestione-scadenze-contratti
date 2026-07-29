@@ -25,6 +25,12 @@ function _legalMetaFromEntry(entry) {
     complianceTasks: Array.isArray(entry.complianceTasks) ? entry.complianceTasks : [],
     contractHistory: Array.isArray(entry.contractHistory) ? entry.contractHistory : [],
     publicProcurement: entry.publicProcurement || {},
+    taxCode: entry.taxCode || '',
+    jobTitle: entry.jobTitle || '',
+    trialDays: entry.trialDays ?? '',
+    trialEndDate: entry.trialEndDate || '',
+    workPermitExpiry: entry.workPermitExpiry || '',
+    customDeadlines: Array.isArray(entry.customDeadlines) ? entry.customDeadlines : [],
   };
 }
 
@@ -60,6 +66,12 @@ function _rowToEntry(row) {
     complianceTasks: Array.isArray(meta.complianceTasks) ? meta.complianceTasks : [],
     contractHistory: Array.isArray(meta.contractHistory) ? meta.contractHistory : [],
     publicProcurement: meta.publicProcurement || {},
+    taxCode: meta.taxCode || '',
+    jobTitle: meta.jobTitle || '',
+    trialDays: meta.trialDays ?? '',
+    trialEndDate: meta.trialEndDate || '',
+    workPermitExpiry: meta.workPermitExpiry || '',
+    customDeadlines: Array.isArray(meta.customDeadlines) ? meta.customDeadlines : [],
   };
 }
 

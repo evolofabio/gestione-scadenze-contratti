@@ -1273,6 +1273,28 @@ body.role-readonly .requires-write{display:none!important}
 .compliance-table-wrap th{background:var(--surface2);font-weight:600;font-size:12px}
 .compliance-actions{margin:12px 0 16px}
 .compliance-done-list{font-size:13px;color:var(--text2);padding-left:18px}
+.compliance-filter-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.studio-week-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:20px;box-shadow:var(--shadow)}
+.studio-week-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.studio-week-title{font-size:15px;font-weight:600}
+.studio-week-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.studio-week-list{list-style:none;display:grid;gap:8px}
+.studio-week-item{font-size:13px;color:var(--text2);padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:grid;gap:4px}
+.studio-week-item.overdue{border-color:var(--red-border);background:var(--red-bg)}
+.studio-week-item.today{border-color:var(--amber-border);background:var(--amber-bg)}
+.studio-week-date{font-size:11px;color:var(--text3);font-family:var(--fm)}
+.studio-week-empty{font-size:13px;color:var(--text3)}
+.studio-week-item .act-btn.sm{justify-self:start;font-size:11px;padding:4px 10px}
+.client-portfolio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.client-portfolio-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow)}
+.client-portfolio-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+.client-portfolio-top h3{font-size:15px;font-weight:600;line-height:1.3}
+.client-badge{font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap}
+.client-badge.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.client-badge.warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}
+.client-badge.err{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.client-portfolio-stats{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text2);margin-bottom:14px}
+.client-portfolio-actions{display:flex;flex-wrap:wrap;gap:8px}
 .badge-amber{background:#fff7e0;color:#8a5a00}
 .badge-red{background:#fee2e2;color:#991b1b}
 [data-theme=dark] .legal-banner.info{background:#0f172a;color:#93c5fd}
