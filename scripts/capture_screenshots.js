@@ -8,8 +8,18 @@ const BASE = process.argv[2] || 'http://127.0.0.1:8766/contract_manager_dashboar
 const OUT = path.resolve(__dirname, '../assets/screenshots');
 
 const shots = [
-  { file: 'dashboard.png', setup: null },
-  { file: 'compliance.png', setup: () => window.setPage('compliance') },
+  { file: 'dashboard.png', setup: () => window.setPage('dashboard') },
+  { file: 'clienti.png', setup: () => window.setPage('clienti') },
+  { file: 'contratti.png', setup: () => window.setPage('contratti') },
+  {
+    file: 'compliance.png',
+    setup: () => {
+      window.setPage('compliance');
+      if (typeof window.setComplianceCategoryFilter === 'function') {
+        window.setComplianceCategoryFilter('unilav');
+      }
+    },
+  },
   { file: 'calendar.png', setup: () => window.setPage('calendar') },
   { file: 'analytics.png', setup: () => window.setPage('analytics') },
   { file: 'cantieri.png', setup: () => window.setPage('cantieri') },
@@ -29,7 +39,7 @@ const shots = [
   for (const s of shots) {
     if (s.setup) {
       await page.evaluate(s.setup);
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(1400);
     }
     await page.screenshot({ path: path.join(OUT, s.file), fullPage: false });
     console.log('Saved', s.file);
