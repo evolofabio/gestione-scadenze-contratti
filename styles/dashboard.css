@@ -569,6 +569,54 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .contract-card.status-terminato:hover{opacity:.9;filter:saturate(.85)}
 [data-theme="dark"] .contract-card.status-gestita{background:linear-gradient(180deg,rgba(13,34,24,0.96) 0%, rgba(26,26,23,0.90) 100%)}
 
+/* Compact contract card */
+.contract-card--compact{margin-bottom:12px}
+.contract-card--compact:hover{transform:translateY(-1px)}
+.card-compact-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:14px 16px 8px}
+.card-compact-main{min-width:0;flex:1}
+.card-compact-employee{font-size:15px;font-weight:700;color:var(--text);line-height:1.2;letter-spacing:-.01em}
+.card-compact-company{font-size:12px;color:var(--text2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-compact-deadline{text-align:right;flex-shrink:0;padding:6px 10px;border-radius:10px;background:var(--surface2);border:1px solid var(--border)}
+.card-compact-deadline.is-urgent{background:var(--amber-bg);border-color:var(--amber-border)}
+.card-compact-deadline.is-overdue{background:var(--red-bg);border-color:var(--red-border)}
+.card-compact-deadline-val{font-size:14px;font-weight:700;color:var(--text);line-height:1}
+.card-compact-deadline.is-urgent .card-compact-deadline-val{color:var(--amber)}
+.card-compact-deadline.is-overdue .card-compact-deadline-val{color:var(--red)}
+.card-compact-deadline-date{font-size:11px;color:var(--text3);margin-top:3px}
+.card-compact-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:0 16px 10px}
+.card-compact-meta-extra{margin-left:auto;font-size:11px;color:var(--text3);font-weight:600}
+.card-compact-bar{margin:0 16px 10px;height:2px}
+.card-compact-details{padding:0 16px 8px}
+.card-compact-details summary{
+  cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);
+  list-style:none;padding:4px 0 8px;
+}
+.card-compact-details summary::-webkit-details-marker{display:none}
+.card-compact-details[open] summary{color:var(--accent);margin-bottom:4px}
+.card-fields--compact{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-bottom:10px}
+.card-compact-actions{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 12px 12px;border-top:1px solid var(--border);background:rgba(39,88,207,0.03);
+}
+.status-selector--compact{width:auto;padding:0;margin:0;border:none;flex-wrap:nowrap}
+.card-compact-primary{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-left:auto}
+.card-menu-wrap{position:relative}
+.card-menu-btn{min-width:36px;justify-content:center;font-size:16px;letter-spacing:.08em;padding:6px 10px}
+.card-menu{
+  display:none;position:absolute;right:0;bottom:calc(100% + 6px);min-width:190px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow-md);padding:6px;z-index:30;
+}
+.card-menu.open{display:block}
+.card-menu-item{
+  display:block;width:100%;text-align:left;
+  font-size:12px;font-weight:500;padding:8px 10px;border:none;border-radius:8px;
+  background:transparent;color:var(--text2);cursor:pointer;
+}
+.card-menu-item:hover{background:var(--surface2);color:var(--text)}
+.card-menu-item.danger{color:var(--red)}
+.card-menu-item.danger:hover{background:var(--red-bg)}
+
 /* ═══ CALENDAR ═══ */
 .calendar-grid{
   display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
@@ -1226,7 +1274,7 @@ textarea.f-input{resize:vertical;min-height:70px;line-height:1.5}
   .legacy-table{display:block;overflow-x:auto;white-space:nowrap}
 }
 @media print{
-  .sidebar,.topbar,.card-actions{display:none!important}
+  .sidebar,.topbar,.card-actions,.card-compact-actions{display:none!important}
   .contract-card{break-inside:avoid;box-shadow:none}
   .modal-bg{display:none!important}
 }

@@ -735,7 +735,49 @@ function renderDashboardPage(){
   return html;
 }
 
-// Render helper: single contract card
+function renderContractCardMenuItems(c, cStatus){
+  const id = c.id;
+  const items = [];
+  if (!canManageData()) {
+    items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();openWorkNoteModal(${escAttr(id)})">Note</button>`);
+    return items.join('');
+  }
+  items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();duplicateContract(${escAttr(id)})">Duplica</button>`);
+  items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();openAddCantiere(${escAttr(id)})">+ Cantiere</button>`);
+  if (c.renewable) {
+    items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();openRenewModal(${escAttr(id)})">Rinnovo</button>`);
+  }
+  items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();exportDossierProroga(${escAttr(id)})">Dossier PDF</button>`);
+  items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();openWorkNoteModal(${escAttr(id)})">Nota lavorazione</button>`);
+  if (!c.indeterminate) {
+    items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();markIndeterminate(${escAttr(id)})">Converti T.I.</button>`);
+  }
+  if (!c.cessato) {
+    items.push(`<button type="button" class="card-menu-item" onclick="closeCardMenus();markCessato(${escAttr(id)})">Segna cessato</button>`);
+  }
+  items.push(`<button type="button" class="card-menu-item danger" onclick="closeCardMenus();confirmDelete(${escAttr(id)})">Elimina</button>`);
+  return items.join('');
+}
+
+window.closeCardMenus = function(){
+  document.querySelectorAll('.card-menu.open').forEach(el => el.classList.remove('open'));
+};
+
+window.toggleCardMenu = function(id, ev){
+  if (ev) ev.stopPropagation();
+  if (!window._cardMenuListener) {
+    window._cardMenuListener = true;
+    document.addEventListener('click', closeCardMenus);
+  }
+  const menuId = 'card-menu-' + id;
+  const menu = document.getElementById(menuId);
+  document.querySelectorAll('.card-menu.open').forEach(el => {
+    if (el.id !== menuId) el.classList.remove('open');
+  });
+  if (menu) menu.classList.toggle('open');
+};
+
+// Render helper: single contract card (layout compatto)
 function renderContractCard(c){
   try{
     const d=daysLeft(c.endDate);
@@ -744,64 +786,76 @@ function renderContractCard(c){
     const prog=Math.round(progressPct(c.startDate,c.endDate)||0);
     const pcls=progCls(d)||'gray';
     const urg=urgClass(d)||'';
-    const progressLabel = d<0 ? 'Contratto scaduto' : d<=ALERT_DAYS ? 'Intervento prioritario' : 'Monitoraggio regolare';
     const cStatus=c.status||'da_gestire';
     const sLbl=cStatus==='gestita'?'Gestita':cStatus==='terminato'?'Terminato':'Da gestire';
     if(typeof normalizeContractLegal==='function') normalizeContractLegal(c);
     const pendingCompliance=(c.complianceTasks||[]).filter(t=>t.status!=='done').length;
     const compR=typeof analyzeContractCompliance==='function'?analyzeContractCompliance(c):null;
     const disdettaDl=typeof getDisdettaDaysLeft==='function'?getDisdettaDaysLeft(c):null;
-    return `<div class="contract-card ${urg} status-${cStatus}" data-id="${escAttr(c.id)}">
-      <div class="card-main">
-        <div class="card-top">
-          <div class="card-ident">
-            <div class="card-kicker">Scheda contratto</div>
-            <div class="card-company-name">${esc(c.name)}</div>
-            <div class="card-employee">${esc(c.employeeName||'Dipendente non specificato')}</div>
-            <div class="card-type">${esc(c.contractType||'')}</div>
-          </div>
-          <div class="card-badges">
-              <div class="badge ${badge.cls}">${esc(badge.txt)}</div>
-              <div class="renew-pill ${c.renewable ? 'yes' : 'no'}">${c.renewable ? 'Prorogabile' : 'Non prorogabile'}</div>
-              <div class="status-badge s-${cStatus}">${sLbl}</div>
-              ${c.indeterminate?`<div class="badge badge-gray">T.I.</div>`:''}
-              ${c.cessato?`<div class="badge badge-gray">Cessato</div>`:''}
-              ${pendingCompliance?`<div class="badge badge-red" title="Adempimenti pendenti">${pendingCompliance} UNILAV</div>`:''}
-              ${compR&&compR.stato==='ERRORE'?`<div class="badge badge-red">Non conforme</div>`:''}
-              ${compR&&compR.stato==='ATTENZIONE'?`<div class="badge badge-amber">Verifica legale</div>`:''}
-              ${disdettaDl!==null&&disdettaDl<=7&&disdettaDl>=-3?`<div class="badge badge-amber">Disdetta ${disdettaDl}gg</div>`:''}
-              ${c.inProgress?`<div class="badge badge-purple">In lavorazione</div>`:''}
-              ${(c.workNotes && c.workNotes.length)?`<div class="badge badge-blue" title="Note di lavorazione: clicca per visualizzare" onclick="viewWorkNotes(${escAttr(c.id)})">${c.workNotes.length} note</div>`:''}
-            </div>
+    const dlCls=d<0?'is-overdue':d<=ALERT_DAYS?'is-urgent':'';
+    const alertBadges=[];
+    if(pendingCompliance) alertBadges.push(`<span class="badge badge-red" title="Adempimenti pendenti">${pendingCompliance} ademp.</span>`);
+    if(compR&&compR.stato==='ERRORE') alertBadges.push('<span class="badge badge-red">Non conforme</span>');
+    else if(compR&&compR.stato==='ATTENZIONE') alertBadges.push('<span class="badge badge-amber">Verifica legale</span>');
+    if(disdettaDl!==null&&disdettaDl<=7&&disdettaDl>=-3) alertBadges.push(`<span class="badge badge-amber">Disdetta ${disdettaDl}gg</span>`);
+    if(c.inProgress) alertBadges.push('<span class="badge badge-purple">In lavorazione</span>');
+    if((c.workNotes||[]).length) alertBadges.push(`<span class="badge badge-blue" onclick="event.stopPropagation();viewWorkNotes(${escAttr(c.id)})">${c.workNotes.length} note</span>`);
+    const alertHtml=alertBadges.slice(0,3).join('');
+
+    return `<article class="contract-card contract-card--compact ${urg} status-${cStatus}" data-id="${escAttr(c.id)}">
+      <div class="card-compact-head">
+        <div class="card-compact-main">
+          <div class="card-compact-employee">${esc(c.employeeName||'Dipendente non specificato')}</div>
+          <div class="card-compact-company">${esc(c.name)}${c.contractType?` · ${esc(c.contractType)}`:''}</div>
         </div>
-        <div class="prog-bar"><div class="prog-fill ${pcls}" style="width:${prog}%"></div></div>
-        <div class="card-progress-meta"><div class="card-progress-label">${progressLabel}</div><div class="card-progress-value">${prog}% percorso</div></div>
-        <div class="card-fields">
+        <div class="card-compact-deadline ${dlCls}">
+          <div class="card-compact-deadline-val">${d<0?'Scaduto':d+' gg'}</div>
+          <div class="card-compact-deadline-date">${formatDate(c.endDate)}</div>
+        </div>
+      </div>
+      <div class="card-compact-meta">
+        <div class="badge ${badge.cls}">${esc(badge.txt)}</div>
+        <span class="status-badge s-${cStatus}">${sLbl}</span>
+        <span class="renew-pill ${c.renewable?'yes':'no'}">${c.renewable?'Prorogabile':'Fisso'}</span>
+        ${c.indeterminate?'<span class="badge badge-gray">T.I.</span>':''}
+        ${c.cessato?'<span class="badge badge-gray">Cessato</span>':''}
+        ${alertHtml}
+        <span class="card-compact-meta-extra">${c.renewCount||0}/4 proroghe</span>
+      </div>
+      <div class="prog-bar card-compact-bar"><div class="prog-fill ${pcls}" style="width:${prog}%"></div></div>
+      <details class="card-compact-details">
+        <summary>Dettagli contratto</summary>
+        <div class="card-fields card-fields--compact">
+          <div><div class="field-label">Inizio</div><div class="field-val">${formatDate(c.startDate)}</div></div>
           <div><div class="field-label">Scadenza</div><div class="field-val ${d<0?'c-red':d<=ALERT_DAYS?'c-amber':'c-green'}">${formatDate(c.endDate)}</div></div>
           <div><div class="field-label">Giorni</div><div class="field-val">${d<0?'Scaduto':d+' gg'}</div></div>
-          <div><div class="field-label">Inizio</div><div class="field-val">${formatDate(c.startDate)}</div></div>
-          <div><div class="field-label">Tipo</div><div class="field-val">${esc(c.contractType||'')}</div></div>
-          <div><div class="field-label">Proroghe</div><div class="field-val">${c.renewCount||0}/4</div></div>
+          <div><div class="field-label">Mesi a 12</div><div class="field-val">${monthsTo12}</div></div>
+          <div><div class="field-label">ID</div><div class="field-val">${esc(c.id)}</div></div>
         </div>
         ${c.notes?`<div class="card-notes"><span class="notes-label">Note</span>${esc(c.notes)}</div>`:''}
-        <div class="card-footline"><div style="font-size:12px;color:var(--text3)">Mesi rimanenti a 12: <strong>${monthsTo12}</strong></div><div class="card-foot-pill">ID ${esc(c.id)}</div></div>
         ${Array.isArray(c.cantieri)&&c.cantieri.length?`<div class="cantieri-inline"><div class="cantieri-label">Cantieri</div>`+c.cantieri.map(rawCt=>{const ct=normalizeCantiere(rawCt);const endDate=getCantiereEndDate(ct);return `<div class="cantiere-row"><div class="cantiere-nome">${esc(ct.nome)}</div><div class="cantiere-scad ${daysLeft(endDate)<=0?'':'ok'}">${formatDate(endDate)}</div></div>`}).join('')+`</div>`:''}
+      </details>
+      <div class="card-compact-actions">
+        ${canManageData()?`<div class="status-selector status-selector--compact">
+          <button type="button" class="status-btn s-da_gestire${cStatus==='da_gestire'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'da_gestire')">Da gestire</button>
+          <button type="button" class="status-btn s-gestita${cStatus==='gestita'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'gestita')">Gestita</button>
+          <button type="button" class="status-btn s-terminato${cStatus==='terminato'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'terminato')">Terminato</button>
+        </div>
+        <div class="card-compact-primary">
+          <button type="button" class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
+          ${c.renewable?`<button type="button" class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button>`:''}
+          <button type="button" class="act-btn primary" onclick="openEmailModal(${escAttr(c.id)})">Email</button>
+          <div class="card-menu-wrap">
+            <button type="button" class="act-btn card-menu-btn" aria-label="Altre azioni" onclick="toggleCardMenu(${escAttr(c.id)}, event)">···</button>
+            <div class="card-menu" id="card-menu-${escAttr(c.id)}">${renderContractCardMenuItems(c, cStatus)}</div>
+          </div>
+        </div>`:`
+        <div class="card-compact-primary">
+          <button type="button" class="act-btn" onclick="openWorkNoteModal(${escAttr(c.id)})">Note</button>
+          <button type="button" class="act-btn primary" onclick="openEmailModal(${escAttr(c.id)})">Email</button>
+        </div>`}
       </div>
-        <div class="card-actions">
-        ${canManageData()?`<div class="status-selector"><span class="status-selector-label">Stato:</span><button class="status-btn s-da_gestire${cStatus==='da_gestire'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'da_gestire')">Da gestire</button><button class="status-btn s-gestita${cStatus==='gestita'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'gestita')">Gestita</button><button class="status-btn s-terminato${cStatus==='terminato'?' active':''}" onclick="setContractStatus(${escAttr(c.id)},'terminato')">Terminato</button></div>
-        <button class="act-btn" onclick="openEditModal(${escAttr(c.id)})">Modifica</button>
-        <button class="act-btn" onclick="duplicateContract(${escAttr(c.id)})">Duplica</button>
-        <button class="act-btn" onclick="openAddCantiere(${escAttr(c.id)})">+ Cantiere</button>
-        ${c.renewable?`<button class="act-btn quick-renew" onclick="openQuickRenew(${escAttr(c.id)})">Proroga</button><button class="act-btn" onclick="openRenewModal(${escAttr(c.id)})">Rinnovo</button>`:''}
-        <button class="act-btn" onclick="exportDossierProroga(${escAttr(c.id)})">Dossier PDF</button>
-        <button class="act-btn" onclick="openWorkNoteModal(${escAttr(c.id)})">Nota</button>
-        ${!c.indeterminate?`<button class="act-btn" onclick="markIndeterminate(${escAttr(c.id)})">Converti T.I.</button>`:'<button class="act-btn" disabled>Convertito</button>'}
-        ${!c.cessato?`<button class="act-btn" onclick="markCessato(${escAttr(c.id)})">Segna cessato</button>`:'<button class="act-btn" disabled>Cessato</button>'}
-        <button class="act-btn danger" onclick="confirmDelete(${escAttr(c.id)})">Elimina</button>`:`
-        <button class="act-btn" onclick="openWorkNoteModal(${escAttr(c.id)})">Note</button>`}
-        <button class="act-btn primary" onclick="openEmailModal(${escAttr(c.id)})">Email</button>
-      </div>
-    </div>`;
+    </article>`;
   }catch(e){console.error('renderContractCard',e);return ''}
 }
 
