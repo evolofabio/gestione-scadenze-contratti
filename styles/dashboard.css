@@ -340,6 +340,20 @@ code{font-family:var(--fm);font-size:.85em;background:var(--surface3);padding:1p
 .dashboard-kicker{font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
 .dashboard-title{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--text);line-height:1.02}
 .dashboard-subtitle{font-size:13px;color:var(--text2);margin-top:8px;max-width:720px}
+.dashboard-hero--cockpit{margin-bottom:14px}
+.dashboard-hero-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dashboard-cockpit-kpis{margin-bottom:18px}
+.dashboard-priority-head{margin-bottom:14px}
+.dashboard-priority-list{display:grid;gap:14px}
+.dashboard-priority-more{display:flex;justify-content:center;margin:6px 0 18px}
+.dashboard-all-clear{
+  text-align:center;padding:36px 24px;border-radius:var(--radius-lg);
+  background:var(--green-bg);border:1px solid var(--green-border);margin-bottom:20px;
+}
+.dashboard-all-clear-title{font-size:16px;font-weight:600;color:var(--green);margin-bottom:6px}
+.dashboard-all-clear-sub{font-size:13px;color:var(--text2);margin-bottom:16px}
+.dashboard-all-clear-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.legal-banner-wrap--alerts{margin-bottom:14px}
 .dashboard-summary{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
   margin-bottom:20px;

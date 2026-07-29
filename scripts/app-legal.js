@@ -489,14 +489,18 @@ function getLegalNotifications(){
   return { pending, overdue, dueSoon, disdetta, total: pending.length + disdetta.length };
 }
 
-function renderLegalBannerHtml(){
+function renderLegalBannerHtml(opts){
+  opts = opts || {};
+  const alertsOnly = !!opts.alertsOnly;
   const today = new Date().toISOString().split('T')[0];
   const legal = getLegalNotifications();
   const parts = [];
-  if (today <= CAUSALE_PARTIES_DEADLINE) {
-    parts.push(`<div class="legal-banner info"><strong>Causale parti (L. 118/2025):</strong> utilizzabile fino al <strong>31/12/2026</strong> se il CCNL non prevede causali proprie.</div>`);
-  } else {
-    parts.push(`<div class="legal-banner warn"><strong>Post 31/12/2026:</strong> per TD oltre 12 mesi serve causale CCNL — non più quella individuata dalle parti.</div>`);
+  if (!alertsOnly) {
+    if (today <= CAUSALE_PARTIES_DEADLINE) {
+      parts.push(`<div class="legal-banner info"><strong>Causale parti (L. 118/2025):</strong> utilizzabile fino al <strong>31/12/2026</strong> se il CCNL non prevede causali proprie.</div>`);
+    } else {
+      parts.push(`<div class="legal-banner warn"><strong>Post 31/12/2026:</strong> per TD oltre 12 mesi serve causale CCNL — non più quella individuata dalle parti.</div>`);
+    }
   }
   if (legal.overdue.length) {
     parts.push(`<div class="legal-banner err"><strong>${legal.overdue.length} adempimenti scaduti</strong> (UNILAV/compliance) — <a href="#" onclick="setPage('compliance');return false">Apri registro</a></div>`);

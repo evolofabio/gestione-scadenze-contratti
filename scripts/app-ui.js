@@ -649,6 +649,92 @@ window.doDeleteCantiere=function(contractId,idx){
   saveData();hideModal();renderPage();showToast(`Cantiere "${removed?.nome||''}" eliminato`);
 }
 
+// Render helper: dashboard cockpit (priorità operative)
+function getDashboardPriorityContracts(companies, q, limit){
+  limit = limit == null ? 8 : limit;
+  let list = (companies || []).filter(c => {
+    if (c.indeterminate || c.cessato) return false;
+    const st = c.status || 'da_gestire';
+    if (st === 'gestita' || st === 'terminato') return false;
+    const d = daysLeft(c.endDate);
+    const urgentEnd = d <= 30;
+    const pending = (c.complianceTasks || []).filter(t => t.status !== 'done');
+    const urgentCompliance = pending.some(t => daysLeft(t.dueDate) <= 7);
+    return urgentEnd || urgentCompliance;
+  });
+  if (q) {
+    list = list.filter(c => (`${c.name} ${c.employeeName} ${c.contractType}`).toLowerCase().includes(q));
+  }
+  const sOrd = { da_gestire: 0, gestita: 1, terminato: 2 };
+  list.sort((a, b) => {
+    const sd = (sOrd[a.status || 'da_gestire'] || 0) - (sOrd[b.status || 'da_gestire'] || 0);
+    if (sd !== 0) return sd;
+    return daysLeft(a.endDate) - daysLeft(b.endDate);
+  });
+  return { list: list.slice(0, limit), total: list.length };
+}
+
+function renderDashboardPage(){
+  const expiredCnt = state.companies.filter(c => daysLeft(c.endDate) < 0).length;
+  const weekCnt = state.companies.filter(c => { const d = daysLeft(c.endDate); return d >= 0 && d <= 7; }).length;
+  const companyCount = [...new Set(state.companies.map(c => c.name).filter(Boolean))].length;
+  const legal = typeof getLegalNotifications === 'function' ? getLegalNotifications() : { pending: [], overdue: [] };
+  const adempCnt = (legal.pending || []).length + (legal.overdue || []).length;
+  const q = (state.searchQuery || '').toLowerCase();
+  const priority = getDashboardPriorityContracts(state.companies, q, 8);
+  const legalAlerts = typeof renderLegalBannerHtml === 'function' ? renderLegalBannerHtml({ alertsOnly: true }) : '';
+
+  let html = `<div class="dashboard-hero dashboard-hero--cockpit">
+    <div class="dashboard-hero-copy">
+      <div class="dashboard-kicker">Cockpit operativo</div>
+      <div class="dashboard-title">Priorità di oggi</div>
+      <div class="dashboard-subtitle">Scadenze critiche, adempimenti e azioni immediate — il resto è in Contratti e Scadenziario.</div>
+    </div>
+    <div class="dashboard-hero-actions">
+      <button class="tb-btn" onclick="setPage('compliance')">Scadenziario</button>
+      <button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button>
+    </div>
+  </div>`;
+
+  html += typeof renderStudioWeekWidget === 'function' ? renderStudioWeekWidget() : '';
+
+  html += `<div class="metrics-grid dashboard-cockpit-kpis">
+    <div class="metric-card m-red"><div class="metric-label">Scaduti</div><div class="metric-val c-red">${expiredCnt}</div></div>
+    <div class="metric-card m-amber"><div class="metric-label">Entro 7 giorni</div><div class="metric-val c-amber">${weekCnt}</div></div>
+    <div class="metric-card"><div class="metric-label">Adempimenti</div><div class="metric-val c-blue">${adempCnt}</div><div class="metric-delta">pendenti o scaduti</div></div>
+    <div class="metric-card"><div class="metric-label">Aziende</div><div class="metric-val">${companyCount}</div><div class="metric-delta">${state.companies.length} contratti</div></div>
+  </div>`;
+
+  if (legalAlerts) {
+    html += `<div class="legal-banner-wrap legal-banner-wrap--alerts">${legalAlerts}</div>`;
+  }
+
+  html += `<div class="section-head dashboard-priority-head">
+    <div>
+      <div class="section-title">Priorità operative (${priority.total})</div>
+      <div class="section-sub">${priority.total ? `Mostrati ${Math.min(priority.list.length, 8)} su ${priority.total} contratti critici` : 'Nessuna criticità nei prossimi 30 giorni'}</div>
+    </div>
+    <button class="tb-btn" onclick="setPage('contratti')">Vedi tutti i contratti</button>
+  </div>`;
+
+  if (!priority.list.length) {
+    html += `<div class="dashboard-all-clear">
+      <div class="dashboard-all-clear-title">Tutto sotto controllo</div>
+      <div class="dashboard-all-clear-sub">Nessun contratto attivo in scadenza entro 30 giorni e nessun adempimento urgente.</div>
+      <div class="dashboard-all-clear-actions">
+        <button class="tb-btn" onclick="setPage('contratti')">Apri elenco contratti</button>
+        <button class="tb-btn" onclick="setPage('clienti')">Portfolio clienti</button>
+      </div>
+    </div>`;
+  } else {
+    html += `<div id="contracts-list" class="dashboard-priority-list">${priority.list.map(c => renderContractCard(c)).join('')}</div>`;
+    if (priority.total > priority.list.length) {
+      html += `<div class="dashboard-priority-more"><button class="tb-btn" onclick="setPage('contratti')">Altri ${priority.total - priority.list.length} contratti critici →</button></div>`;
+    }
+  }
+  return html;
+}
+
 // Render helper: single contract card
 function renderContractCard(c){
   try{
@@ -1011,47 +1097,7 @@ function renderPage(){
     let html='';
     switch(state.page){
       case 'dashboard':
-        // Dashboard metrics (quick counts)
-        const expiredCnt = state.companies.filter(c=>daysLeft(c.endDate)<0).length;
-        const urgentCnt = state.companies.filter(c=>{const d=daysLeft(c.endDate);return d>=0&&d<=30}).length;
-        const renewableCnt = state.companies.filter(c=>c.renewable).length;
-        const avgDur = state.companies.length?Math.round(state.companies.reduce((s,c)=>s+durationMonths(c.startDate,c.endDate),0)/state.companies.length):0;
-        const companyCount = [...new Set(state.companies.map(c=>c.name).filter(Boolean))].length;
-        const nextDeadline = state.companies.reduce((best,c)=>{
-          const d=daysLeft(c.endDate);
-          if(d<0)return best;
-          if(best===null||d<best)return d;
-          return best;
-        },null);
-        html+=`<div class="dashboard-hero">
-    <div class="dashboard-hero-copy">
-      <div class="dashboard-kicker">Controllo operativo</div>
-      <div class="dashboard-title">Tutte le scadenze sotto controllo</div>
-      <div class="dashboard-subtitle">Vista unificata di contratti, rinnovi e priorità per gestire rapidamente le prossime azioni.</div>
-    </div>
-    <div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div>
-  </div>`;
-        html+=`<div class="legal-banner-wrap">${typeof renderLegalBannerHtml==='function'?renderLegalBannerHtml():''}</div>`;
-        html+=typeof renderStudioWeekWidget==='function'?renderStudioWeekWidget():'';
-        html+=`<div class="metrics-grid" style="margin-bottom:20px">
-    <div class="metric-card"><div class="metric-label">Durata media</div><div class="metric-val">${avgDur}<span style="font-size:16px;font-weight:400"> mesi</span></div></div>
-    <div class="metric-card"><div class="metric-label">Prorogabili</div><div class="metric-val c-blue">${renewableCnt}</div><div class="metric-delta">su ${state.companies.length} totali</div></div>
-    <div class="metric-card m-amber"><div class="metric-label">In scadenza 30gg</div><div class="metric-val c-amber">${urgentCnt}</div></div>
-    <div class="metric-card m-red"><div class="metric-label">Scaduti</div><div class="metric-val c-red">${expiredCnt}</div></div>
-  </div>`;
-        html+=`<div class="dashboard-summary">
-    <div class="summary-chip"><div class="summary-chip-label">Aziende</div><div class="summary-chip-value">${companyCount}</div><div class="summary-chip-meta">anagrafiche gestite</div></div>
-    <div class="summary-chip"><div class="summary-chip-label">Contratti</div><div class="summary-chip-value">${state.companies.length}</div><div class="summary-chip-meta">in monitoraggio</div></div>
-    <div class="summary-chip"><div class="summary-chip-label">Prossima scadenza</div><div class="summary-chip-value">${nextDeadline===null?'—':nextDeadline}</div><div class="summary-chip-meta">${nextDeadline===null?'nessuna futura':'giorni residui'}</div></div>
-  </div>`;
-
-        html+=`<div class="section-head"><div><div class="section-title">Contratti (${state.companies.length})</div><div class="section-sub">Elenco ordinato per urgenza con accesso rapido alle azioni operative.</div></div></div>`;
-        // apply search filter
-        const q=(state.searchQuery||'').toLowerCase();
-        const list=state.companies.filter(c=>!q||(`${c.name} ${c.employeeName} ${c.contractType}`).toLowerCase().includes(q));
-        const sOrd={'da_gestire':0,'gestita':1,'terminato':2};
-        list.sort((a,b)=>{const sd=(sOrd[a.status||'da_gestire']||0)-(sOrd[b.status||'da_gestire']||0);if(sd!==0)return sd;return daysLeft(a.endDate)-daysLeft(b.endDate);});
-        html+=`<div id="contracts-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+        html = renderDashboardPage();
         break;
       case 'company':
         html=renderCompanyContracts(state.activeCompany||'');
