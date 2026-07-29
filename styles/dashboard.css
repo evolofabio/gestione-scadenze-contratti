@@ -1288,6 +1288,17 @@ body.role-readonly .requires-write{display:none!important}
 .compliance-actions{margin:12px 0 16px}
 .compliance-done-list{font-size:13px;color:var(--text2);padding-left:18px}
 .compliance-filter-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.scadenziario-tabs{display:grid;gap:12px;margin-bottom:16px}
+.scadenziario-tab-group{display:grid;gap:6px}
+.scadenziario-tab-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding-left:2px}
+.compliance-table-wrap tr.row-overdue{background:var(--red-bg)}
+.compliance-table-wrap tr.row-today{background:var(--amber-bg)}
+.compliance-table-wrap tr.row-week{background:rgba(196,126,12,0.06)}
+.compliance-done-panel{margin-top:20px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--surface2)}
+.compliance-done-panel summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--text);list-style:none}
+.compliance-done-panel summary::-webkit-details-marker{display:none}
+.compliance-done-panel[open] summary{margin-bottom:10px}
+.act-btn.sm{font-size:11px;padding:4px 10px}
 .contract-filter-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
 .contract-filter-btn{
   display:inline-flex;align-items:center;gap:6px;

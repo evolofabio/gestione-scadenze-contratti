@@ -41,7 +41,32 @@ const COMPLIANCE_TYPES = {
   scadenza_custom:       { label: 'Scadenza personalizzata', deadlineDays: 0 },
 };
 
-let _complianceFilter = 'all';
+let _complianceTimeFilter = 'all';
+let _complianceCategoryFilter = 'all';
+
+const COMPLIANCE_STUDIO_TYPES = new Set([
+  'fine_prova', 'preavviso_disdetta', 'permesso_soggiorno', 'scadenza_custom', 'disdetta', 'gara_pubblica',
+]);
+
+function isUnilavComplianceTask(t){
+  return String(t?.type || '').startsWith('unilav_');
+}
+
+function isStudioComplianceTask(t){
+  return COMPLIANCE_STUDIO_TYPES.has(t?.type);
+}
+
+function filterComplianceTasksByCategory(tasks, category){
+  const c = category || 'all';
+  if (c === 'unilav') return (tasks || []).filter(isUnilavComplianceTask);
+  if (c === 'studio') return (tasks || []).filter(isStudioComplianceTask);
+  return tasks || [];
+}
+
+function getFilteredComplianceTasks(allTasks, timeFilter, categoryFilter){
+  let tasks = filterStudioDeadlines(allTasks || [], timeFilter || 'all');
+  return filterComplianceTasksByCategory(tasks, categoryFilter || 'all');
+}
 
 function complianceTypeLabel(type, note){
   const base = (COMPLIANCE_TYPES[type] || {}).label || type;
@@ -326,7 +351,7 @@ function getPendingComplianceTasks(companies){
 }
 
 function filterStudioDeadlines(tasks, filter){
-  const f = filter || _complianceFilter || 'all';
+  const f = filter || _complianceTimeFilter || 'all';
   if (f === 'all') return tasks;
   return tasks.filter(t => {
     const d = daysLeft(t.dueDate);
@@ -422,8 +447,18 @@ function renderStudioPortfolioPage(){
   return html;
 }
 
+window.setComplianceTimeFilter = function(f){
+  _complianceTimeFilter = f || 'all';
+  renderPage();
+};
+
+window.setComplianceCategoryFilter = function(f){
+  _complianceCategoryFilter = f || 'all';
+  renderPage();
+};
+
 window.setComplianceFilter = function(f){
-  _complianceFilter = f || 'all';
+  _complianceTimeFilter = f || 'all';
   renderPage();
 };
 
@@ -516,39 +551,58 @@ function renderLegalBannerHtml(opts){
 function renderCompliancePage(){
   syncAllStudioTasks();
   const allTasks = getPendingComplianceTasks();
-  const tasks = filterStudioDeadlines(allTasks, _complianceFilter);
+  const tasks = getFilteredComplianceTasks(allTasks, _complianceTimeFilter, _complianceCategoryFilter);
   const done = (state.companies || []).flatMap(c => (c.complianceTasks || []).filter(t => t.status === 'done').map(t => ({
     ...t, contractId: c.id, contractName: c.name, employeeName: c.employeeName, label: complianceTypeLabel(t.type, t.note),
   }))).slice(0, 30);
-  const filters = [
-    ['all', 'Tutti', allTasks.length],
-    ['today', 'Oggi', filterStudioDeadlines(allTasks, 'today').length],
-    ['week', '7 giorni', filterStudioDeadlines(allTasks, 'week').length],
-    ['overdue', 'Scaduti', filterStudioDeadlines(allTasks, 'overdue').length],
+  const timeFilters = [
+    ['all', 'Tutti'],
+    ['today', 'Oggi'],
+    ['week', '7 giorni'],
+    ['overdue', 'Scaduti'],
   ];
-  let html = `<div class="dashboard-hero"><div class="dashboard-hero-copy"><div class="dashboard-kicker">Scadenziario</div><div class="dashboard-title">Registro adempimenti studio</div><div class="dashboard-subtitle">UNILAV, prova, disdetta, permessi e scadenze personalizzate — tutto in un unico registro.</div></div></div>`;
+  const categoryFilters = [
+    ['all', 'Tutti i tipi'],
+    ['unilav', 'UNILAV'],
+    ['studio', 'Studio & contratto'],
+  ];
+  let html = `<div class="dashboard-hero"><div class="dashboard-hero-copy"><div class="dashboard-kicker">Scadenziario</div><div class="dashboard-title">Registro adempimenti studio</div><div class="dashboard-subtitle">Filtra per urgenza e tipologia: UNILAV, periodo di prova, disdetta, permessi e scadenze personalizzate.</div></div></div>`;
   html += renderLegalBannerHtml();
-  html += `<div class="compliance-filter-row">${filters.map(([k, lbl, n]) =>
-    `<button class="day-chip${_complianceFilter === k ? ' active' : ''}" onclick="setComplianceFilter('${k}')">${lbl}${n ? ' (' + n + ')' : ''}</button>`
-  ).join('')}</div>`;
+  html += `<div class="scadenziario-tabs">
+    <div class="scadenziario-tab-group">
+      <div class="scadenziario-tab-label">Quando</div>
+      <div class="compliance-filter-row">${timeFilters.map(([k, lbl]) => {
+        const n = getFilteredComplianceTasks(allTasks, k, _complianceCategoryFilter).length;
+        return `<button type="button" class="day-chip${_complianceTimeFilter === k ? ' active' : ''}" onclick="setComplianceTimeFilter(${escJsArg(k)})">${esc(lbl)}${n ? ` (${n})` : ''}</button>`;
+      }).join('')}</div>
+    </div>
+    <div class="scadenziario-tab-group">
+      <div class="scadenziario-tab-label">Tipo</div>
+      <div class="compliance-filter-row">${categoryFilters.map(([k, lbl]) => {
+        const n = getFilteredComplianceTasks(allTasks, _complianceTimeFilter, k).length;
+        return `<button type="button" class="day-chip${_complianceCategoryFilter === k ? ' active' : ''}" onclick="setComplianceCategoryFilter(${escJsArg(k)})">${esc(lbl)}${n ? ` (${n})` : ''}</button>`;
+      }).join('')}</div>
+    </div>
+  </div>`;
   html += `<div class="compliance-actions"><button class="tb-btn" onclick="exportComplianceCSV()">Esporta registro CSV</button></div>`;
   if (!tasks.length) {
-    html += `<div class="empty-state">Nessun adempimento in questo filtro. Le scadenze di prova, disdetta e UNILAV si generano automaticamente dai dati contratto.</div>`;
+    html += `<div class="empty-state">Nessun adempimento con i filtri selezionati. Prova ad allargare la finestra temporale o cambiare tipologia.</div>`;
   } else {
     html += `<div class="compliance-table-wrap"><table class="data-table"><thead><tr><th>Scadenza</th><th>Tipo</th><th>Cliente / soggetto</th><th>CF</th><th>Evento</th><th></th></tr></thead><tbody>`;
     tasks.forEach(t => {
       const dl = daysLeft(t.dueDate);
+      const rowCls = dl < 0 ? 'row-overdue' : dl <= 1 ? 'row-today' : dl <= 7 ? 'row-week' : '';
       const cls = dl < 0 ? 'c-red' : dl <= 3 ? 'c-amber' : '';
-      html += `<tr><td class="${cls}">${formatDate(t.dueDate)} (${dl} gg)</td><td>${esc(t.label)}</td><td>${esc(t.contractName)} — ${esc(t.employeeName || '')}</td><td>${esc(t.taxCode || '—')}</td><td>${formatDate(t.eventDate)}</td><td><button class="act-btn" onclick="markComplianceDone(${escJsArg(t.contractId)},${escJsArg(t.id)})">Segna fatto</button></td></tr>`;
+      html += `<tr class="${rowCls}"><td class="${cls}">${formatDate(t.dueDate)} (${dl} gg)</td><td>${esc(t.label)}</td><td>${esc(t.contractName)} — ${esc(t.employeeName || '')}</td><td>${esc(t.taxCode || '—')}</td><td>${formatDate(t.eventDate)}</td><td><button class="act-btn sm" onclick="markComplianceDone(${escJsArg(t.contractId)},${escJsArg(t.id)})">Segna fatto</button></td></tr>`;
     });
     html += `</tbody></table></div>`;
   }
   if (done.length) {
-    html += `<h3 style="margin:24px 0 12px;font-size:15px">Completati di recente</h3><ul class="compliance-done-list">`;
+    html += `<details class="compliance-done-panel"><summary>Completati di recente (${done.length})</summary><ul class="compliance-done-list">`;
     done.forEach(t => {
       html += `<li>${formatDate(t.doneAt || t.dueDate)} — ${esc(t.label)} — ${esc(t.contractName)}</li>`;
     });
-    html += `</ul>`;
+    html += `</ul></details>`;
   }
   return html;
 }
