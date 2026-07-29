@@ -1274,6 +1274,18 @@ body.role-readonly .requires-write{display:none!important}
 .compliance-actions{margin:12px 0 16px}
 .compliance-done-list{font-size:13px;color:var(--text2);padding-left:18px}
 .compliance-filter-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.contract-filter-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.contract-filter-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:999px;font-size:12px;font-weight:500;
+  border:1px solid var(--border);background:var(--surface);color:var(--text2);
+  transition:background var(--t),border-color var(--t),color var(--t),box-shadow var(--t);
+}
+.contract-filter-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+.contract-filter-btn.active{background:var(--accent-bg);border-color:rgba(39,88,207,0.22);color:var(--accent);font-weight:600;box-shadow:0 6px 16px rgba(39,88,207,0.10)}
+.contract-filter-btn .filter-count{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--surface3);color:var(--text3)}
+.contract-filter-btn.active .filter-count{background:rgba(39,88,207,0.14);color:var(--accent)}
+.nav-badge--muted{background:var(--text3)!important;box-shadow:none!important}
 .studio-week-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:20px;box-shadow:var(--shadow)}
 .studio-week-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .studio-week-title{font-size:15px;font-weight:600}

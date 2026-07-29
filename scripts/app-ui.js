@@ -1062,17 +1062,14 @@ function renderPage(){
       case 'clienti':
         html=typeof renderStudioPortfolioPage==='function'?renderStudioPortfolioPage():'<div class="empty-state">Vista clienti non disponibile</div>';
         break;
+      case 'contratti':
+        html=typeof renderContrattiPage==='function'?renderContrattiPage():'<div class="empty-state">Vista contratti non disponibile</div>';
+        break;
       case 'indeterminati':
-        html=renderIndeterminatiPage();
-        break;
       case 'cessati':
-        html=renderCessatiPage();
-        break;
       case 'gestite':
-        html=renderGestiteePage();
-        break;
       case 'terminate':
-        html=renderTerminatePage();
+        html=typeof renderContrattiPage==='function'?renderContrattiPage():'<div class="empty-state">Vista contratti non disponibile</div>';
         break;
       case 'compliance':
         html=typeof renderCompliancePage==='function'?renderCompliancePage():'<div class="empty-state">Modulo compliance non disponibile</div>';

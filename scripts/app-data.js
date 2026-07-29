@@ -1113,33 +1113,90 @@ window.viewWorkNotes = function(id){
   </div></div>`);
 }
 
-// Pagine dedicate
-function renderIndeterminatiPage(){
-  const list = state.companies.filter(c=>c.indeterminate===true);
-  if(!list.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto a tempo indeterminato.</div>`;
-  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
-  return `<div class="section-head"><div class="section-title">Contratti a tempo indeterminato (${list.length})</div></div><div id="indeterminati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+// Pagine dedicate — vista Contratti unificata con filtri
+const CONTRACT_FILTERS=[
+  {id:'all',label:'Tutti'},
+  {id:'da_gestire',label:'Da gestire'},
+  {id:'gestita',label:'Gestite'},
+  {id:'terminato',label:'Terminate'},
+  {id:'indeterminate',label:'T.I.'},
+  {id:'cessato',label:'Cessati'},
+];
+
+function filterContractsByView(list,filter){
+  const f=filter||'all';
+  if(f==='all') return list;
+  if(f==='da_gestire'){
+    return list.filter(c=>!c.indeterminate&&!c.cessato&&(c.status||'da_gestire')==='da_gestire');
+  }
+  if(f==='gestita') return list.filter(c=>c.status==='gestita');
+  if(f==='terminato') return list.filter(c=>c.status==='terminato');
+  if(f==='indeterminate') return list.filter(c=>c.indeterminate===true);
+  if(f==='cessato') return list.filter(c=>c.cessato===true);
+  return list;
 }
 
-function renderCessatiPage(){
-  const list = state.companies.filter(c=>c.cessato===true);
-  if(!list.length) return `<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Nessun contratto cessato.</div>`;
-  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
-  return `<div class="section-head"><div class="section-title">Contratti cessati (${list.length})</div></div><div id="cessati-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+function getContractFilterCounts(){
+  const all=state.companies||[];
+  const counts={};
+  CONTRACT_FILTERS.forEach(cf=>{ counts[cf.id]=filterContractsByView(all,cf.id).length; });
+  return counts;
 }
 
-function renderGestiteePage(){
-  const list=state.companies.filter(c=>c.status==='gestita');
-  if(!list.length)return`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Nessun contratto marcato come Gestita.<br><br><small style="color:var(--text3)">Seleziona "Gestita" su un contratto dalla Dashboard per spostarlo qui.</small></div>`;
-  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
-  return`<div class="section-head"><div><div class="section-title">Contratti Gestiti (${list.length})</div><div class="section-sub">Contratti già gestiti e conclusi con esito positivo.</div></div></div><div id="gestite-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+function contractFilterEmptyMessage(filter){
+  const msgs={
+    all:'Nessun contratto registrato.',
+    da_gestire:'Nessun contratto da gestire.',
+    gestita:'Nessun contratto marcato come Gestita.',
+    terminato:'Nessun contratto marcato come Terminato.',
+    indeterminate:'Nessun contratto a tempo indeterminato.',
+    cessato:'Nessun contratto cessato.',
+  };
+  return msgs[filter||'all']||msgs.all;
 }
 
-function renderTerminatePage(){
-  const list=state.companies.filter(c=>c.status==='terminato');
-  if(!list.length)return`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>Nessun contratto marcato come Terminato.<br><br><small style="color:var(--text3)">Seleziona "Terminato" su un contratto dalla Dashboard per spostarlo qui.</small></div>`;
-  list.sort((a,b)=>a.name.localeCompare(b.name,'it'));
-  return`<div class="section-head"><div><div class="section-title">Contratti Terminati (${list.length})</div><div class="section-sub">Contratti terminati e non più attivi.</div></div></div><div id="terminate-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+function renderContrattiPage(){
+  const filter=state.contractFilter||'all';
+  const counts=getContractFilterCounts();
+  const q=(state.searchQuery||'').toLowerCase();
+  let list=filterContractsByView(state.companies,filter);
+  if(q) list=list.filter(c=>(`${c.name} ${c.employeeName} ${c.contractType}`).toLowerCase().includes(q));
+  const sOrd={'da_gestire':0,'gestita':1,'terminato':2};
+  list.sort((a,b)=>{
+    const sd=(sOrd[a.status||'da_gestire']||0)-(sOrd[b.status||'da_gestire']||0);
+    if(sd!==0) return sd;
+    return daysLeft(a.endDate)-daysLeft(b.endDate);
+  });
+  const activeDef=CONTRACT_FILTERS.find(cf=>cf.id===filter)||CONTRACT_FILTERS[0];
+  let html=`<div class="dashboard-hero"><div class="dashboard-hero-copy">
+    <div class="dashboard-kicker">Anagrafica</div>
+    <div class="dashboard-title">Contratti</div>
+    <div class="dashboard-subtitle">Elenco completo con filtri per stato operativo, T.I. e cessazioni.</div>
+  </div><div><button class="tb-btn primary" onclick="openAddModal()">+ Nuovo contratto</button></div></div>`;
+  html+=`<div class="contract-filter-row">`;
+  CONTRACT_FILTERS.forEach(cf=>{
+    const active=filter===cf.id?' active':'';
+    html+=`<button type="button" class="contract-filter-btn${active}" onclick="setContractFilter(${escJsArg(cf.id)})">${esc(cf.label)} <span class="filter-count">${counts[cf.id]}</span></button>`;
+  });
+  html+=`</div>`;
+  html+=`<div class="section-head"><div><div class="section-title">${esc(activeDef.label)} (${list.length})</div></div></div>`;
+  if(!list.length){
+    html+=`<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>${esc(contractFilterEmptyMessage(filter))}${filter==='all'?`<br><br><button class="tb-btn primary" onclick="openAddModal()">+ Aggiungi contratto</button>`:''}</div>`;
+  }else{
+    html+=`<div id="contratti-list">${list.map(c=>renderContractCard(c)).join('')}</div>`;
+  }
+  return html;
 }
+
+window.setContractFilter=function(f){
+  state.contractFilter=f||'all';
+  updateNav();
+  renderPage();
+};
+
+function renderIndeterminatiPage(){ state.contractFilter='indeterminate'; return renderContrattiPage(); }
+function renderCessatiPage(){ state.contractFilter='cessato'; return renderContrattiPage(); }
+function renderGestiteePage(){ state.contractFilter='gestita'; return renderContrattiPage(); }
+function renderTerminatePage(){ state.contractFilter='terminato'; return renderContrattiPage(); }
 
 window.addEventListener('load', checkAuth);

@@ -187,6 +187,7 @@ let state={
   showNotifCenter:false,
   theme:load(SK.theme,'light'),
   sidebarCollapsed:false,
+  contractFilter:'all',
 };
 let emailSettings=load(SK.settings,defaultSettings);
 let emailLog=load(SK.log,[]);
@@ -365,12 +366,24 @@ function toggleMobileSidebar(){
 // ═══════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════
+const LEGACY_CONTRACT_PAGES={
+  indeterminati:'indeterminate',
+  cessati:'cessato',
+  gestite:'gestita',
+  terminate:'terminato',
+};
+
 function setPage(p,company){
+  if(LEGACY_CONTRACT_PAGES[p]){
+    state.contractFilter=LEGACY_CONTRACT_PAGES[p];
+    p='contratti';
+  }
   state.page=p;
   state.activeCompany=company||null;
   state.searchQuery='';
   state.quickRenewId=null;
-  document.getElementById('search-input').value='';
+  const searchEl=document.getElementById('search-input');
+  if(searchEl) searchEl.value='';
   updateNav();
   renderSidebarCompanies();
   renderPage();
@@ -379,7 +392,7 @@ function setCompanyPage(name){setPage('company',name)}
 
 function onSearch(val){
   state.searchQuery=(val||'').trim();
-  if(state.page==='dashboard'||state.page==='company'){
+  if(['dashboard','company','contratti'].includes(state.page)){
     renderPage();
   }
 }
@@ -403,15 +416,33 @@ function getUrgentNotifications(){
 }
 
 function updateNav(){
-  ['dashboard','calendar','cantieri','clienti','indeterminati','cessati','gestite','terminate','compliance','analytics','settings'].forEach(p=>{
+  ['dashboard','compliance','calendar','clienti','contratti','cantieri','analytics','settings'].forEach(p=>{
     const el=document.getElementById('nav-'+p);
     if(el)el.className=`nav-item${state.page===p?' active':''}`;
   });
-  const titles={dashboard:'Dashboard',calendar:'Calendario',cantieri:'Cantieri',clienti:'Clienti',indeterminati:'Indeterminati',cessati:'Cessati',gestite:'Gestite',terminate:'Terminate',compliance:'Scadenziario',analytics:'Analytics',settings:'Impostazioni',company:state.activeCompany||'Azienda'};
+  const filterTitles={
+    all:'Contratti',
+    da_gestire:'Contratti — Da gestire',
+    gestita:'Contratti — Gestite',
+    terminato:'Contratti — Terminate',
+    indeterminate:'Contratti — T.I.',
+    cessato:'Contratti — Cessati',
+  };
+  const titles={
+    dashboard:'Dashboard',
+    calendar:'Calendario',
+    cantieri:'Cantieri',
+    clienti:'Clienti',
+    contratti:filterTitles[state.contractFilter||'all']||'Contratti',
+    compliance:'Scadenziario',
+    analytics:'Analytics',
+    settings:'Impostazioni',
+    company:state.activeCompany||'Azienda',
+  };
   const el=document.getElementById('topbar-title');
   if(el)el.textContent=titles[state.page]||'';
   const sw=document.getElementById('topbar-search-wrap');
-  if(sw)sw.style.display=(['dashboard','company'].includes(state.page))?'':'none';
+  if(sw)sw.style.display=(['dashboard','company','contratti'].includes(state.page))?'':'none';
   // update small nav badges (cantieri count) and notification badge
   try{
     const seenCompany={};
@@ -438,6 +469,12 @@ function updateNav(){
       const n=(legalData.pending||[]).length;
       if(n>0){cb2.style.display='';cb2.textContent=compactBadgeCount(n)}
       else{cb2.style.display='none';cb2.textContent='0'}
+    }
+    const ctb=document.getElementById('contratti-badge');
+    if(ctb){
+      const n=(state.companies||[]).filter(c=>!c.indeterminate&&!c.cessato&&(c.status||'da_gestire')==='da_gestire').length;
+      if(n>0){ctb.style.display='';ctb.textContent=compactBadgeCount(n)}
+      else{ctb.style.display='none';ctb.textContent='0'}
     }
   }catch(e){console.error('updateNav badges',e)}
 }
