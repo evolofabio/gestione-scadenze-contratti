@@ -231,6 +231,10 @@ function _renderBillingBanner () {
   if (subStatus === 'trialing' && trialDays !== null) {
     cls = trialDays <= 3 ? 'billing-bar--warn' : 'billing-bar--trial';
     parts.push(`Trial: ${trialDays} ${trialDays === 1 ? 'giorno rimasto' : 'giorni rimasti'}`);
+    if (trialDays <= 0) {
+      cls = 'billing-bar--err';
+      parts[parts.length - 1] = 'Trial scaduto';
+    }
   } else if (subStatus === 'past_due' || subStatus === 'unpaid') {
     cls = 'billing-bar--err';
     parts.push('Pagamento in sospeso — rinnova per continuare');
@@ -247,8 +251,25 @@ function _renderBillingBanner () {
     if (pct >= 90) cls = 'billing-bar--warn';
   }
 
+  const maxExp = s.max_exports_per_month != null ? Number(s.max_exports_per_month) : null;
+  const expUsed = Number(s.exports_used) || 0;
+  if (maxExp !== null) {
+    parts.push(`Export: ${expUsed}/${maxExp}`);
+    if (expUsed >= maxExp * 0.9) cls = 'billing-bar--warn';
+  }
+
+  const maxUsers = s.max_users != null ? Number(s.max_users) : null;
+  const usersUsed = Number(s.users_used) || 1;
+  if (maxUsers !== null) {
+    parts.push(`Utenti: ${usersUsed}/${maxUsers}`);
+  }
+
+  const upgradeBtn = (typeof isTrialExpired === 'function' && isTrialExpired() && typeof isAdmin === 'function' && isAdmin())
+    ? `<button type="button" class="billing-manage-btn billing-manage-btn--primary" onclick="openPricingModal()">Scegli piano</button>`
+    : '';
+
   const manageBtn = (typeof isAdmin === 'function' && isAdmin())
-    ? `<button type="button" class="billing-manage-btn" onclick="openBillingPortal()">Gestisci abbonamento</button>`
+    ? `${upgradeBtn}<button type="button" class="billing-manage-btn" onclick="openBillingPortal()">Gestisci abbonamento</button>`
     : '';
 
   el.className = `billing-status-bar ${cls}`;

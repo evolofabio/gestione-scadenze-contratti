@@ -117,10 +117,38 @@ function getHeaders(){return['Nome Azienda','Dipendente','Tipo Contratto','Data 
 function getRows(companies){
   return(companies||state.companies).map(c=>{const d=daysLeft(c.endDate);const s=d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'Regolare';return[c.name,c.employeeName||'',c.contractType,formatDate(c.startDate),formatDate(c.endDate),d,s,c.renewable?'Sì':'No',c.renewMonths||'',c.renewType||'',c.renewNotice||'',c.renewCount||0,c.adminEmail||'',c.companyEmail||'',c.notes||'']});
 }
-window.exportCSV=()=>{const h=getHeaders();const r=getRows();const csv=[h,...r].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`prorogapro_export_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(u);showToast('CSV esportato')}
-window.exportExcel=()=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows()]);ws['!cols']=[22,20,22,12,12,8,12,10,10,14,10,8,24,24,40].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Contratti');XLSX.writeFile(wb,`prorogapro_export_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel esportato')}
-window.exportExcelCompany=name=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows(state.companies.filter(c=>c.name===name))]);XLSX.utils.book_append_sheet(wb,ws,name.substring(0,30));XLSX.writeFile(wb,`prorogapro_export_${name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel azienda esportato')}
-window.exportPDFCompany=name=>{
+
+function requireExportAccess(label){
+  if (typeof canExport === 'function' && !canExport(1)) {
+    showToast('Limite export mensile raggiunto — aggiorna il piano');
+    return false;
+  }
+  return true;
+}
+
+async function trackExportUsage(){
+  try {
+    if (window.supabaseClient && typeof window.supabaseClient.rpc === 'function') {
+      await window.supabaseClient.rpc('increment_usage_metric', { p_metric_key: 'exports', p_quantity: 1 });
+    }
+  } catch (_) {}
+  const s = window._billingSummary;
+  if (s) s.exports_used = (Number(s.exports_used) || 0) + 1;
+  if (typeof refreshBillingSummary === 'function') refreshBillingSummary();
+}
+
+function wrapExport(fn){
+  return function(...args){
+    if (!requireExportAccess()) return;
+    fn.apply(this, args);
+    trackExportUsage();
+  };
+}
+
+window.exportCSV=wrapExport(()=>{const h=getHeaders();const r=getRows();const csv=[h,...r].map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`prorogapro_export_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(u);showToast('CSV esportato')});
+window.exportExcel=wrapExport(()=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows()]);ws['!cols']=[22,20,22,12,12,8,12,10,10,14,10,8,24,24,40].map(w=>({wch:w}));XLSX.utils.book_append_sheet(wb,ws,'Contratti');XLSX.writeFile(wb,`prorogapro_export_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel esportato')});
+window.exportExcelCompany=wrapExport(name=>{const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([getHeaders(),...getRows(state.companies.filter(c=>c.name===name))]);XLSX.utils.book_append_sheet(wb,ws,name.substring(0,30));XLSX.writeFile(wb,`prorogapro_export_${name.replace(/\s+/g,'_')}_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel azienda esportato')});
+window.exportPDFCompany=wrapExport(name=>{
   const list=state.companies.filter(c=>c.name===name);
   if(!list.length){showToast('Nessun contratto per questa azienda');return}
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
@@ -133,14 +161,14 @@ window.exportPDFCompany=name=>{
     startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}
   });
   doc.save(`prorogapro_export_${safeName}_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF azienda esportato');
-}
-window.exportPDF=()=>{
+});
+window.exportPDF=wrapExport(()=>{
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
   doc.setFontSize(14);doc.setFont(undefined,'bold');doc.text('ProrogaPro — Scadenze e proroghe contrattuali',14,14);
   doc.setFontSize(9);doc.setFont(undefined,'normal');doc.setTextColor(100);doc.text(`Esportato il ${new Date().toLocaleDateString('it-IT')} — ${state.companies.length} contratti`,14,20);doc.setTextColor(0);
   doc.autoTable({head:[['Azienda','Dipendente','Tipo Contratto','Inizio','Scadenza','Gg','Stato','Pror.']],body:state.companies.map(c=>{const d=daysLeft(c.endDate);return[c.name,c.employeeName||'—',c.contractType,formatDate(c.startDate),formatDate(c.endDate),String(d),d<0?'Scaduto':d<=ALERT_DAYS?'Urgente':d<=30?'In scadenza':'OK',c.renewable?'Sì':'No',c.renewMonths||'',c.renewType||'',c.renewNotice||'',c.renewCount||0,c.adminEmail||'',c.companyEmail||'',c.notes||'']}).slice(0,100),startY:25,theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[42,91,215],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[245,244,240]}});
   doc.save(`prorogapro_export_${new Date().toISOString().split('T')[0]}.pdf`);showToast('PDF esportato');
-}
+});
 window.triggerImportExcel=()=>{
   const inp=document.createElement('input');inp.type='file';inp.accept='.xlsx,.xls,.csv';
   inp.onchange=e=>{
@@ -655,6 +683,11 @@ window.doRegister = async function() {
 
     authUser = { ...user, uid: user.id };
     try {
+      const { data: inviteResult } = await window.supabaseClient.rpc('accept_team_invite');
+      if (inviteResult?.accepted) {
+        await afterLogin();
+        return;
+      }
       await window.registerNewTenant(fullName || email.split('@')[0], companyName);
     } catch (rpcErr) {
       console.warn('register_new_tenant RPC:', rpcErr.message);
@@ -669,6 +702,17 @@ window.doRegister = async function() {
 async function afterLogin() {
   if (!authUser) return;
   try {
+    try {
+      if (window.supabaseClient?.rpc) {
+        const { data: inviteResult } = await window.supabaseClient.rpc('accept_team_invite');
+        if (inviteResult?.accepted) {
+          showToast('Invito team accettato — benvenuto!');
+        }
+      }
+    } catch (invErr) {
+      console.warn('accept_team_invite', invErr);
+    }
+
     try {
       await completePendingTenantRegistration(authUser);
     } catch (regErr) {
@@ -804,10 +848,8 @@ window.acceptLicense = async function(licKey) {
 };
 
 async function _doEnterApp() {
-  // Nasconde la schermata di login e mostra la dashboard
   const ls = document.getElementById('login-screen'); if (ls) { ls.innerHTML = ''; ls.style.display = 'none'; }
   const appShell = document.getElementById('app-shell'); if (appShell) appShell.style.display = 'flex';
-  // Carica dati da Supabase prima di renderizzare
   if (typeof window.initSupabaseSync === 'function') {
     await window.initSupabaseSync();
   } else {
@@ -815,10 +857,12 @@ async function _doEnterApp() {
     renderSidebarCompanies();
     renderPage();
   }
+  if (typeof checkTrialAndBillingGate === 'function' && !checkTrialAndBillingGate()) return;
   startAutoSend();
   if (typeof updateSyncUI === 'function') updateSyncUI();
   if (typeof applyWriteRoleUI === 'function') applyWriteRoleUI();
   if (typeof initPushNotifications === 'function') initPushNotifications();
+  if (typeof maybeShowOnboarding === 'function') maybeShowOnboarding();
 }
 // Salva la configurazione utente su profilo Supabase
 async function saveUserConfig() {
@@ -937,14 +981,29 @@ window.loadAdminUsers = function() {
   const container = document.getElementById('admin-users-list');
   if (!container) return;
   container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Caricamento…</div>';
-  window.supabaseClient.from('profiles').select('id,email,role,status,created_at').order('created_at',{ascending:false}).then(({data,error}) => {
-    if (error) throw error;
-    const me = String(currentAuthId() || '');
-    const users = (data || []).filter(u => String(u.id || '') !== me);
-    if (!users.length) { container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Nessun utente registrato.</div>'; return; }
+  const me = String(currentAuthId() || '');
+  Promise.all([
+    window.supabaseClient.from('profiles').select('id,email,role,status,created_at').neq('id', me).order('created_at', { ascending: false }),
+    window.supabaseClient.from('team_invites').select('id,email,role,status,created_at,expires_at').eq('status', 'pending').order('created_at', { ascending: false }),
+  ]).then(([profRes, invRes]) => {
+    if (profRes.error) throw profRes.error;
+    const users = (profRes.data || []);
+    const invites = (invRes.data || []);
+    if (!users.length && !invites.length) {
+      container.innerHTML = '<div style="font-size:13px;color:var(--text3)">Nessun collaboratore. Invita un membro del team con il form sopra.</div>';
+      return;
+    }
     const statusLabel = { pending: '⏳ In attesa', approved: '✅ Approvato', rejected: '❌ Rifiutato', suspended: '⛔ Sospeso' };
     const roleLabel = { owner: 'Owner', admin: 'Admin', manager: 'Manager', viewer: 'Viewer' };
-    container.innerHTML = users.map(u => `
+    let html = invites.map(inv => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500">${esc(inv.email || '')}</div>
+          <div style="font-size:11px;color:var(--text3)">Invito ${roleLabel[inv.role] || inv.role} · in attesa registrazione</div>
+        </div>
+        <button class="tb-btn" style="color:var(--danger)" onclick="revokeTeamInvite(${Number(inv.id)})">Revoca</button>
+      </div>`).join('');
+    html += users.map(u => `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:500">${esc(u.email||'')}</div>
@@ -961,15 +1020,50 @@ window.loadAdminUsers = function() {
           <button class="tb-btn primary" onclick="approveUser('${esc(u.id)}')">Riattiva</button>
         `}
       </div>`).join('');
+    container.innerHTML = html;
   }).catch(() => { if(container) container.innerHTML = '<div style="font-size:13px;color:var(--danger)">Errore caricamento utenti.</div>'; });
+};
+
+window.inviteTeamMember = async function() {
+  if (!isAdmin()) { showToast('Permesso negato'); return; }
+  if (typeof canAddUser === 'function' && !canAddUser(1)) {
+    showToast('Limite utenti del piano raggiunto');
+    return;
+  }
+  const email = (document.getElementById('invite-email') || {}).value?.trim();
+  const role = (document.getElementById('invite-role') || {}).value || 'viewer';
+  if (!email) { showToast('Inserisci email'); return; }
+  try {
+    const { error } = await window.supabaseClient.rpc('invite_team_member', { p_email: email, p_role: role });
+    if (error) throw error;
+    showToast('Invito inviato a ' + email);
+    const el = document.getElementById('invite-email');
+    if (el) el.value = '';
+    loadAdminUsers();
+  } catch (e) {
+    showToast('Invito: ' + (e.message || e));
+  }
+};
+
+window.revokeTeamInvite = async function(inviteId) {
+  if (!isAdmin()) return;
+  try {
+    const { error } = await window.supabaseClient.from('team_invites').update({ status: 'revoked' }).eq('id', inviteId);
+    if (error) throw error;
+    showToast('Invito revocato');
+    loadAdminUsers();
+  } catch (e) {
+    showToast('Errore: ' + (e.message || e));
+  }
 };
 
 window.approveUser = function(uid) {
   if (!isAdmin()) return;
-  saveProfilePatch(uid, { status: 'approved', approved_by: currentAuthId(), updated_at: new Date().toISOString() }).then(ok => {
-    if (!ok) throw new Error('update failed');
+  window.supabaseClient.rpc('approve_team_member', { p_user_id: uid, p_role: 'viewer' }).then(({ error }) => {
+    if (error) throw error;
     showToast('Utente approvato');
     loadAdminUsers();
+    if (typeof refreshBillingSummary === 'function') refreshBillingSummary();
   }).catch(() => showToast('Errore durante l\'approvazione'));
 };
 

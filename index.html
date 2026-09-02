@@ -8,7 +8,13 @@
   <meta property="og:title" content="ProrogaPro — Scadenze e proroghe contrattuali">
   <meta property="og:description" content="Dashboard cockpit, scadenziario UNILAV, portfolio clienti e analytics. Prova la demo interattiva.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="assets/screenshots/dashboard.png">
+  <meta property="og:url" content="https://evolofabio.github.io/gestione-scadenze-contratti/">
+  <meta property="og:image" content="https://evolofabio.github.io/gestione-scadenze-contratti/assets/screenshots/dashboard.png">
+  <meta property="og:locale" content="it_IT">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ProrogaPro — Scadenze contrattuali">
+  <meta name="twitter:description" content="Trial 14 giorni · Scadenziario UNILAV · Export Excel/PDF">
+  <meta name="twitter:image" content="https://evolofabio.github.io/gestione-scadenze-contratti/assets/screenshots/dashboard.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
@@ -24,10 +30,15 @@
         <img src="assets/prorogapro-mark.png" alt="ProrogaPro">
         <span>Proroga<span class="brand-pro">Pro</span></span>
       </a>
-      <nav class="nav-links" aria-label="Navigazione principale">
+      <button class="nav-toggle hide-desktop" type="button" aria-label="Menu" aria-expanded="false" id="nav-toggle">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="nav-links" id="site-nav-links" aria-label="Navigazione principale">
         <a href="#destinatari" class="hide-mobile">A chi è destinata</a>
         <a href="#funzionalita" class="hide-mobile">Funzionalità</a>
+        <a href="#pricing" class="hide-mobile">Prezzi</a>
         <a href="#compliance" class="hide-mobile">Scadenziario</a>
+        <a href="#faq" class="hide-mobile">FAQ</a>
         <a href="#come-funziona" class="hide-mobile">Come funziona</a>
         <a class="btn btn-ghost hide-mobile" href="https://evolofabio.github.io/Gestione-scadenze-contratti-DEMO/contract_manager_dashboard.html" target="_blank" rel="noopener">Demo live</a>
         <a class="btn btn-primary" href="contract_manager_dashboard.html">Accedi / Registrati</a>
@@ -151,6 +162,21 @@
           </figure>
         </div>
 
+        <div class="feature-block reverse">
+          <div class="feature-copy">
+            <h3>Elenco contratti con filtri intelligenti</h3>
+            <p>Vista unificata con filtri per stato (Da gestire, Gestite, T.I.), card compatte e menu azioni rapide.</p>
+            <ul class="feature-list">
+              <li>Filtri pill: Tutti · Da gestire · Gestite · T.I.</li>
+              <li>Card compatte con dipendente e scadenza in evidenza</li>
+              <li>Duplica, proroga, dossier PDF dal menu ···</li>
+            </ul>
+          </div>
+          <figure class="screen-frame">
+            <img src="assets/screenshots/contratti.png" loading="lazy" alt="Elenco contratti ProrogaPro con filtri">
+          </figure>
+        </div>
+
         <div class="feature-block">
           <div class="feature-copy">
             <h3>Calendario e pianificazione</h3>
@@ -230,6 +256,97 @@
       </div>
     </section>
 
+    <section id="pricing">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Prezzi</p>
+          <h2>Piani semplici, trial 14 giorni incluso</h2>
+          <p>Canoni mensili o annuali (IVA esclusa). Upgrade immediato, downgrade al rinnovo.</p>
+        </div>
+        <div class="pricing-landing-grid">
+          <article class="pricing-landing-card">
+            <h3>Starter</h3>
+            <div class="pricing-landing-price"><strong>€29</strong><span>/mese</span></div>
+            <p class="pricing-landing-year">€290/anno</p>
+            <ul>
+              <li>3 utenti · 1 azienda</li>
+              <li>300 contratti</li>
+              <li>50 export/mese</li>
+              <li>Dashboard, alert, export base</li>
+            </ul>
+            <a class="btn btn-secondary" href="contract_manager_dashboard.html">Inizia trial</a>
+          </article>
+          <article class="pricing-landing-card pricing-landing-card--featured">
+            <span class="pricing-landing-badge">Consigliato</span>
+            <h3>Growth</h3>
+            <div class="pricing-landing-price"><strong>€79</strong><span>/mese</span></div>
+            <p class="pricing-landing-year">€790/anno</p>
+            <ul>
+              <li>15 utenti · 3 aziende</li>
+              <li>3.000 contratti</li>
+              <li>500 export/mese</li>
+              <li>Analytics, automazioni, multi-azienda</li>
+            </ul>
+            <a class="btn btn-primary" href="contract_manager_dashboard.html">Inizia trial</a>
+          </article>
+          <article class="pricing-landing-card">
+            <h3>Scale</h3>
+            <div class="pricing-landing-price"><strong>€149</strong><span>/mese</span></div>
+            <p class="pricing-landing-year">€1.490/anno</p>
+            <ul>
+              <li>100 utenti · 20 aziende</li>
+              <li>50.000 contratti</li>
+              <li>5.000 export/mese</li>
+              <li>Supporto prioritario, API, SSO</li>
+            </ul>
+            <a class="btn btn-secondary" href="mailto:info@evolodigitalstudio.it">Contattaci</a>
+          </article>
+        </div>
+        <p style="text-align:center;font-size:0.82rem;color:var(--text3);margin-top:20px">Setup assistito €290 · Formazione team 2h €240</p>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">FAQ</p>
+          <h2>Domande frequenti</h2>
+        </div>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>Serve integrazione con INPS o INAIL?</summary>
+            <p>No. ProrogaPro si concentra su scadenze contrattuali, proroghe, cantieri e adempimenti UNILAV — senza integrazioni esterne obbligatorie.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Posso importare i contratti da Excel?</summary>
+            <p>Sì. Dalla dashboard usa Esporta → Importa Excel oppure il percorso guidato al primo accesso. Supportiamo colonne standard (azienda, dipendente, scadenza, email…).</p>
+          </details>
+          <details class="faq-item">
+            <summary>Come funziona il multi-utente?</summary>
+            <p>L'admin invita collaboratori via email dalle Impostazioni. Ogni piano include un numero di utenti (Starter: 3, Growth: 15, Scale: 100).</p>
+          </details>
+          <details class="faq-item">
+            <summary>Cosa succede quando finisce il trial?</summary>
+            <p>Dopo 14 giorni puoi scegliere un piano a pagamento. I dati restano salvati su cloud Supabase (UE). Senza abbonamento l'accesso in scrittura viene sospeso.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Le email di alert sono davvero automatiche?</summary>
+            <p>Puoi usare mailto (apre Outlook/Gmail) o EmailJS per invio automatico configurabile. Le notifiche push richiedono permesso browser e tab aperta o PWA installata.</p>
+          </details>
+        </div>
+        <div class="testimonial-row" style="margin-top:40px">
+          <blockquote class="testimonial">
+            <p>«Finalmente uno scadenziario che parla la lingua di chi gestisce proroghe ogni giorno — senza fronzoli.»</p>
+            <cite>— Responsabile amministrativo, PMI manifatturiera</cite>
+          </blockquote>
+          <blockquote class="testimonial">
+            <p>«Per lo studio: portfolio clienti e report settimanale PDF in un click.»</p>
+            <cite>— Consulente del lavoro, studio multi-cliente</cite>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
     <section id="come-funziona">
       <div class="container">
         <div class="section-head">
@@ -290,10 +407,11 @@
         <a href="contract_manager_dashboard.html">Accedi all'app</a>
         <a href="pages/terms.html">Termini</a>
         <a href="pages/privacy.html">Privacy</a>
-        <a href="mailto:evolo434@gmail.com">Contatti</a>
+        <a href="mailto:info@evolodigitalstudio.it">Contatti</a>
       </nav>
     </div>
   </footer>
 
+  <script src="scripts/landing.js"></script>
 </body>
 </html>

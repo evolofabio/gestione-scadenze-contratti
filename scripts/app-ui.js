@@ -295,13 +295,21 @@ function renderBillingSettingsCard(){
   const contracts = s.max_contracts != null
     ? `<p style="font-size:13px;color:var(--text2);margin-top:6px">Contratti: ${Number(s.contracts_used)||0}/${s.max_contracts}</p>`
     : '';
+  const users = s.max_users != null
+    ? `<p style="font-size:13px;color:var(--text2);margin-top:4px">Utenti: ${Number(s.users_used)||1}/${s.max_users}</p>`
+    : '';
+  const exports = s.max_exports_per_month != null
+    ? `<p style="font-size:13px;color:var(--text2);margin-top:4px">Export mese: ${Number(s.exports_used)||0}/${s.max_exports_per_month}</p>`
+    : '';
   const adminBtns = isAdmin() ? `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-      <button class="tb-btn primary" onclick="openStripeCheckout('starter')">Passa a Starter</button>
-      <button class="tb-btn" onclick="openStripeCheckout('growth')">Growth</button>
+      <button class="tb-btn primary" onclick="openPricingModal()">Confronta piani</button>
+      <button class="tb-btn" onclick="openStripeCheckout('starter')">Starter €29</button>
+      <button class="tb-btn" onclick="openStripeCheckout('growth')">Growth €79</button>
+      <button class="tb-btn" onclick="openStripeCheckout('scale')">Scale €149</button>
       <button class="tb-btn" onclick="openBillingPortal()">Portale fatturazione</button>
     </div>` : '<p style="font-size:12px;color:var(--text3);margin-top:8px">Solo owner/admin possono gestire l\'abbonamento.</p>';
-  return `<p style="font-size:14px"><strong>${esc(plan)}</strong> — ${esc(status)}${trial}</p>${contracts}${adminBtns}`;
+  return `<p style="font-size:14px"><strong>${esc(plan)}</strong> — ${esc(status)}${trial}</p>${contracts}${users}${exports}${adminBtns}`;
 }
 
 function renderSettingsPage(){
@@ -415,10 +423,25 @@ function renderSettingsPage(){
   </div>
 
   ${isAdmin() ? `<div class="settings-card">
-    <h4><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Gestione utenti</h4>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Approva o rifiuta le richieste di registrazione dei collaboratori.</p>
-    <button class="tb-btn primary" onclick="loadAdminUsers()" style="margin-bottom:12px">Aggiorna lista utenti</button>
-    <div id="admin-users-list"><div style="font-size:13px;color:var(--text3)">Clicca "Aggiorna lista utenti" per vedere le richieste.</div></div>
+    <h4><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Gestione team</h4>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Invita collaboratori via email. Al primo accesso verranno associati automaticamente alla tua azienda.</p>
+    <div class="settings-row" style="align-items:flex-end">
+      <div class="field-group" style="flex:2">
+        <label>Email collaboratore</label>
+        <input class="f-input" type="email" id="invite-email" placeholder="collaboratore@azienda.it">
+      </div>
+      <div class="field-group" style="flex:1">
+        <label>Ruolo</label>
+        <select class="f-input" id="invite-role">
+          <option value="viewer">Viewer</option>
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button class="tb-btn primary" onclick="inviteTeamMember()">Invita</button>
+    </div>
+    <button class="tb-btn" onclick="loadAdminUsers()" style="margin-top:12px;margin-bottom:12px">Aggiorna lista</button>
+    <div id="admin-users-list"><div style="font-size:13px;color:var(--text3)">Clicca "Aggiorna lista" per vedere inviti e utenti.</div></div>
   </div>` : ''}`;
 }
 
@@ -650,6 +673,59 @@ window.doDeleteCantiere=function(contractId,idx){
 }
 
 // Render helper: dashboard cockpit (priorità operative)
+function onboardingStorageKey(){
+  const uid = typeof currentAuthId === 'function' ? currentAuthId() : '';
+  return 'cm2_onboarding_' + (uid || 'guest');
+}
+
+function renderOnboardingPanel(){
+  return `<div class="onboarding-panel">
+    <div class="onboarding-kicker">Primi passi</div>
+    <h3 class="onboarding-title">Benvenuto in ProrogaPro</h3>
+    <p class="onboarding-sub">Inizia in pochi minuti: importa i contratti esistenti o creane uno nuovo, poi attiva gli alert.</p>
+    <div class="onboarding-steps">
+      <article class="onboarding-step">
+        <span class="onboarding-step-num">1</span>
+        <div>
+          <strong>Importa da Excel</strong>
+          <p>Carica il file con colonne Azienda, Dipendente, Scadenza…</p>
+          <button class="tb-btn primary requires-write" onclick="triggerImportExcel()">Importa Excel</button>
+        </div>
+      </article>
+      <article class="onboarding-step">
+        <span class="onboarding-step-num">2</span>
+        <div>
+          <strong>Aggiungi il primo contratto</strong>
+          <p>Inserisci manualmente azienda, dipendente e date.</p>
+          <button class="tb-btn requires-write" onclick="openAddModal()">+ Nuovo contratto</button>
+        </div>
+      </article>
+      <article class="onboarding-step">
+        <span class="onboarding-step-num">3</span>
+        <div>
+          <strong>Configura gli alert</strong>
+          <p>Email automatiche o mailto per scadenze e preavvisi.</p>
+          <button class="tb-btn" onclick="setPage('settings')">Impostazioni alert</button>
+        </div>
+      </article>
+    </div>
+    <button class="onboarding-dismiss" type="button" onclick="dismissOnboarding()">Ho capito, nascondi guida</button>
+  </div>`;
+}
+
+window.dismissOnboarding = function(){
+  try { localStorage.setItem(onboardingStorageKey(), '1'); } catch (_) {}
+  renderPage();
+};
+
+window.maybeShowOnboarding = function(){
+  if (state.companies.length > 0) return;
+  try {
+    if (localStorage.getItem(onboardingStorageKey()) === '1') return;
+  } catch (_) {}
+  if (state.currentPage !== 'dashboard') setPage('dashboard');
+};
+
 function getDashboardPriorityContracts(companies, q, limit){
   limit = limit == null ? 8 : limit;
   let list = (companies || []).filter(c => {
@@ -718,7 +794,11 @@ function renderDashboardPage(){
   </div>`;
 
   if (!priority.list.length) {
-    html += `<div class="dashboard-all-clear">
+    const isEmpty = !state.companies.length;
+    if (isEmpty) {
+      html += renderOnboardingPanel();
+    } else {
+      html += `<div class="dashboard-all-clear">
       <div class="dashboard-all-clear-title">Tutto sotto controllo</div>
       <div class="dashboard-all-clear-sub">Nessun contratto attivo in scadenza entro 30 giorni e nessun adempimento urgente.</div>
       <div class="dashboard-all-clear-actions">
@@ -726,6 +806,7 @@ function renderDashboardPage(){
         <button class="tb-btn" onclick="setPage('clienti')">Portfolio clienti</button>
       </div>
     </div>`;
+    }
   } else {
     html += `<div id="contracts-list" class="dashboard-priority-list">${priority.list.map(c => renderContractCard(c)).join('')}</div>`;
     if (priority.total > priority.list.length) {

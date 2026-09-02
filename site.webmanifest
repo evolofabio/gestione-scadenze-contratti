@@ -1,7 +1,8 @@
 {
   "name": "ProrogaPro — Scadenze e proroghe contrattuali",
   "short_name": "ProrogaPro",
-  "start_url": "/",
+  "start_url": "./contract_manager_dashboard.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
@@ -11,6 +12,11 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "assets/prorogapro-apple-touch.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ]
 }

@@ -1,8 +1,20 @@
 'use strict';
 // ═══════════════════════════════════════════════════════════════════════════
 //  ProrogaPro — Service Worker v1
-//  Gestisce: push events, periodic background sync, notification click
 // ═══════════════════════════════════════════════════════════════════════════
+
+function swAsset(path) {
+  try {
+    const base = new URL('./', self.registration?.scope || self.location.href).href;
+    return new URL(String(path || '').replace(/^\//, ''), base).href;
+  } catch (_) {
+    return path;
+  }
+}
+
+function swDashUrl() {
+  return swAsset('contract_manager_dashboard.html');
+}
 
 // ── Install ──────────────────────────────────────────────────────────────────
 self.addEventListener('install', () => {
@@ -22,12 +34,12 @@ self.addEventListener('push', e => {
   const title   = data.title || '⚠️ ProrogaPro';
   const options = {
     body            : data.body || '',
-    icon            : '/assets/prorogapro-mark.png',
-    badge           : '/assets/prorogapro-mark.png',
+    icon            : swAsset('assets/prorogapro-mark.png'),
+    badge           : swAsset('assets/prorogapro-mark.png'),
     tag             : data.tag || 'es-alert',
     renotify        : true,
     requireInteraction: true,
-    data            : { url: data.url || '/contract_manager_dashboard.html' },
+    data            : { url: data.url || swDashUrl() },
     actions         : [
       { action: 'open',    title: 'Apri app' },
       { action: 'dismiss', title: 'Ignora'   }
@@ -54,7 +66,7 @@ self.addEventListener('message', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   if (e.action === 'dismiss') return;
-  const url = (e.notification.data && e.notification.data.url) || '/contract_manager_dashboard.html';
+  const url = (e.notification.data && e.notification.data.url) || swDashUrl();
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const client of list) {
@@ -103,12 +115,12 @@ async function checkAndNotify() {
 
   await self.registration.showNotification(title, {
     body,
-    icon             : '/apple-touch-icon.png',
-    badge            : '/apple-touch-icon.png',
+    icon             : swAsset('assets/prorogapro-apple-touch.png'),
+    badge            : swAsset('assets/prorogapro-apple-touch.png'),
     tag              : 'es-urgent',
     renotify         : true,
     requireInteraction: true,
-    data             : { url: '/contract_manager_dashboard.html' },
+    data             : { url: swDashUrl() },
     actions          : [
       { action: 'open',    title: 'Apri dashboard' },
       { action: 'dismiss', title: 'Ignora'          }

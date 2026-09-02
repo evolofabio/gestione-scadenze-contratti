@@ -49,11 +49,32 @@ function canManageData(){
 }
 function isViewer(){ return getCurrentUserRole() === 'viewer'; }
 
+function isTrialExpired(){
+  const s = window._billingSummary;
+  if (!s) return false;
+  const st = String(s.subscription_status || '').toLowerCase();
+  if (st !== 'trialing') return false;
+  const days = s.trial_days_left;
+  return days !== null && days !== undefined && Number(days) <= 0;
+}
+
 function isWriteBlockedByBilling(){
   const s = window._billingSummary;
   if (!s) return false;
   const st = String(s.subscription_status || '').toLowerCase();
-  return st === 'canceled' || st === 'unpaid';
+  if (st === 'canceled' || st === 'unpaid') return true;
+  if (isTrialExpired()) return true;
+  return false;
+}
+
+function getBillingBlockReason(){
+  const s = window._billingSummary;
+  if (!s) return '';
+  const st = String(s.subscription_status || '').toLowerCase();
+  if (isTrialExpired()) return 'Trial scaduto — scegli un piano per continuare';
+  if (st === 'canceled') return 'Abbonamento cancellato';
+  if (st === 'unpaid') return 'Pagamento in sospeso';
+  return 'Abbonamento non attivo';
 }
 
 function canAddContract(extraCount){
@@ -66,13 +87,43 @@ function canAddContract(extraCount){
   return used + add <= max;
 }
 
+function canAddUser(extraCount){
+  if (isWriteBlockedByBilling()) return false;
+  const s = window._billingSummary;
+  if (!s || s.max_users == null) return true;
+  const used = Number(s.users_used) || 1;
+  const max = Number(s.max_users);
+  const add = Number(extraCount) || 1;
+  return used + add <= max;
+}
+
+function canExport(extraCount){
+  if (isWriteBlockedByBilling()) return false;
+  const s = window._billingSummary;
+  if (!s || s.max_exports_per_month == null) return true;
+  const used = Number(s.exports_used) || 0;
+  const max = Number(s.max_exports_per_month);
+  const add = Number(extraCount) || 1;
+  return used + add <= max;
+}
+
+function getExportsRemaining(){
+  const s = window._billingSummary;
+  if (!s || s.max_exports_per_month == null) return null;
+  return Math.max(0, Number(s.max_exports_per_month) - (Number(s.exports_used) || 0));
+}
+
 function requireWriteAccess(actionLabel){
   if (!canManageData()) {
     showToast('Permesso negato: ruolo in sola lettura');
     return false;
   }
   if (isWriteBlockedByBilling()) {
-    showToast('Abbonamento non attivo — rinnova per ' + (actionLabel || 'modificare i dati'));
+    showToast(getBillingBlockReason() + ' — ' + (actionLabel || 'modificare i dati'));
+    return false;
+  }
+  if (!canAddContract(0) && (actionLabel || '').match(/contratt/i)) {
+    showToast('Limite contratti del piano raggiunto — aggiorna il piano');
     return false;
   }
   return true;
@@ -96,6 +147,11 @@ window.canManageData = canManageData;
 window.isViewer = isViewer;
 window.requireWriteAccess = requireWriteAccess;
 window.canAddContract = canAddContract;
+window.canAddUser = canAddUser;
+window.canExport = canExport;
+window.isTrialExpired = isTrialExpired;
+window.getBillingBlockReason = getBillingBlockReason;
+window.getExportsRemaining = getExportsRemaining;
 window.applyWriteRoleUI = applyWriteRoleUI;
 window.APP_LOGO = APP_LOGO;
 window.APP_LOGO_FULL = APP_LOGO_FULL;

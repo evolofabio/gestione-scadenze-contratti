@@ -10,7 +10,13 @@ Checklist operativa per il **rilascio produzione** (versione vendibile).
 | Sync contratti multi-tenant | ✅ Implementato |
 | RBAC (owner/admin/manager/viewer) | ✅ Implementato |
 | Privacy + Termini pubblicati | ✅ `pages/` |
-| Stripe (checkout/portal) | ⚠️ Stub — `stripeEnabled: false` |
+| Trial scaduto + gate UI | ✅ Implementato |
+| Team invite + approve RPC | ✅ `supabase_migration_saas_phase5.sql` |
+| Limiti piano (contratti/utenti/export) | ✅ UI + RPC usage |
+| Onboarding primo accesso | ✅ Dashboard |
+| Landing pricing + FAQ + mobile nav | ✅ `index.html` |
+| Stripe webhook Edge Function | ✅ `supabase/functions/stripe-webhook` |
+| Stripe (checkout/portal) | ⚠️ Deploy Edge Functions + `stripeEnabled: true` |
 | Billing attivo | ❌ Dopo configurazione Stripe |
 | RLS validata e firmata | ❌ Eseguire checklist staging |
 | Demo pubblica separata | ✅ Repo `Gestione-scadenze-contratti-DEMO` |
@@ -48,8 +54,10 @@ Applica su progetto Supabase **produzione** (`mdorhwwnvepviavtnksf`) nell'ordine
 3. `supabase_migration_saas_phase1.sql`
 4. `supabase_migration_saas_phase2.sql`
 5. `supabase_migration_saas_phase3.sql`
+6. `supabase_migration_saas_phase4_legal.sql` (colonna `legal_meta` su contratti)
+7. `supabase_migration_saas_phase5.sql` (team invite, export metrics, billing_summary)
 
-Verifica: funzione `register_new_tenant` presente, piani `starter`/`growth`/`scale` seedati.
+Verifica: funzione `register_new_tenant`, `invite_team_member`, `accept_team_invite` presenti; piani `starter`/`growth`/`scale` seedati.
 
 ---
 
